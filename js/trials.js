@@ -86,6 +86,7 @@ G.scenes.trials = (() => {
     lookV.copy(pet.pos);
     setTimeout(menu, 400);
   };
+  T.onVoice = function (kind, id) { if (mode === 'obedience' && st && st.phase === 'obey' && kind === 'trick') judgeGesture(id); return true; };
   T.debug = () => ({ st, obstacles, pet });
   T.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.baseY = 0; } $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.banner('', null, 1); st = null; };
   T.dock = () => [{ label: 'Events', icon: 'trophy', fn: () => { if (!st || st.phase === 'done') menu(); } }, { label: 'Leave', icon: 'door', cls: 'go', fn: () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' }) }];

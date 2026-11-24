@@ -16,11 +16,11 @@ G.scenes.frisbee = (() => {
   const F = { music: 'contest', hideNeeds: true };
   let scene, cam, pet, mc, crowd, crowdData = [], disc, discId = 'disc', from = 'home', lookV = new V3(0, 0.8, 10);
   let boardCtx, boardTex, st = null, tiers = [], rivals = [], balloons = [], blimp = null, shibaBalloon = null, jumbo = null, jumboCam = null, jumboRT = null, frame = 0, boardEl = null;
-  const HAND = new V3(0.35, 1.15, 0.2), SIT = new V3(0.9, 0, 0.7);
+  const SIT = new V3(0.9, 0, 0.7);
   const LANES = [-10, -5.2, 5.2, 10];
   F.init = function () {
     scene = new THREE.Scene(); F.scene = scene; scene.background = new THREE.Color('#9fd4ff'); scene.fog = new THREE.Fog('#9fd4ff', 55, 130);
-    cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam;
+    cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam; F.hand = new G.DiscHand(scene, cam);
     const L = G.outdoorLights(scene, { shadow: 30 }); L.sun.position.set(-10, 25, 15); L.sun.target.position.set(0, 0, 25); F.L = L;
     build();
   };
@@ -186,7 +186,7 @@ G.scenes.frisbee = (() => {
     setTimeout(classMenu, 450);
   };
   F.exit = function () {
-    $('#dock').style.visibility = ''; if (boardEl) { boardEl.remove(); boardEl = null; }
+    $('#dock').style.visibility = ''; F.hand.hide(); if (boardEl) { boardEl.remove(); boardEl = null; }
     if (pet) { if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; } scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.gnaw = false; }
     clearRivals(); $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.prompts([]); st = null;
   };
@@ -199,9 +199,9 @@ G.scenes.frisbee = (() => {
     G.ui.sheet({ title: 'Disc Cup entry', render(body) {
       G.ui.note(body, 'Throw as many times as you can before time runs out! Points = catch distance in meters. Jumping catches x2, flip catches x3. Rivals compete in the lanes beside you.');
       const sk = pet.d.disc || 0;
+      G.ui.note(body, 'Want to practice? Throw the disc at home, or at the Dog Park on your walk.');
       G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, and may get distracted and chew the disc!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
       const l = G.ui.list(body);
-      l.appendChild(G.ui.li({ icon: 'disc', title: 'Practice', sub: 'No timer, no rivals. Builds disc skill.', fn: () => { G.ui.closeSheet(true); start(null); } }));
       G.CONTESTS.forEach((c) => {
         const open = G.state.unlocked[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id).reduce((m, t) => Math.min(m, t.place), 9);
         l.appendChild(G.ui.li({ icon: 'trophy', title: c.name + (best < 9 ? ' — best: ' + ['', '1st', '2nd', '3rd'][best] : ''), sub: open ? c.time + 's round · entry ' + (c.fee ? c.fee + ' coins' : 'free') + ' · 1st prize ' + c.prize[0] : 'Locked: win the ' + G.CONTESTS.find((x) => x.id === c.need).name + ' first', lock: !open, fn: open ? () => { if (G.state.coins < c.fee) { G.ui.toast('Not enough coins for the entry fee.'); return; } G.ui.closeSheet(true); G.state.coins -= c.fee; G.ui.refresh(); start(c); } : null }));
@@ -223,8 +223,8 @@ G.scenes.frisbee = (() => {
       G.ui.banner('GO!', null, 800); G.audio.play('whistle'); G.audio.track('contest'); crowdJump(0.8);
       st.wind = U.rand(-1, 1) * [0.2, 0.3, 0.6, 1.2, 1.6][cls.tier];
     } else { G.audio.track('contest'); G.ui.prompts([{ label: 'Done practicing', cls: 'orange', fn: () => { st = null; G.ui.prompts([]); disc.mesh.visible = false; classMenu(); } }]); }
-    st.phase = 'ready'; disc.mesh.visible = true; hud(); drawBoard();
-    G.ui.hint('Flick up to throw! Short soft flick = short throw. Long fast flick = far.', 3500);
+    st.phase = 'ready'; F.hand.show(discId); hud(); drawBoard();
+    G.ui.hint('Grab the disc, swing it upward and let go to throw. Gentle swing = short toss.', 4000);
   }
   function leaderboard() {
     const rows = rivals.map((r) => ({ dog: r.dog, breed: r.breed, owner: r.owner, score: r.score }));
@@ -239,44 +239,15 @@ G.scenes.frisbee = (() => {
   }
 
   /* ---------------- player throwing ---------------- */
-  F.onDown = function (p) { if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); } };
-  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) HAND.x = 0.35 + (p.x / innerWidth - 0.5) * 0.4; };
-  F.onUp = function (p) {
-    if (!st || st.phase !== 'ready') return;
-    const pw = G.throwPower(p);
-    if (pw < 0.3) { if (!p.tap) G.ui.toast('Flick upward to throw!'); return; }
-    const pro = discId === 'prodisc' ? 1.1 : 1;
-    const s = U.clamp(3.2 + pw * 2.6, 4, 18) * pro;
-    const ang = U.clamp(p.vx / Math.max(250, -p.vy) * 0.6, -0.22, 0.22);
-    throwDisc(s, ang);
-  };
-  function simulate(s, ang, wind) {
-    const pos = HAND.clone(); const vel = new V3(Math.sin(ang) * s, s * 0.06 + 1.0, Math.cos(ang) * s);
-    const out = []; const dt = 1 / 60; let t = 0; const L = discId === 'prodisc' ? 9.75 : 9.6;
-    while (t < 10) {
-      const h = Math.hypot(vel.x, vel.z); const lift = L * Math.min(1, Math.pow(h / 7, 2));
-      vel.y += (lift - 9.8) * dt; vel.y *= Math.exp(-0.6 * dt); vel.x += -wind * dt * 0.9; vel.x *= Math.exp(-0.45 * dt); vel.z *= Math.exp(-0.45 * dt);
-      pos.addScaledVector(vel, dt); pos.x = U.clamp(pos.x, -3.5, 3.5); t += dt;
-      out.push({ t, p: pos.clone() });
-      if (pos.y <= 0.03) break;
-    }
-    return out;
-  }
-  function skillInfo() {
-    const sk = pet.d.disc || 0;
-    const reach = (pet.m.baseH + pet.m.dims.by + pet.m.headR) * pet.S + 0.05;
-    return { sk, spd: (5.2 + sk * 0.045) * pet.S, delay: 0.32 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
-  }
-  function throwDisc(s, ang) {
+  F.onDown = function (p) { if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
+  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); };
+  F.onUp = function (p) { if (!st || st.phase !== 'ready') return; const r = F.hand.up(p); if (r) throwDisc(r); };
+  function skillInfo() { return G.discSkill(pet); }
+  function throwDisc(r) {
     st.phase = 'flight'; st.throws++; G.ui.hint(null);
-    G.audio.play('whoosh'); G.state.stats.throws++;
-    const path = simulate(s, ang, st.wind); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false;
-    const S = skillInfo(); let plan = null;
-    for (let i = 0; i < path.length; i++) {
-      const q = path[i]; if (q.p.y > S.jumpReach) continue;
-      const need = U.d2(pet.pos.x, pet.pos.z, q.p.x, q.p.z) / S.spd + S.delay;
-      if (need <= q.t) { const air = q.p.y > S.reach + 0.02; plan = { i, t: q.t, p: q.p.clone(), kind: !air ? 'ground' : S.canFlip && Math.random() < 0.3 + (S.sk - 60) / 60 ? 'flip' : 'jump' }; break; }
-    }
+    if (r.power > 4) G.audio.play('whoosh'); G.state.stats.throws++;
+    const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -4.5, x1: 4.5, z0: -3, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
+    const plan = G.discPlan(pet, path); const S = plan ? plan.S : G.discSkill(pet);
     st.plan = plan; st.landing = path[path.length - 1].p.clone();
     pet.stop(); pet.brain = null; pet.excite = 1;
     pet.do((function* () {
@@ -333,13 +304,13 @@ G.scenes.frisbee = (() => {
       pet.setPose('sit'); pet.lookCam = 2; yield* pet.wait(0.3);
       if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; }
       pet.happy(2); pet.voice('happy');
-      if (st && st.phase === 'return') { if (st.practice || st.time > 0) { st.phase = 'ready'; disc.mesh.visible = true; } else { st.phase = 'done'; finish(); } }
+      if (st && st.phase === 'return') { if (st.practice || st.time > 0) { st.phase = 'ready'; F.hand.show(discId); } else { st.phase = 'done'; finish(); } }
     })());
   }
   function goRogue() {
     st.phase = 'rogue'; st.obey = 0;
     const kind = U.pick(['chew', 'chew', 'zoom', 'sniff']);
-    G.ui.prompts([{ label: 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]);
+    G.ui.prompts([{ label: G.voice.on ? 'Say "' + pet.name + '"! (or tap)' : 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]);
     commentary(kind === 'chew' ? 'Uh oh, ' + pet.name + ' is chewing the disc!' : kind === 'zoom' ? pet.name + ' has the zoomies!' : pet.name + ' found something interesting to sniff...');
     G.ui.toast('Tap "Call" (or tap ' + pet.name + ') again and again to get them back!');
     pet.do((function* () {
@@ -354,10 +325,11 @@ G.scenes.frisbee = (() => {
       pet.gnaw = false; pet.moveTarget = null;
     })());
   }
-  F.call = function () {
+  F.onVoice = function (kind) { if (kind === 'name' && st && st.phase === 'rogue') { F.call(true); return true; } if (kind === 'name') { pet.emote('bang', 0.8); pet.lookCam = 2; return true; } return true; };
+  F.call = function (voiced) {
     if (!st || st.phase !== 'rogue') return;
     G.audio.play('call'); const learned = (pet.d.nameLearn || 0) >= 1;
-    st.obey += (learned ? 0.3 : 0.18) + (pet.d.bond || 0) * 0.002;
+    st.obey += voiced ? 0.6 : (learned ? 0.3 : 0.18) + (pet.d.bond || 0) * 0.002;
     pet.lookCam = 1; pet.tiltT = 0.6; pet.emote(st.obey >= 1 ? 'bang' : 'q', 0.6);
     if (st.obey >= 1) { G.ui.prompts([]); pet.gnaw = false; pet.stop(); commentary(pet.name + ' is coming back!'); pet.voice(); bringBack(); }
   };
@@ -365,7 +337,7 @@ G.scenes.frisbee = (() => {
   /* ---------------- results ---------------- */
   function finish() {
     if (!st || st.phase === 'done2') return; st.phase = 'done2';
-    G.ui.prompts([]); disc.mesh.visible = false; $('#dock').style.visibility = '';
+    G.ui.prompts([]); disc.mesh.visible = false; F.hand.hide(); $('#dock').style.visibility = '';
     const c = st.cls; const board = leaderboard(); const place = board.findIndex((x) => x.me) + 1;
     G.state.stats.contests++;
     const prize = place <= 3 ? c.prize[place - 1] : 15;
@@ -413,11 +385,11 @@ G.scenes.frisbee = (() => {
     }
     for (const r of rivals) updateRival(r, dt, running);
     pet.update(dt); mc.update(dt); mc.lookAt = pet.pos;
-    if (st && st.phase === 'ready') { disc.pos.copy(cam.localToWorld(new V3(HAND.x - 0.1, -0.55, -1.3))); disc.mesh.position.copy(disc.pos); disc.mesh.rotation.set(0.5, G.time, 0); }
+    if (st && st.phase === 'ready') F.hand.update(dt);
     if (st && st.phase === 'flight') st.ft += dt;
     if (st && st.phase === 'flight' && disc.flying) {
       const P = st.path; let i = 0; while (i < P.length - 1 && P[i].t < st.ft) i++;
-      disc.pos.copy(P[i].p); disc.mesh.position.copy(disc.pos); disc.mesh.rotation.y += dt * 22; disc.mesh.rotation.x = 0.08;
+      disc.pos.copy(P[i].p); disc.mesh.position.copy(disc.pos); if (!P[i].ground) { disc.mesh.rotation.y += dt * 22; disc.mesh.rotation.x = 0.06; disc.mesh.rotation.z = P[i].bank; } else { disc.mesh.rotation.x = 0; disc.mesh.rotation.z = 0; }
       if (i >= P.length - 1) { disc.flying = false; disc.landed = true; G.audio.play('thud'); if (!st.plan) missed(); }
     }
     const m4 = new THREE.Matrix4(); const q = new THREE.Quaternion(); const one = new V3(1, 1, 1);

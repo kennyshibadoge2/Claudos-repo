@@ -26,6 +26,7 @@ const IC = {
   kennel: '<svg viewBox="0 0 32 32"><path d="M4 15L16 6l12 9v12H4z" fill="#c8622a"/><path d="M11 27v-7a5 5 0 0110 0v7z" fill="#3b2a1f"/></svg>',
   map: '<svg viewBox="0 0 32 32"><path d="M4 8l7-3 10 3 7-3v19l-7 3-10-3-7 3z" fill="#fff7ea" stroke="#79b25a" stroke-width="2" stroke-linejoin="round"/><path d="M11 5v19M21 8v19" stroke="#79b25a" stroke-width="2"/></svg>',
   hand: '<svg viewBox="0 0 64 64"><path d="M22 34V14a4 4 0 018 0v14-18a4 4 0 018 0v18-14a4 4 0 018 0v16-8a4 4 0 018 0v16c0 12-8 20-20 20-8 0-12-3-16-9l-8-12a4 4 0 016-5z" fill="#fff4e8" stroke="#7a5c46" stroke-width="3" stroke-linejoin="round"/></svg>',
+  mic: '<svg viewBox="0 0 32 32"><rect x="11" y="4" width="10" height="16" rx="5" fill="currentColor"/><path d="M7 15a9 9 0 0018 0M16 24v4M11 28h10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>',
   whistle: '<svg viewBox="0 0 32 32"><path d="M4 13h14a7 7 0 110 8H9a5 5 0 01-5-5z" fill="#f2c24b" stroke="#c8922a" stroke-width="1.6"/><circle cx="19" cy="17" r="3" fill="#c8922a"/><path d="M24 6l2-3M28 9l3-2M21 5l0-3" stroke="#ee8a3c" stroke-width="2" stroke-linecap="round"/></svg>',
   mail: '<svg viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="17" rx="3" fill="#fff" stroke="#e2574c" stroke-width="2"/><path d="M5 10l11 8 11-8" stroke="#e2574c" stroke-width="2" fill="none"/></svg>',
   book: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#e2574c" stroke="#fff" stroke-width="2" stroke-dasharray="3 2"/><path d="M16 8.5l2.4 5 5.4.7-4 3.7 1.1 5.4L16 20.6l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" fill="#fff"/></svg>',
@@ -52,6 +53,7 @@ G.ui = (() => {
     $('#btnSettings').innerHTML = IC.gear;
     $('#btnSettings').onclick = () => ui.settings();
     $('#btnMail').innerHTML = IC.mail + '<span class="badge" id="mailBadge"></span>'; $('#btnMail').onclick = () => { G.audio.play('pop'); G.ui.mailSheet(); };
+    $('#btnMic').innerHTML = '<span id="micRing"></span>' + IC.mic; $('#btnMic').onclick = () => { G.audio.init(); G.voice.toggle(); }; G.voice.ui();
     $('#btnStamps').innerHTML = IC.book; $('#btnStamps').onclick = () => { G.audio.play('pop'); G.ui.stampSheet(); };
     $('#shClose').onclick = () => ui.closeSheet();
     $('#sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') ui.closeSheet(); });
@@ -208,10 +210,12 @@ G.ui = (() => {
       title: p.name + '’s tricks', render(body) {
         note(body, 'Teach tricks by touch: do the gesture on your pet, then tap "Good job!" to praise. Three praises and the trick is learned. Learned tricks can be called from here anytime.');
         const l = list(body);
+        if (G.voice && G.voice.supported()) { const vb = document.createElement('div'); vb.className = 'list'; vb.style.marginBottom = '10px'; const learnedT = G.TRICKS.filter((t) => (p.d.tricks[t.id] || 0) >= 1); if (learnedT.length) { const h3 = document.createElement('h3'); h3.textContent = 'Voice commands'; body.appendChild(h3); note(body, 'Turn on the mic, then pick a trick and say your command word twice. After that, just say it!'); const g2 = document.createElement('div'); g2.className = 'row'; g2.style.flexWrap = 'wrap'; learnedT.forEach((t) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = (G.voice.store(p.d.id).tricks[t.id] || []).length ? t.name + ' \u2713' : 'Teach \u201c' + t.name + '\u201d'; b.onclick = () => { if (!G.voice.on) { G.ui.toast('Tap the mic in the top bar first!'); return; } ui.closeSheet(true); G.voiceTeachTrick(p, t.id); }; g2.appendChild(b); }); body.appendChild(g2); const h4 = document.createElement('h3'); h4.textContent = 'All tricks'; body.appendChild(h4); } void vb; }
         G.TRICKS.forEach((tr) => {
           if (p.cat && (tr.id === 'beg' || tr.id === 'rollover' || tr.id === 'dead')) return;
           const prog = Math.min(1, p.d.tricks[tr.id] || 0); const learned = prog >= 1;
-          l.appendChild(li({ icon: 'star', title: tr.name + (learned ? '' : ' (learning)'), sub: learned ? 'Learned! Tap to call it out.' : 'How: ' + tr.hint, prog, lock: !learned && prog === 0, fn: learned ? () => { ui.closeSheet(true); G.cur.command && G.cur.command(tr.id); } : null }));
+          const vw = G.voice && G.voice.store(p.d.id).tricks[tr.id] && G.voice.store(p.d.id).tricks[tr.id].length;
+          l.appendChild(li({ icon: 'star', title: tr.name + (learned ? '' : ' (learning)') + (vw ? ' \u00b7 voice \u2713' : ''), sub: learned ? 'Learned! Tap to call it out.' : 'How: ' + tr.hint, prog, lock: !learned && prog === 0, fn: learned ? () => { ui.closeSheet(true); G.cur.command && G.cur.command(tr.id); } : null }));
         });
       },
     });
@@ -312,6 +316,8 @@ G.ui = (() => {
     ui.sheet({
       title: 'Settings', render(body) {
         body.innerHTML = '<h3>Sound</h3><div class="kv" style="align-items:center"><b>Music</b><input type="range" id="sMus" min="0" max="1" step="0.05" value="' + s.music + '"><b>Effects</b><input type="range" id="sSfx" min="0" max="1" step="0.05" value="' + s.sfx + '"></div>' +
+          '<h3>Voice</h3><p class="note">Tap the mic in the top bar to talk to your pets: teach names with Call, and trick words from the Tricks menu. Engine:</p><div class="seg" id="sV">' + [['auto', 'Speech (auto)'], ['match', 'Sound matching']].map(([k, n]) => '<button data-v="' + k + '" class="' + ((s.voiceEngine || 'auto') === k ? 'on' : '') + '">' + n + '</button>').join('') + '</div><p class="note">Sound matching records your own voice, so any made-up word works, offline. Speech uses word recognition.</p><button class="btn ghost" id="sVc">Forget voice training for the active pet</button>' +
+          '<h3>Graphics</h3><div class="seg" id="sQ">' + ['auto', 'low', 'medium', 'high'].map((k) => '<button data-q="' + k + '" class="' + ((s.quality || 'auto') === k ? 'on' : '') + '">' + (k === 'auto' ? 'Auto' : G.QUALITY[k].name) + '</button>').join('') + '</div><p class="note" id="sQn">Low: fastest, no shadows, less grass. High: sharpest, full shadows. Resolution and shadows change now; grass and shadow sharpness after a reload.</p><button class="btn ghost" id="sReload">Reload now</button>' +
           '<h3>How to play</h3><div class="note" style="line-height:1.6">' +
           '<b>Pet</b>: press and stroke on your pet. Try head, chin, back and belly (when lying down).<br>' +
           '<b>Call</b>: tap the floor and your active pet trots over.<br><b>Throw</b>: pick a toy, then flick upward. Faster flick, farther throw.<br>' +
@@ -320,6 +326,10 @@ G.ui = (() => {
           '<h3>Save</h3><p class="note">Your game saves automatically in this browser.</p><button class="btn ghost" id="sReset">Start over</button>';
         body.querySelector('#sMus').oninput = (e) => { s.music = +e.target.value; G.audio.applyVolumes(); };
         body.querySelector('#sSfx').oninput = (e) => { s.sfx = +e.target.value; G.audio.applyVolumes(); };
+        body.querySelectorAll('#sQ button').forEach((b) => (b.onclick = () => { s.quality = b.dataset.q; G.save(); G.applyQuality(); body.querySelectorAll('#sQ button').forEach((x) => x.classList.toggle('on', x === b)); G.ui.toast('Graphics: ' + b.textContent); }));
+        body.querySelectorAll('#sV button').forEach((b) => (b.onclick = () => { s.voiceEngine = b.dataset.v; if (G.voice.on) G.voice.stop(); body.querySelectorAll('#sV button').forEach((x) => x.classList.toggle('on', x === b)); G.save(); }));
+        body.querySelector('#sVc').onclick = () => { const p = G.activePet(); if (!p) return; if (G.state.voice) delete G.state.voice[p.d.id]; G.ui.toast('Cleared ' + p.name + '\u2019s voice training.'); G.save(); };
+        body.querySelector('#sReload').onclick = () => { G.save(); location.reload(); };
         body.querySelector('#sReset').onclick = () => ui.confirm('Start over?', 'This erases your pets, coins and items in this browser.', 'Erase and restart').then((ok) => { if (ok) { G.wipe(); G.state = null; location.reload(); } });
       }, onClose: () => G.save(),
     });

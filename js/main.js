@@ -4,6 +4,8 @@
    ========================================================= */
 (function boot() {
   try {
+    G.mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || Math.min(innerWidth, innerHeight) < 600;
+    if (!G.state) G.state = G.load() || G.newState();
     G.initRenderer();
   } catch (e) {
     $('#loading').textContent = 'This device could not start 3D graphics (WebGL). Try another browser.';
@@ -44,7 +46,7 @@
     saveT += dt; if (saveT > 15) { saveT = 0; G.save(); G.checkStamps(); }
     // adaptive quality: drop pixel ratio if the device struggles
     fpsAcc += dt; frames++;
-    if (fpsAcc > 4) { const fps = frames / fpsAcc; fpsAcc = 0; frames = 0; if (fps < 32 && !lowered) { lowered = true; G.renderer.setPixelRatio(Math.max(1, G.renderer.getPixelRatio() * 0.7)); G.onResize(); } }
+    if (fpsAcc > 4) { const fps = frames / fpsAcc; fpsAcc = 0; frames = 0; if (fps < 32 && !lowered && !G.QUALITY[G.state.settings.quality]) { lowered = true; G.renderer.setPixelRatio(Math.max(1, G.renderer.getPixelRatio() * 0.7)); G.onResize(); } }
   }
   requestAnimationFrame(frame);
   addEventListener('visibilitychange', () => { if (document.hidden) G.save(); });

@@ -5,7 +5,7 @@
 function outdoorLights(scene, o = {}) {
   const hemi = new THREE.HemisphereLight(0xfff4e0, 0x7a9a5a, 0.7); scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff0d8, 1.25); sun.position.set(-4, 8, 6); sun.castShadow = true;
-  const s = o.shadow || 8; sun.shadow.mapSize.set(G.mobile ? 1024 : 2048, G.mobile ? 1024 : 2048);
+  const s = o.shadow || 8; sun.shadow.mapSize.set(G.quality().shadowSize, G.quality().shadowSize);
   Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 40 }); sun.shadow.bias = -0.0006; sun.shadow.radius = 3;
   scene.add(sun); scene.add(sun.target);
   return { hemi, sun };

@@ -18,10 +18,10 @@ G.scenes.home = (() => {
   H.init = function () {
     scene = new THREE.Scene(); H.scene = scene;
     scene.background = new THREE.Color('#f3dcc0');
-    cam = new THREE.PerspectiveCamera(42, G.aspect(), 0.05, 60); H.camera = cam; cam.position.copy(camBase());
+    cam = new THREE.PerspectiveCamera(42, G.aspect(), 0.05, 60); H.camera = cam; cam.position.copy(camBase()); H.hand = new G.DiscHand(scene, cam); H.flights = [];
     hemi = new THREE.HemisphereLight(0xfff1e0, 0xa47c5c, 0.6); scene.add(hemi);
     sun = new THREE.DirectionalLight(0xfff0dc, 1.15); sun.position.set(-2.5, 6, 4.5); sun.castShadow = true;
-    sun.shadow.mapSize.set(G.mobile ? 1024 : 2048, G.mobile ? 1024 : 2048); const sc = sun.shadow.camera; sc.left = -5; sc.right = 5; sc.top = 5; sc.bottom = -5; sc.near = 1; sc.far = 20; sun.shadow.bias = -0.0005; sun.shadow.radius = 4;
+    sun.shadow.mapSize.set(G.quality().shadowSize, G.quality().shadowSize); const sc = sun.shadow.camera; sc.left = -5; sc.right = 5; sc.top = 5; sc.bottom = -5; sc.near = 1; sc.far = 20; sun.shadow.bias = -0.0005; sun.shadow.radius = 4;
     scene.add(sun);
     const fill = new THREE.DirectionalLight(0xcfe6ff, 0.35); fill.position.set(1, 3, -5); scene.add(fill);
     lamp = new THREE.PointLight(0xffc27a, 0, 9, 1.6); lamp.position.set(-3.75, 1.75, 0.6); scene.add(lamp);
@@ -254,6 +254,7 @@ G.scenes.home = (() => {
     if (h === 'hanami' || h === 'dogday' || h === 'tanabata') bunting(['#f39bb0', '#f2c24b', '#4aa6e0', '#79b25a']);
   }
   H.exit = function () {
+    for (const f of H.flights) f.remove(); H.flights = [];
     G.audio.loop(false);
     for (const p of pets) { if (p.carry) p.drop(scene); scene.remove(p.root); p.stop(); p.ctl = null; }
     endModes(); G.ui.cursor(null); G.ui.hint(null);
@@ -341,11 +342,20 @@ G.scenes.home = (() => {
     let t = 0; while (t < 2.8) { t += p.dt; p.spinV = 10; p.heading += 10 * p.dt; p.m.head.rotation.y = -0.8; if (Math.random() < p.dt * 1.5) { p.voiceCd = 0; p.voice(); } yield; }
     p.spinV = 0; p.setPose('sit'); p.emote('sweat', 1.2); G.stamp('tail'); yield* p.wait(1.2);
   }
+  H.onVoice = function (kind, id) { if (kind === 'name') H.callName(); else H.command(id); };
   H.callName = function () {
     const p = G.activePet(); if (!p) return;
     G.audio.play('call'); const d = p.d; d.nameLearn = d.nameLearn || 0;
     if (p.ctl) return;
+    if (d.nameLearn < 1 && G.voice.on) {
+      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 4); })()); setFocus(p, 6);
+      G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
+        if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); }
+        else G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Press Call and say it again.'); });
+      return;
+    }
     if (d.nameLearn < 1) {
+      if (G.voice.supported() && !p._micTip) { p._micTip = 1; G.ui.toast('Tip: tap the mic in the top bar, then press Call and say ' + p.name + '\u2019s name to teach it by voice!'); }
       const now = G.time; if (!p._lastCall || now - p._lastCall > 1.0) { d.nameLearn = Math.min(1, d.nameLearn + 0.2); p._lastCall = now; }
       p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 2; p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(d.nameLearn >= 1 ? 'heart' : 'q', 1.2); yield* p.act('sit', 1.5); })());
       if (d.nameLearn >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Now they\u2019ll come when called', 2400); p.happy(8); G.stamp('named'); }
@@ -463,7 +473,39 @@ G.scenes.home = (() => {
     mesh.traverse((o) => { o.userData.toy = t; }); toys.push(t); return t;
   }
   function handPoint(p, dist = 1.6) { const rc = G.ray(p); return rc.ray.at(dist, new V3()); }
+  function launchDisc(r) {
+    const path = G.discSim(r.pos, r.vel, { pro: r.id === 'prodisc', bounds: { x0: BX0, x1: BX1, z0: BZ0 - 0.3, z1: Math.max(BZ1 + 0.4, r.pos.z + 0.5) } });
+    const flight = new G.DiscFlight(scene, r.id, path); H.flights.push(flight);
+    if (r.power > 4) G.audio.play('whoosh'); G.state.stats.throws++; tutDone('toy');
+    const cands = pets.filter((x) => !x.ctl && x.poseName !== 'sleep' && x.d.energy > 8 && !x.cat);
+    const act = G.activePet(); const fetcher = cands.includes(act) ? act : cands[0];
+    if (!fetcher) { setTimeout(() => { flight.remove(); H.flights.splice(H.flights.indexOf(flight), 1); if (mode === 'disc') H.hand.show(r.id); }, 1500); return; }
+    if (fetcher.carry) fetcher.drop(scene);
+    const plan = G.discPlan(fetcher, path);
+    fetcher.emote('bang', 0.8);
+    fetcher.do((function* () {
+      fetcher.busy = true;
+      try {
+        let kind = null; yield* G.discChase(fetcher, flight, plan, { id: r.id, train: 0.5, done: (k) => { kind = k; } });
+        H.flights.splice(H.flights.indexOf(flight), 1);
+        if (kind === 'flip') G.ui.toast(fetcher.name + ' did a flip catch!'); else if (kind === 'jump') G.ui.toast('Jumping catch!');
+        yield* fetcher.goto(CALL.x + U.rand(-0.3, 0.3), CALL.z, { speed: 2.4 }); yield* fetcher.face(cam.position.x, cam.position.z);
+        fetcher.setPose('sit'); fetcher.lookCam = 3; yield* fetcher.wait(0.4);
+        if (fetcher.carry) { fetcher.m.mouth.remove(fetcher.carry.mesh); fetcher.carry = null; }
+        fetcher.happy(3); fetcher.excite = 1; fetcher.voice('happy');
+        if (mode === 'disc') H.hand.show(r.id);
+        yield* fetcher.wait(1.5);
+      } finally { fetcher.busy = false; }
+    })());
+    cands.filter((x) => x !== fetcher).forEach((x) => { if (U.chance(0.6)) x.do((function* () { x.excite = 1; let t = 0; while (t < 2.5 && !flight.caught) { t += x.dt; x.setPose('stand'); x.moveTarget = new V3(flight.pos.x, 0, flight.pos.z); x.speedMul = 2.8; yield; } x.moveTarget = null; yield* x.act('bow', 0.8); })()); });
+  }
   H.holdToy = function (id) {
+    if (G.ITEMS[id] && G.ITEMS[id].toy === 'disc') {
+      endModes(); mode = 'disc'; H.hand.show(id);
+      G.ui.prompts([{ label: 'Put away', cls: 'orange', fn: () => endModes() }]);
+      G.ui.hint('Grab the disc and swing it up, then let go to throw. A gentle swing tosses it softly.', 4500);
+      return;
+    }
     endModes();
     let t = toys.find((x) => x.id === id);
     if (t && t.held) t.held.drop(scene);
@@ -575,6 +617,7 @@ G.scenes.home = (() => {
   function setFocus(target, secs = 3) { focus = target; focusUntil = G.time + secs; }
   H.focusPet = function (p) { if (p) setFocus(p, 999); else focus = null; };
   H.onDown = function (p) {
+    if (mode === 'disc' && H.hand.active && H.hand.down(p)) return;
     if (mode === 'bath') return bathStroke(p, true);
     if (held) { moveHeld(p); held.dragging = true; return; }
     if (mode === 'treat') { touch = { kind: 'treat', p0: p }; G.ui.cursor(G.M.icons.item(heldTreat), p.x, p.y); return; }
@@ -604,6 +647,7 @@ G.scenes.home = (() => {
     touch = { kind: 'floor', p0: p };
   };
   H.onMove = function (p, down) {
+    if (mode === 'disc' && H.hand.drag) { H.hand.move(p); return; }
     if (mode === 'bath') { if (down) bathStroke(p); else G.ui.cursor(IC.hand, p.x, p.y); return; }
     if (held) { if (down || held.inHand) moveHeld(p); if (tug && down) { tug.pull = U.clamp((p.y - G.input.sy) / 160, 0, 1); } return; }
     if (mode === 'treat') { G.ui.cursor(G.M.icons.item(heldTreat), p.x, p.y); treatPoint = G.groundAt(p) || treatPoint; return; }
@@ -655,6 +699,7 @@ G.scenes.home = (() => {
     if (part === 'tail' && Math.random() < dtp * 2) pet.emote('sweat', 0.8);
   }
   H.onUp = function (p) {
+    if (mode === 'disc' && H.hand.drag) { const r = H.hand.up(p); if (r) launchDisc(r); return; }
     if (mode === 'bath') return;
     if (held) { if (tug) return; releaseHeld(p); return; }
     const T = touch; touch = null;
@@ -877,6 +922,7 @@ G.scenes.home = (() => {
     }
   }
   function endModes() {
+    if (mode === 'disc') H.hand.hide();
     if (mode === 'treat') { pets.forEach((p) => { if (!p.ctl) p.stop(); }); }
     if (mode === 'brush') { const p = G.activePet(); if (p && !p.ctl) p.stop(); focus = null; }
     if (mode === 'bath') finishBath(true);
@@ -903,7 +949,7 @@ G.scenes.home = (() => {
       const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, d = Math.hypot(dx, dz), r = 0.32 * (a.S + b.S);
       if (d < r && d > 0.001) { const push = (r - d) * 0.5; a.pos.x -= dx / d * push; a.pos.z -= dz / d * push; b.pos.x += dx / d * push; b.pos.z += dz / d * push; }
     }
-    updateToys(dt); updateTug(dt); updateBath(dt);
+    updateToys(dt); updateTug(dt); updateBath(dt); H.hand.update(dt); for (const f of H.flights) f.update(dt);
     if (praise && G.time > praise.until) { praise = null; G.ui.prompts([]); }
     if (held && !held.dragging && !G.input.down) held.mesh.rotation.y += dt * 0.8;
     // camera

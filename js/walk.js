@@ -71,6 +71,7 @@ G.scenes.walk = (() => {
       { t: 0.0, kind: 'cafe', name: 'Paw & Bean Caf\u00e9', o: { w: 5.2, d: 4, h: 3, wall: '#f3e2c4', wallKind: 'boards', style: 'gable', roof: '#7a4a24', sign: 'Paw & Bean', signCol: '#7a4a24', awning: '#7a4a24', door: '#7a4a24', porch: false, fence: false, mailbox: false, pots: 2, chimney: true, shutters: '#7a4a24', flowers: true } },
       { t: 0.09, kind: 'shop', name: 'Maple Pets', o: { w: 5, d: 4, h: 3, wall: '#eef7e4', wallKind: 'siding', style: 'hip', roof: '#4a8a3a', sign: 'Maple Pets', signCol: '#3f7a32', awning: '#79b25a', porch: false, fence: false, mailbox: false, pots: 2, flowers: true } },
       { t: 0.25, kind: 'field', name: 'Disc Cup Field' },
+      { t: 0.37, kind: 'park', name: 'Maple Dog Park' },
       { t: 0.5, kind: 'kennel', name: 'Maple Kennel', o: { w: 3.6, d: 2.8, h: 2.2, wall: '#fff2dc', wallKind: 'boards', style: 'gable', roof: '#e2574c', sign: 'Maple Kennel', signCol: '#e2574c', windows: [[-1.1, 1.3]], fence: true, mailbox: true, porch: false } },
       { t: 0.75, kind: 'home', name: 'Home', o: { w: 4.8, d: 3.8, h: 2.5, stories: 2, wall: '#fff7ea', wallKind: 'siding', style: 'gable', roof: '#ee8a3c', door: '#c8622a', porch: true, chimney: true, mailbox: true, fence: true, pots: 2, shutters: '#c8622a', flowers: true, number: 7 } },
     ];
@@ -79,14 +80,14 @@ G.scenes.walk = (() => {
     [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
     for (const b of BLD) {
       const P = curvePt(b.t), n = outward(b.t);
-      if (b.kind === 'field') {
+      if (b.kind === 'field' || b.kind === 'park') {
         const gate = new THREE.Group(); const gp = P.clone().addScaledVector(n, 3.2); gate.position.copy(gp); gate.rotation.y = Math.atan2(-n.x, -n.z); st.add(gate);
         const pm = M.mat('#ffffff', { r: 0.6 });
         for (const s of [-1, 1]) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3.2, 12), pm); pole.position.set(s * 2.2, 1.6, 0); pole.castShadow = true; gate.add(pole); const ball = new THREE.Mesh(new THREE.SphereGeometry(0.2, 12, 10), M.mat('#ee8a3c')); ball.position.set(s * 2.2, 3.3, 0); gate.add(ball); }
-        const tex = G.textTex('Disc Cup Field', { font: '700 64px Fredoka, sans-serif', bg: '#ee8a3c', color: '#fff', pad: 30 });
+        const tex = G.textTex(b.name, { font: '700 64px Fredoka, sans-serif', bg: b.kind === 'park' ? '#79b25a' : '#ee8a3c', color: '#fff', pad: 30 });
         const ban = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2 * tex.userData.h / tex.userData.w), M.mat('#fff', { map: tex, side: THREE.DoubleSide })); ban.position.set(0, 2.7, 0.02); gate.add(ban);
         for (let i = 0; i < 9; i++) { const fl = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.32, 3), M.mat(['#e2574c', '#f2c24b', '#4aa6e0', '#79b25a'][i % 4], { side: THREE.DoubleSide })); fl.rotation.z = Math.PI; fl.position.set(-2 + i * 0.5, 3.05 - Math.sin(i / 8 * Math.PI) * 0.25, 0); gate.add(fl); }
-        const fieldG = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), M.mat('#9fd27a', { r: 1 })); fieldG.rotation.x = -Math.PI / 2; fieldG.position.copy(P.clone().addScaledVector(n, 9)).setY(0.015); fieldG.rotation.z = Math.atan2(-n.x, -n.z); fieldG.receiveShadow = true; scene.add(fieldG);
+        if (b.kind === 'field') { const fieldG = new THREE.Mesh(new THREE.PlaneGeometry(14, 10), M.mat('#9fd27a', { r: 1 })); fieldG.rotation.x = -Math.PI / 2; fieldG.position.copy(P.clone().addScaledVector(n, 9)).setY(0.015); fieldG.rotation.z = Math.atan2(-n.x, -n.z); fieldG.receiveShadow = true; scene.add(fieldG); } else { const fl = M.fence(10, '#c8a07a'); fl.position.copy(P.clone().addScaledVector(n, 3.4)); fl.rotation.y = Math.atan2(-n.x, -n.z); fl.position.addScaledVector(curve.getTangentAt(b.t), 0); st.add(fl); }
         doors.push({ kind: b.kind, name: b.name, p: P.clone().addScaledVector(n, 2.0) });
         continue;
       }
@@ -117,7 +118,7 @@ G.scenes.walk = (() => {
       const tuft = new THREE.BufferGeometry(); const arr = []; for (const pp of parts) arr.push(...pp.attributes.position.array); tuft.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); tuft.computeVertexNormals();
       const gm = new THREE.MeshLambertMaterial({ color: '#ffffff' }); W.grassU = { value: 0 };
       gm.onBeforeCompile = (sh) => { sh.uniforms.uTime = W.grassU; sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vec4 wp = instanceMatrix * vec4(0.0,0.0,0.0,1.0); float sway = sin(uTime*1.8 + wp.x*0.35 + wp.z*0.27) * 0.09 * position.y * 3.0; transformed.x += sway; transformed.z += sway*0.5;'); };
-      const N = G.mobile ? 2200 : 4200; const im = new THREE.InstancedMesh(tuft, gm, N); const m4 = new THREE.Matrix4(); const q = new THREE.Quaternion(); const col = new THREE.Color(); let n = 0, tries = 0;
+      const N = Math.max(1, Math.round((G.mobile ? 2200 : 4200) * G.quality().grass)); const im = new THREE.InstancedMesh(tuft, gm, N); const m4 = new THREE.Matrix4(); const q = new THREE.Quaternion(); const col = new THREE.Color(); let n = 0, tries = 0;
       const base = { spring: '#7cbf5a', summer: '#5e9e44', autumn: '#9aa84a', winter: '#cfd9cf' }[season];
       while (n < N && tries < N * 6) { tries++; const r = Math.sqrt(Math.random()) * 46, a = Math.random() * 6.28; const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.9; if (distToPathFast(x, z) < 1.7) continue; if (!colliders.every((c) => U.d2(x, z, c.x, c.z) > c.r + 0.2)) continue; if (U.d2(x, z, pondPos.x, pondPos.z) < 4.8) continue; const sc = U.rand(0.7, 1.4); m4.compose(new V3(x, 0, z), q.setFromAxisAngle(new V3(0, 1, 0), Math.random() * 6.28), new V3(sc, sc * U.rand(0.8, 1.3), sc)); im.setMatrixAt(n, m4); im.setColorAt(n, col.set(base).offsetHSL(U.rand(-0.03, 0.03), U.rand(-0.1, 0.05), U.rand(-0.08, 0.08))); n++; }
       im.count = n; im.instanceMatrix.needsUpdate = true; scene.add(im); }
@@ -175,7 +176,7 @@ G.scenes.walk = (() => {
     G.walkSession = (G.walkSession || 0) + 1;
     scene.add(pet.root); pet.stop(); pet.ctl = null; pet.busy = false; pet.baseY = 0; pet.carry = null; pet.lookTarget = null;
     pet.brain = walkIdle; pet.bounds = bounds;
-    const startT = { cafe: 0.0, shop: 0.09, field: 0.25, kennel: 0.5 }[opts.from] ?? 0.75;
+    const startT = { cafe: 0.0, shop: 0.09, field: 0.25, kennel: 0.5, park: 0.37 }[opts.from] ?? 0.75;
     const P = curvePt(startT), n = outward(startT);
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
@@ -189,7 +190,9 @@ G.scenes.walk = (() => {
     if (!G.state.tut.walk) { G.state.tut.walk = 1; setTimeout(() => G.ui.hint('Hold on the ground to lead ' + pet.name + '. Tap people to chat!', 5000), 800); }
     else setTimeout(() => G.ui.hint(G.timeWord() === 'night' ? 'A quiet night walk...' : 'Lovely ' + G.season() + ' ' + G.timeWord() + ' for a walk!', 2500), 600);
   };
+  W.onVoice = function (kind, id, p) { if (talkBusy) return true; if (kind === 'name') { p.stop(); p.emote('heart', 1); p.voice(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z); p.lookCam = 3; yield* p.act('sit', 2); })()); } else p.do((function* () { p.lookCam = 3; yield* p.trick(id); p.happy(2); })()); return true; };
   W.debugProps = () => props;
+  W.debugDoors = () => doors;
   function refreshPresence() {
     const h = new Date().getHours() + (G.hourOffset || 0);
     for (const N of npcs) {
@@ -229,7 +232,7 @@ G.scenes.walk = (() => {
     })());
   }
   function mapSheet() {
-    const places = [['Paw & Bean Café', 0.0, 'cup'], ['Maple Pets', 0.09, 'bag'], ['Disc Cup Field', 0.25, 'disc'], ['Maple Kennel', 0.5, 'kennel'], ['Home', 0.75, 'home'], ['Pond', 'pond', 'water'], ['Fountain', 'fountain', 'water'], ['Big oak tree', 'oak', 'paw']];
+    const places = [['Paw & Bean Café', 0.0, 'cup'], ['Maple Pets', 0.09, 'bag'], ['Disc Cup Field', 0.25, 'disc'], ['Maple Dog Park', 0.37, 'paw'], ['Maple Kennel', 0.5, 'kennel'], ['Home', 0.75, 'home'], ['Pond', 'pond', 'water'], ['Fountain', 'fountain', 'water'], ['Big oak tree', 'oak', 'paw']];
     G.ui.sheet({ title: 'Maple Hill map', render(body) {
       G.ui.note(body, 'Hop straight to a spot. (Or just walk, there’s lots to sniff on the way!)');
       const l = G.ui.list(body);
@@ -737,6 +740,7 @@ G.scenes.walk = (() => {
     else if (d.kind === 'shop') G.go('shop', { from: 'walk' });
     else if (d.kind === 'field') G.ui.trialsSheet('walk');
     else if (d.kind === 'kennel') G.go('kennel', { from: 'walk' });
+    else if (d.kind === 'park') G.go('park', { from: 'walk' });
   }
   return W;
 })();

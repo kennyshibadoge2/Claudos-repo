@@ -52,16 +52,28 @@ G.save = () => { if (!G.state) return; try { G.state.last = Date.now(); localSto
 G.wipe = () => { try { localStorage.removeItem(G.SAVE_KEY); } catch (e) { } };
 
 /* ---------------- Renderer ---------------- */
+G.QUALITY = {
+  low: { name: 'Low', pr: 1, shadows: false, shadowSize: 512, grass: 0.3 },
+  medium: { name: 'Medium', pr: 1.5, shadows: true, shadowSize: 1024, grass: 0.65 },
+  high: { name: 'High', pr: 2, shadows: true, shadowSize: 2048, grass: 1 },
+};
+G.quality = function () { const q = G.state && G.state.settings.quality; return G.QUALITY[q] || (G.mobile ? G.QUALITY.medium : G.QUALITY.high); };
+G.applyQuality = function () {
+  const q = G.quality(); const r = G.renderer; if (!r) return;
+  r.setPixelRatio(Math.min(devicePixelRatio || 1, q.pr)); const sh = r.shadowMap.enabled !== q.shadows; r.shadowMap.enabled = q.shadows;
+  if (sh) for (const k in G.scenes) { const sc = G.scenes[k].scene; if (sc) sc.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => (m.needsUpdate = true)); }); }
+  G.onResize();
+};
 G.initRenderer = function () {
   const canvas = $('#gl');
   const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) || Math.min(innerWidth, innerHeight) < 600;
   G.mobile = mobile;
   const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-  r.setPixelRatio(Math.min(devicePixelRatio || 1, mobile ? 1.75 : 2));
+  r.setPixelRatio(Math.min(devicePixelRatio || 1, G.quality().pr));
   r.outputEncoding = THREE.sRGBEncoding;
   r.toneMapping = THREE.ACESFilmicToneMapping;
   r.toneMappingExposure = 1.12;
-  r.shadowMap.enabled = true;
+  r.shadowMap.enabled = G.quality().shadows;
   r.shadowMap.type = THREE.PCFSoftShadowMap;
   r.setSize(innerWidth, innerHeight, false);
   G.renderer = r;

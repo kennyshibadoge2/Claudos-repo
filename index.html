@@ -51,6 +51,11 @@ button:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
 .stat svg{width:22px;height:22px}
 .iconbtn{width:44px;height:44px;border-radius:50%;background:var(--cream);box-shadow:var(--shadow);display:grid;place-items:center}
 .iconbtn svg{width:24px;height:24px}
+.iconbtn.listening{background:#e2574c;color:#fff}
+#micRing{position:absolute;inset:-4px;border-radius:50%;border:3px solid rgba(226,87,76,.55);pointer-events:none;transition:transform .06s}
+.iconbtn:not(.listening) #micRing{display:none}
+#btnMic{color:#3b2a1f}
+#voiceHeard{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(150px + var(--safe-b));background:#fff;color:#3b2a1f;border-radius:999px;padding:6px 14px;font-weight:600;font-size:14px;box-shadow:var(--shadow);transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .iconbtn .badge{position:absolute;top:-4px;right:-4px;background:#e2574c;color:#fff;border-radius:999px;font-size:12px;font-weight:700;min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px}
 #needs{position:absolute;top:calc(60px + var(--safe-t));left:calc(8px + var(--safe-l));background:rgba(255,247,234,.92);
   border-radius:16px;padding:8px 10px;box-shadow:var(--shadow);display:grid;grid-template-columns:auto 84px;gap:3px 8px;
@@ -211,12 +216,14 @@ h3{margin:14px 0 6px;font-size:18px}
     <div id="pets"></div>
     <div class="stat" id="coins" title="Coins"></div>
     <div class="stat" id="clock"></div>
+    <button class="iconbtn hidden" id="btnMic" aria-label="Voice commands" style="position:relative"></button>
     <button class="iconbtn" id="btnMail" aria-label="Mail" style="position:relative"></button>
     <button class="iconbtn" id="btnStamps" aria-label="Stamp book"></button>
     <button class="iconbtn" id="btnSettings" aria-label="Settings"></button>
   </div>
   <div id="needs"></div>
   <div id="hint" style="opacity:0"></div>
+  <div id="voiceHeard" style="opacity:0"></div>
   <div id="contestHud" class="hidden"></div>
   <div id="joy"><i></i></div>
   <div id="prompts"></div>
@@ -260,15 +267,18 @@ h3{margin:14px 0 6px;font-size:18px}
 <script src="js/data.js"></script>
 <script src="js/models.js"></script>
 <script src="js/pet.js"></script>
+<script src="js/disc.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/extras.js"></script>
 <script src="js/music.js"></script>
+<script src="js/voice.js"></script>
 <script src="js/home.js"></script>
 <script src="js/walk.js"></script>
 <script src="js/cafe.js"></script>
 <script src="js/frisbee.js"></script>
 <script src="js/kennel.js"></script>
 <script src="js/shop.js"></script>
+<script src="js/park.js"></script>
 <script src="js/trials.js"></script>
 <script src="js/main.js"></script>
 </body>
