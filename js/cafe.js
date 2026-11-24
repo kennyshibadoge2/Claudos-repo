@@ -150,10 +150,12 @@ G.scenes.cafe = (() => {
     if (G.state.coins < pr || busy) return;
     busy = true; G.state.coins -= pr; G.ui.refresh(); G.audio.play('coin'); G.state.stats.cafe = (G.state.stats.cafe || 0) + 1; G.checkStamps();
     const item = G.M.item(it.id);
-    yuki.target = new V3(0.4, 0, 0.35); yuki.speed = 1.3;
+    const ROUTE = [new V3(3.4, 0, -3.05), new V3(3.4, 0, -1.3), new V3(1.5, 0, -1.3), new V3(-0.3, 0, 0.6)];
+    yuki.walkPath(ROUTE); yuki.speed = 1.3;
     const startT = G.time;
     const step = () => {
-      if (U.d2(yuki.pos.x, yuki.pos.z, 0.4, 0.35) > 0.2 && G.time - startT < 6) { requestAnimationFrame(step); return; }
+      if (!yuki.idle && G.time - startT < 14) { requestAnimationFrame(step); return; }
+      yuki.heading = Math.atan2(-1.15 - yuki.pos.x, 1.15 - yuki.pos.z);
       yuki.waveT = 0.8; G.audio.play('pop');
       if (it.who === 'you') {
         item.position.set(U.rand(-0.25, 0.25), 0.765, U.rand(0.05, 0.25)); table.add(item); onTable.push(item);
@@ -170,7 +172,7 @@ G.scenes.cafe = (() => {
           G.ui.toast(pet.name + ' loved the ' + it.name + '!'); busy = false;
         })());
       }
-      yuki.target = new V3(0.4, 0, -3.05);
+      setTimeout(() => yuki.walkPath(ROUTE.slice(0, 3).reverse().concat([new V3(0.4, 0, -3.05)])), 700);
     };
     requestAnimationFrame(step);
   }

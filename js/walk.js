@@ -138,7 +138,7 @@ G.scenes.walk = (() => {
     const N = { key, person, home: pos.clone(), mode: o.mode || 'idle', s: o.s || 0, speed: o.speed || 0, dogs: [], waved: false };
     [G.NPCS[key].dog, G.NPCS[key].dog2].filter(Boolean).forEach((dg, i) => {
       const p = new G.Pet({ name: dg.name, breed: dg.breed, coat: dg.coat, acc: { collar: ['collar_blue', 'collar_pink', 'collar_gold'][i % 3] }, mood: 85, old: dg.old }, { npc: true });
-      p.pos.copy(pos).add(new V3(0.9 + i * 0.5, 0, 0.6)); p.brain = G.npcDogBrain(person, 1.7); p.bounds = bounds; scene.add(p.root); N.dogs.push(p); npcDogs.push(p); p.owner = N;
+      p.pos.copy(pos).add(new V3(0.9 + i * 0.5, 0, 0.6)); p.brain = G.npcDogBrain(person, 1.7, i); p.bounds = bounds; scene.add(p.root); N.dogs.push(p); npcDogs.push(p); p.owner = N;
     });
     npcs.push(N); return N;
   }
@@ -170,7 +170,7 @@ G.scenes.walk = (() => {
   };
   W.debugProps = () => props;
   W.exit = function () {
-    G.audio.loop(false);
+    G.audio.loop(false); G.audio.busk(null, 0);
     if (!pet) return;
     if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + 2); pet.happy(6, false); }
     scene.remove(pet.root); pet.stop();
@@ -285,7 +285,7 @@ G.scenes.walk = (() => {
       petBy: (n) => { pet.eyeOverride = 'happy'; pet.excite = 1; G.audio.play('aww'); let k = 0; const iv = setInterval(() => { pet.fx('heart', 1); pet.petT = 0; pet.petPart = 'head'; if (++k > 10) { clearInterval(iv); pet.eyeOverride = null; } }, 160); pet.happy(n, false); if (N.extra) N.extra.waveT = 1.5; per.waveT = 1.5; },
       race: () => { N.raceReq = true; },
       paint: () => { G.state.coins -= 150; G.ui.refresh(); paintPortrait(); },
-      music: (type, sec) => { let k = 0; const iv = setInterval(() => { G.fx.spawn('note', per.pos.clone().add(new V3(U.rand(-0.4, 0.4), 1.4, U.rand(-0.4, 0.4))), 1); if (++k > sec * 3) clearInterval(iv); }, 330); pet.excite = 1; },
+      music: (type, sec) => { if (G.BUSK_NAMES[type]) W.kenjiSong = type; let k = 0; const iv = setInterval(() => { G.fx.spawn('note', per.pos.clone().add(new V3(U.rand(-0.4, 0.4), 1.4, U.rand(-0.4, 0.4))), 1); if (++k > sec * 3) clearInterval(iv); }, 330); pet.excite = 1; },
       howl: () => { pet.do((function* () { pet.setPose('howl'); pet.voice('howl'); yield* pet.wait(1.8); pet.setPose('sit'); })()); let k = 0; const iv = setInterval(() => { G.fx.spawn('note', per.pos.clone().add(new V3(0, 1.4, 0)), 1); if (++k > 6) clearInterval(iv); }, 300); },
     };
     try { await G.ui.talk(N.key, ctx); } catch (e) { console.error(e); }
@@ -642,6 +642,13 @@ G.scenes.walk = (() => {
         }
       }
     }
+    // personal space: dogs never overlap each other or people
+    const dogs = npcDogs.filter((d) => d.root.visible !== false).concat([pet]);
+    for (let i = 0; i < dogs.length; i++) {
+      const a = dogs[i];
+      for (let j = i + 1; j < dogs.length; j++) { const b = dogs[j]; const dx = b.pos.x - a.pos.x, dz = b.pos.z - a.pos.z, dd = Math.hypot(dx, dz), r = 0.3 * (a.S + b.S) + 0.05; if (dd < r && dd > 1e-4) { const k = (r - dd) / dd * 0.5; const wa = a === pet ? 0.3 : 1, wb = b === pet ? 0.3 : 1; a.pos.x -= dx * k * wa; a.pos.z -= dz * k * wa; b.pos.x += dx * k * wb; b.pos.z += dz * k * wb; } }
+      for (const N of npcs) for (const per of [N.person, N.extra]) { if (!per || per.root.visible === false) continue; const dx = a.pos.x - per.pos.x, dz = a.pos.z - per.pos.z, dd = Math.hypot(dx, dz), r = 0.42 + 0.22 * a.S; if (dd < r && dd > 1e-4) { a.pos.x = per.pos.x + dx / dd * r; a.pos.z = per.pos.z + dz / dd * r; } }
+    }
     updateRace(dt);
     // nori
     if (nori) {
@@ -686,6 +693,7 @@ G.scenes.walk = (() => {
       if (key !== promptKey) { promptKey = key; G.ui.prompts(list); }
     }
     updateDetail(dt);
+    { const K = npcs.find((N) => N.key === 'kenji'); if (K && K.person.root.visible !== false) { const d = U.d2(K.person.pos.x, K.person.pos.z, pet.pos.x, pet.pos.z); G.audio.busk(W.kenjiSong || 'sakura', U.clamp(1 - (d - 2.5) / 13, 0, 1)); } else G.audio.busk(null, 0); }
     lightT -= dt; if (lightT < 0) { lightT = 30; applyLighting(); }
   };
   function enterDoor(d) {

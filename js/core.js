@@ -427,6 +427,7 @@ G.audio = (() => {
     gift() { [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, f, 0.18, 0.12, i * 0.07)); },
     yawn(p = 1) { const t = now(), c = A.ctx; const o = c.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(700 * p, t); o.frequency.linearRampToValueAtTime(950 * p, t + 0.3); o.frequency.linearRampToValueAtTime(500 * p, t + 0.9); const g = c.createGain(); env(g, t, 0.15, 0.12, 0.8); o.connect(g); g.connect(sfx); o.start(t); o.stop(t + 1); },
   };
+  A.bus = () => ({ mus, delay, master });
   A.S = S; A.tone = (...a) => tone(...a); A.noise = (...a) => noise(...a); A.now = () => now(); A.sfx = () => sfx;
   A.loop = function (on) { // gentle rain ambience
     if (!A.ctx) return;
@@ -481,6 +482,12 @@ G.audio = (() => {
   return A;
 })();
 
+/* ---------------- throw power: speed AND distance, gentle curve ---------------- */
+G.throwPower = function (p) {
+  const up = -p.vy / innerHeight; const dist = (G.input.sy - p.y) / innerHeight;
+  if (up < 0.45 || dist < 0.025 || p.dur > 1600) return 0;
+  return U.clamp(up * 0.45 + dist * 3.2, 0, 6);
+};
 /* ---------------- misc ---------------- */
 G.vibrate = (ms) => { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) { } };
 G.wait = (ms) => new Promise((r) => setTimeout(r, ms));

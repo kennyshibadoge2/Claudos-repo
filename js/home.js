@@ -450,13 +450,13 @@ G.scenes.home = (() => {
   function releaseHeld(p) {
     const t = held; held = null; G.ui.prompts([]);
     t.inHand = false; t.rest = false;
-    const up = -p.vy / innerHeight;
-    if (up > 0.7 && p.dur < 1200) {
-      const f = U.clamp(up * 2.3, 1.2, 8.5) * (t.def.toy === 'disc' ? 0.85 : 1);
+    const pw = G.throwPower(p);
+    if (pw > 0.3) {
+      const f = U.clamp(0.4 + pw * 1.25, 0.6, 7.5) * (t.def.toy === 'disc' ? 0.9 : 1);
       const fwd = new V3(); cam.getWorldDirection(fwd); fwd.y = 0; fwd.normalize();
       const right = new V3(fwd.z, 0, -fwd.x).multiplyScalar(-1);
-      t.vel.copy(fwd).multiplyScalar(f).addScaledVector(right, U.clamp(p.vx / innerHeight * 2.2, -4, 4));
-      t.vel.y = 1.4 + f * 0.32; t.thrown = true; t.flying = true;
+      t.vel.copy(fwd).multiplyScalar(f).addScaledVector(right, U.clamp(p.vx / innerHeight * 0.6, -2.5, 2.5) * (0.3 + f / 6));
+      t.vel.y = 0.9 + f * 0.3; t.thrown = true; t.flying = true;
       G.audio.play('whoosh'); G.state.stats.throws++;
       tutDone('toy');
       // send fetchers

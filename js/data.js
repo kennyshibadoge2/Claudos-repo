@@ -233,7 +233,7 @@ G.NPCS = {
       await D.say(U.pick(['So soft! It feels like a cloud!', 'It’s smiling! Aki, look, it’s SMILING!', 'Its tail is a cinnamon roll!']));
       const q = await D.ask('What’s ' + D.name + '’s favorite snack?', ['Sweet potato', 'Chicken jerky', 'Your sandwich']);
       await D.say(['Sweet potato? Our grandma makes those!', 'Jerky! We’ll save our allowance for some!', 'HEY! No way! ...Okay maybe a bite.'][q]);
-      D.once('pet', () => { D.friend(1); D.coins(15, 'Tomo & Aki gave you a shiny coin they found!'); });
+      if (!D.flag('coin' + D.today)) { D.setFlag('coin' + D.today); D.friend(1); D.coins(15, 'Tomo & Aki gave you a shiny coin they found!'); }
     },
   },
   rina: {
@@ -242,18 +242,21 @@ G.NPCS = {
       if (!D.flag('met')) { D.setFlag('met'); await D.say('Hey! I’m Rina. This is Blizzard. We run this loop every day. Rain or shine.'); D.friend(1); }
       if (D.pet && D.pet.d.energy < 25) { await D.say(D.name + ' looks wiped out. Head home, rest up, and come race us another day!'); return; }
       const c = await D.ask('Feel like a race? First one to the big oak tree wins!', ['You’re on!', 'Too tired today.']);
-      if (c === 0) { await D.say('On your marks... get set... GO!'); D.race(); } else await D.say('Ha! Next time then. Blizzard’s always ready.');
+      if (c === 0 && D.flag('race' + D.today)) { await D.say(U.pick(['We already raced today! Blizzard needs his beauty sleep. Rematch tomorrow?', 'Ha, again? Blizzard is lying on the grass refusing to move. Tomorrow!'])); return; }
+      if (c === 0) { D.setFlag('race' + D.today); await D.say('On your marks... get set... GO!'); D.race(); } else await D.say('Ha! Next time then. Blizzard’s always ready.');
     },
   },
   kenji: {
     name: 'Kenji', look: 'kenji',
     async talk(D) {
       if (!D.flag('met')) { D.setFlag('met'); await D.say('Hey there! Name’s Kenji. I play songs for anyone with ears. Floppy ears or pointy ears.'); D.friend(1); }
-      const c = await D.ask('Any requests?', ['Something upbeat!', 'A cozy lullaby', 'Let ' + D.name + ' sing!']);
-      if (c === 0) { await D.say('One bouncy tune, coming right up!'); D.music('note', 8); }
-      else if (c === 1) { await D.say('Shh... this one’s called "Nap on a Warm Floor".'); D.music('note', 5); if (D.pet) D.pet.d.mood = Math.min(100, D.pet.d.mood + 5); }
+      const now = G.audio.buskSong && G.audio.buskSong(); if (now && G.BUSK_NAMES[now]) await D.say('That was "' + G.BUSK_NAMES[now] + '". A classic!');
+      const c = await D.ask('Any requests?', ['Something upbeat!', 'A cozy lullaby', 'Let ' + D.name + ' sing!', 'Something old and pretty']);
+      if (c === 0) { await D.say('"Ode to Joy"! Beethoven wrote it, I just play it faster.'); D.music('ode', 10); }
+      else if (c === 1) { await D.say('Shh... "Twinkle Twinkle Little Star". Works on puppies every time.'); D.music('twinkle', 8); if (D.pet) D.pet.d.mood = Math.min(100, D.pet.d.mood + 5); }
+      else if (c === 3) { await D.say('"Sakura Sakura". An old folk song about cherry blossoms. My grandma hummed it.'); D.music('sakura', 10); }
       else {
-        await D.say('A duet? Alright! Take it away, ' + D.name + '!'); D.howl();
+        D.music('twinkle', 8); await D.say('A duet? Alright! Take it away, ' + D.name + '!'); D.howl();
         await D.say('AWOOOO! Incredible! The crowd loves it!');
         if (!D.flag('tip' + D.today)) { D.setFlag('tip' + D.today); D.coins(25, 'You and ' + D.name + ' earned 25 coins in tips!'); D.friend(1); }
       }

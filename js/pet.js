@@ -262,6 +262,7 @@ class Pet {
     if (this.chewT > 0) { this.chewT -= dt; nod = Math.sin(t * 14) * 0.05; }
     m.head.rotation.set(P.hp + this.lookPitch + nod - (petting && this.petPart === 'chin' ? 0.35 : 0) + (moving && !gallop ? Math.sin(ph * 2) * 0.03 : 0),
       this.lookYaw - shake * 0.6, P.ht + tilt + (petting ? Math.sin(t * 2.2) * 0.12 : 0) - shake * 0.5);
+    if (this.gnaw) { m.head.rotation.x += 0.45 + Math.sin(t * 15) * 0.14; m.head.rotation.z += Math.sin(t * 6) * 0.3; m.head.rotation.y += Math.sin(t * 3.3) * 0.25; }
     // mouth / tongue
     this.mouthPop = Math.max(0, (this.mouthPop || 0) - dt);
     let mouth = P.mouth + (this.mouthPop > 0 ? 0.55 : 0) + this.pant * 0.45 + (this.chewT > 0 ? (Math.sin(t * 14) * 0.5 + 0.5) * 0.4 : 0);
@@ -379,12 +380,14 @@ class Person {
     this.root.userData.person = this; this.root.traverse((x) => { if (x.isMesh) x.userData.person = this; });
   }
   get pos() { return this.root.position; }
+  walkPath(pts) { this.path = pts.map((p) => p.clone()); this.target = this.path.shift(); }
+  get idle() { return !this.target && !(this.path && this.path.length); }
   update(dt) {
     this.t += dt; const m = this.m;
     if (this.target) {
       const dx = this.target.x - this.pos.x, dz = this.target.z - this.pos.z, d = Math.hypot(dx, dz);
       if (d > 0.12) { const want = Math.atan2(dx, dz); this.heading += U.clamp(U.angDiff(this.heading, want), -4 * dt, 4 * dt); this.vel = U.damp(this.vel, this.speed * Math.min(1, d / 0.5 + 0.2), 4, dt); }
-      else { this.target = null; }
+      else { this.target = this.path && this.path.length ? this.path.shift() : null; }
     } else this.vel = U.damp(this.vel, 0, 6, dt);
     if (this.vel > 0.01) { this.pos.x += Math.sin(this.heading) * this.vel * dt; this.pos.z += Math.cos(this.heading) * this.vel * dt; }
     this.root.rotation.y = this.heading;
@@ -408,11 +411,12 @@ class Person {
   }
 }
 G.Person = Person;
-G.npcDogBrain = function (owner, radius = 1.6) {
+G.npcDogBrain = function (owner, radius = 1.6, idx = 0) {
+  const side = idx % 2 ? -1 : 1, back = 0.9 + idx * 0.35;
   return (p) => (function* () {
     const o = owner.pos; const d = U.d2(p.pos.x, p.pos.z, o.x, o.z);
-    if (owner.vel > 0.3) { yield* p.goto(o.x - Math.sin(owner.heading + 0.6) * 0.9, o.z - Math.cos(owner.heading + 0.6) * 0.9, { speed: owner.vel * 1.3 / p.S + 0.4, timeout: 1.5, near: 0.3 }); return; }
-    if (d > radius) { yield* p.goto(o.x + U.rand(-0.8, 0.8), o.z + U.rand(-0.8, 0.8), { speed: d > 4 ? 2.6 : 1.3, timeout: 4 }); return; }
+    if (owner.vel > 0.3) { yield* p.goto(o.x - Math.sin(owner.heading + 0.7 * side) * back, o.z - Math.cos(owner.heading + 0.7 * side) * back, { speed: owner.vel * 1.3 / p.S + 0.4, timeout: 1.5, near: 0.3 }); return; }
+    if (d > radius) { yield* p.goto(o.x + side * U.rand(0.5, 1.0), o.z + U.rand(-0.8, 0.8), { speed: d > 4 ? 2.6 : 1.3, timeout: 4 }); return; }
     const r = Math.random();
     if (r < 0.3) yield* p.sniffAround(1);
     else if (r < 0.55) yield* p.act('sit', U.rand(1, 3));

@@ -98,6 +98,7 @@ G.scenes.kennel = (() => {
     return out;
   }
   K.enter = function (opts) {
+    K.from = opts.from || 'home';
     first = !!opts.first || !G.state.pets.length;
     for (const p of pups) scene.remove(p.root); pups = []; sel = null;
     candidates().forEach((c, i) => {
@@ -131,7 +132,7 @@ G.scenes.kennel = (() => {
   };
   K.debugPups = () => pups;
   K.exit = function () { G.ui.hint(null); G.ui.prompts([]); };
-  K.dock = () => (first ? [] : [{ label: 'Home', icon: 'home', cls: 'go', fn: () => G.go('home') }]);
+  K.dock = () => (first ? [] : [{ label: K.from === 'walk' ? 'Leave' : 'Home', icon: K.from === 'walk' ? 'door' : 'home', cls: 'go', fn: () => G.go(K.from === 'walk' ? 'walk' : 'home', { from: 'kennel' }) }]);
   K.onDown = function () { };
   K.onUp = function (p) {
     if (!p.tap) return;

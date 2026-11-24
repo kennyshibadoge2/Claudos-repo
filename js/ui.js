@@ -390,7 +390,17 @@ G.ui = (() => {
       play: ctx.play || noop, petBy: ctx.petBy || noop, race: ctx.race || noop, paint: ctx.paint || noop, music: ctx.music || noop, howl: ctx.howl || noop,
     };
     G.blockInput = true; st.talked = 1;
-    try { if (Math.random() < 0.45 && st.flags.met) { const l = G.smallTalk(key, pet); if (l) await D.say(l); } await N.talk(D); } catch (e) { console.error(e); }
+    const nowT = Date.now(); st.streak = st.lastTalk && nowT - st.lastTalk < 90000 ? (st.streak || 1) + 1 : 1; st.lastTalk = nowT;
+    const AGAIN = { rina: 'Already? Blizzard\u2019s still panting!', ogawa: 'Hm? Back so soon? The sparrows haven\u2019t even moved.', kids: 'AGAIN?! Yaaay!', kenji: 'Another encore? My fingers need a breather!', pip: 'Twice in one walk? People will talk!', sora: 'Oh! You startled me. I was mid-brushstroke.', kato: 'You again, dear! Dango says hello. Again.', hana: 'Haha, hi again! Biscuit thinks you\u2019re following him.', nori: 'The cat gives you a look that says "this again?"', luna: 'Back for more stars? They\u2019re not going anywhere.', yuki: 'Need a refill already?', ito: 'Ah, a curious mind. Very well.' };
+    const BYE = { kids: 'Mom says we have to go home soon! Bye ' + D.name + '!', rina: 'Gotta keep moving or I\u2019ll cool down. Catch you later!', kenji: 'Let me tune up for a bit. Come back for the next set!', pip: 'Sorry, the mail waits for no one! See you!', ogawa: 'Go on, go on. Enjoy your walk. I\u2019ll be here.', nori: 'The cat turns around and starts grooming. Conversation over.' };
+    try {
+      if (st.streak >= 5) await D.say(BYE[key] || U.pick(['Let\u2019s catch up later, okay? ' + D.name + ' looks ready to walk!', 'I should get going, but it\u2019s always nice to see you two!']));
+      else {
+        if (st.streak >= 2) await D.say(AGAIN[key] || U.pick(['Didn\u2019t we just talk? Ha, I don\u2019t mind.', 'Oh! Hello again!']));
+        else if (Math.random() < 0.45 && st.flags.met) { const l = G.smallTalk(key, pet); if (l) await D.say(l); }
+        await N.talk(D);
+      }
+    } catch (e) { console.error(e); }
     ui.endDialog(); G.save(); ui.refresh();
     for (const k in st.flags) if (k.startsWith('once_') && !k.endsWith('_' + (G.walkSession || 0))) delete st.flags[k];
   };
