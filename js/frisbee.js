@@ -211,7 +211,7 @@ G.scenes.frisbee = (() => {
       G.ui.note(body, 'Throw as many times as you can before time runs out! Points = catch distance in meters. Jumping catches x2, flip catches x3. Rivals compete in the lanes beside you.');
       const sk = pet.d.disc || 0;
       G.ui.note(body, 'Want to practice? Throw the disc at home, or at the Dog Park on your walk.');
-      G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, and may get distracted and chew the disc!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
+      G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, may get distracted and chew the disc, and might not let go of it!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
       const l = G.ui.list(body);
       G.CONTESTS.forEach((c) => {
         const open = G.state.unlocked[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id).reduce((m, t) => Math.min(m, t.place), 9);
@@ -255,7 +255,7 @@ G.scenes.frisbee = (() => {
 
   /* ---------------- player throwing ---------------- */
   F.onDown = function (p) { if (st && st.phase === 'tug' && st.tug) { st.tug.ly = p.y; return; } if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
-  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); const tg = st && st.phase === 'tug' && st.tug; if (tg && down) { if (tg.ly == null) tg.ly = p.y; const dy = p.y - tg.ly; tg.ly = p.y; if (dy > 0) { tg.prog = Math.min(1, tg.prog + dy / innerHeight * (tg.resist < 0.45 ? 2.2 : 0.6)); if (Math.random() < 0.15) G.audio.play('tick'); } } };
+  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); const tg = st && st.phase === 'tug' && st.tug; if (tg && down) { if (tg.ly == null) tg.ly = p.y; const dy = p.y - tg.ly; tg.ly = p.y; if (dy > 0) { tg.prog = Math.min(1, tg.prog + dy / innerHeight * (tg.resist < 0.45 ? 2.2 : 0.6) * (1 + (pet.d.disc || 0) / 40)); if (Math.random() < 0.15) G.audio.play('tick'); } } };
   F.onUp = function (p) { if (!st || st.phase !== 'ready') return; const r = F.hand.up(p); if (r) throwDisc(r); };
   function skillInfo() { return G.discSkill(pet); }
   function throwDisc(r) {
@@ -316,7 +316,7 @@ G.scenes.frisbee = (() => {
     pet.do((function* () {
       yield* pet.wait(0.25);
       yield* pet.goto(SIT.x, SIT.z + 0.3, { speed: 4.5 + (pet.d.disc || 0) * 0.02, timeout: 20 }); yield* pet.face(0, -3);
-      const tugP = st && st.cls && st.time > 3 && pet.carry ? U.clamp(0.42 - (pet.d.disc || 0) * 0.004 - (pet.d.bond || 0) * 0.002, 0.08, 0.42) * (st.cls.dis * 0.6 + 0.4) : 0;
+      const tugP = st && st.cls && st.time > 3 && pet.carry ? Math.max(0, 0.45 - (pet.d.disc || 0) * 0.006 - (pet.d.bond || 0) * 0.003) * st.cls.dis : 0;
       if (st && (st.forceTug || Math.random() < tugP)) { st.forceTug = false; yield* tugOfWar(); if (!st) return; }
       pet.setPose('sit'); pet.lookCam = 2; yield* pet.wait(0.3);
       if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; }
