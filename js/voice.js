@@ -12,33 +12,71 @@ G.voice = (() => {
   try { if (window.claude && window.claude.use) window.claude.use('dictation').then((d) => { V.dict = d; if (d) { d.onFinal(({ text }) => emit({ text })); d.onState(({ state }) => { if (state === 'idle' && V.on && V.engine === 'dict') { V.on = false; ui(); } }); } ui(); }).catch(() => { }); } catch (e) { /* not in claude.ai */ }
   V.supported = () => !!(V.dict || SR || (navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
   const pref = () => (G.state && G.state.settings.voiceEngine) || 'auto';
-  V.toggle = function () {
-    if (V.on) { V.stop(); return; }
+  // start listening; resolves true when the mic is live. quiet = no error toasts (automatic starts)
+  V.start = function (quiet) {
+    if (V.on) return Promise.resolve(true);
+    if (V._starting) return V._starting;
     const p = pref();
-    if (p !== 'match' && V.dict) {
-      V.engine = 'dict'; V.on = true; ui();
-      V.dict.start().catch((e) => { V.on = false; ui(); const m = String((e && (e.code || e.message)) || e); G.ui.toast(m.includes('not_granted') ? 'Microphone permission was declined.' : 'Voice could not start here. Try the sound-matching engine in Settings.'); });
-      return;
-    }
-    if (p !== 'match' && SR) {
-      try {
-        rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = navigator.language || 'en-US';
-        rec.onresult = (ev) => { for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) emit({ text: ev.results[i][0].transcript }); };
-        rec.onerror = (ev) => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { V.on = false; rec = null; ui(); startMatch(); } };
-        rec.onend = () => { if (V.on && V.engine === 'sr' && rec) { try { rec.start(); } catch (e) { /* ignore */ } } };
-        rec.start(); V.engine = 'sr'; V.on = true; ui(); return;
-      } catch (e) { rec = null; }
-    }
-    startMatch();
+    V._starting = new Promise((res) => {
+      if (p !== 'match' && V.dict) {
+        V.engine = 'dict';
+        V.dict.start().then(() => { V.on = true; ui(); res(true); }).catch((e) => { const m = String((e && (e.code || e.message)) || e); if (m.includes('not_granted')) { V.denied = true; res(false); } else startMatch().then(res); });
+        return;
+      }
+      if (p !== 'match' && SR) {
+        try {
+          rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = navigator.language || 'en-US';
+          rec.onresult = (ev) => { for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) emit({ text: ev.results[i][0].transcript }); };
+          rec.onerror = (ev) => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { V.on = false; rec = null; ui(); startMatch(); } };
+          rec.onend = () => { if (V.on && V.engine === 'sr' && rec) { try { rec.start(); } catch (e) { /* ignore */ } } };
+          rec.start(); V.engine = 'sr'; V.on = true; ui(); res(true); return;
+        } catch (e) { rec = null; }
+      }
+      startMatch().then(res);
+    }).then((ok) => { V._starting = null; if (!ok && !V.on) { ui(); if (!quiet) G.ui.toast('Couldn’t use the microphone here. Check your browser’s mic permission.'); } return ok || V.on; });
+    return V._starting;
   };
+  // mic button: mute / unmute the always-on listening
+  V.toggle = function () {
+    const s = G.state.settings;
+    if (V.on) { s.voiceOn = false; V.stop(); G.ui.toast('Mic muted. Tap again to turn voice back on.'); G.save(); return; }
+    s.voiceOn = true; V.denied = false; V.start(false).then((ok) => { if (ok) G.ui.toast('Listening! Just talk to your pet.'); }); G.save();
+  };
+  // called on user gestures: starts the mic automatically (once allowed)
+  let lastTry = -99;
+  V.ensure = function () {
+    if (V.on || V._starting || V.denied || !V.supported()) return;
+    if (G.state && G.state.settings.voiceOn === false) return;
+    const now = performance.now() / 1000; if (now - lastTry < 5) return; lastTry = now;
+    V.start(true).then((ok) => { if (ok && !G.state.tut.voiceTip) { G.state.tut.voiceTip = 1; G.ui.toast('Voice is on \u2014 just talk to your pet! (tap the mic up top to mute)'); } });
+  };
+  // something needs the mic right now (teaching). cb(true) if listening, cb(false) to fall back
+  V.need = function (cb) {
+    if (!V.supported()) { cb(false); return; }
+    if (V.on) { cb(true); return; }
+    G.state.settings.voiceOn = true; V.denied = false;
+    V.start(false).then((ok) => cb(!!ok));
+  };
+  // big "listening" bubble with a live level meter
+  let bubT = null;
+  V.listenFor = function (label, secs = 8) {
+    if (!V.on) return;
+    let el = $('#listenBubble');
+    if (!el) { el = document.createElement('div'); el.id = 'listenBubble'; el.innerHTML = '<div class="lbTxt"></div><div class="lbBars"><i></i><i></i><i></i><i></i><i></i></div>'; document.body.appendChild(el); }
+    el.querySelector('.lbTxt').textContent = label; el.classList.add('show');
+    clearTimeout(bubT); bubT = setTimeout(() => V.hideListen(), secs * 1000);
+  };
+  V.hideListen = function () { const el = $('#listenBubble'); if (el) el.classList.remove('show'); clearTimeout(bubT); };
   function startMatch() {
-    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { G.ui.toast('Voice isn’t available in this browser.'); return; }
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((s) => {
-      stream = s; ctx = G.audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(s); an = ctx.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; src.connect(an);
-      fbuf = new Float32Array(an.frequencyBinCount); tbuf = new Float32Array(an.fftSize);
-      V.engine = 'match'; V.on = true; ui(); timer = setInterval(frame, 20);
-    }).catch(() => { V.on = false; ui(); G.ui.toast('Microphone unavailable here (the claude.ai viewer may block it). It works when the game is hosted on its own page.'); });
+    return new Promise((res) => {
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { res(false); return; }
+      navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((s) => {
+        stream = s; ctx = G.audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(s); an = ctx.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; src.connect(an);
+        fbuf = new Float32Array(an.frequencyBinCount); tbuf = new Float32Array(an.fftSize);
+        V.engine = 'match'; V.on = true; ui(); timer = setInterval(frame, 20); res(true);
+      }).catch(() => { V.denied = true; V.on = false; ui(); res(false); });
+    });
   }
   V.stop = function () {
     V.on = false;
@@ -113,26 +151,26 @@ G.voice = (() => {
     if (b0.r.feat) { const thr = b0.c.thr || (b0.c.thr = thrOf(b0.c.list)); if (b0.r.d > thr) return null; if (res[1] && res[1].r.feat && b0.r.d > res[1].r.d * 0.88) return null; }
     return { kind: b0.c.kind, id: b0.c.id, weak: b0.c.weak };
   };
-  V.trainStart = function (opts) { V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); };
+  V.trainStart = function (opts) { V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); V.listenFor(opts.label || 'Listening…', opts.timeout || 9); };
   /* ---------- dispatch ---------- */
   function emit(utt) {
     if (utt.text !== undefined && !norm(utt.text)) return;
-    G.ui.voiceHeard(utt);
+    G.ui.voiceHeard(utt); V.hideListen();
     if (V.train && G.time < V.train.until) { const t = V.train; V.train = null; try { t.cb(utt); } catch (e) { console.error(e); } return; }
     V.train = null;
     const pet = G.activePet(); if (!pet || !pet.root.parent) return;
     const m = V.classify(utt, pet);
     if (!m) { pet.tiltT = 1.2; pet.tiltDir = U.chance(0.5) ? 1 : -1; pet.emote('q', 1); pet.lookCam = 2; return; }
-    if (m.kind === 'name' && m.weak && (pet.d.nameLearn || 0) < 1) { pet.emote('q', 1); pet.tiltT = 1.2; G.ui.toast(pet.name + ' doesn’t know that name yet. Press Call to teach it by voice!'); return; }
+    if (m.kind === 'name' && m.weak && (pet.d.nameLearn || 0) < 1) { pet.emote('q', 1); pet.tiltT = 1.2; G.ui.toast(pet.name + ' doesn’t know that name yet. Press Call to teach it!'); return; }
     const sc = G.cur; if (sc && sc.onVoice && sc.onVoice(m.kind, m.id, pet) !== false) return;
     if (m.kind === 'name') { pet.emote('bang', 0.8); pet.lookCam = 3; pet.excite = 1; pet.voice(); }
     else { pet.do((function* () { pet.lookCam = 3; yield* pet.trick(m.id); pet.happy(2); })()); }
   }
   V.emit = emit; V.textSim = textSim; V.dtw = dtw;
   /* ---------- HUD ---------- */
-  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.title = V.on ? 'Listening (' + V.engine + ') — tap to stop' : 'Voice commands: tap to start'; }
+  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.classList.toggle('muted', !V.on); b.title = V.on ? 'Listening — tap to mute' : 'Voice off — tap to turn on'; }
   V.ui = ui;
-  setInterval(() => { const r = $('#micRing'); if (r) r.style.transform = 'scale(' + (1 + (V.on ? (V.engine === 'match' ? V.level * 0.7 : 0.15 + Math.abs(Math.sin(G.time * 3)) * 0.15) : 0)) + ')'; }, 60);
+  setInterval(() => { const lb = $('#listenBubble'); if (lb && lb.classList.contains('show')) { const lv = V.engine === 'match' ? V.level : 0.3 + 0.3 * Math.abs(Math.sin(G.time * 5)); lb.querySelectorAll('.lbBars i').forEach((e, i) => (e.style.height = (4 + 22 * U.clamp(lv * (1.4 - Math.abs(i - 2) * 0.25) + Math.random() * 0.12, 0, 1)) + 'px')); } const r = $('#micRing'); if (r) r.style.transform = 'scale(' + (1 + (V.on ? (V.engine === 'match' ? V.level * 0.7 : 0.15 + Math.abs(Math.sin(G.time * 3)) * 0.15) : 0)) + ')'; }, 60);
   return V;
 })();
 
@@ -141,9 +179,9 @@ G.voiceTeachName = function (pet, onProgress) {
   const st = G.voice.store(pet.d.id);
   G.ui.hint('Say ' + pet.name + '’s name into the mic!', 6000);
   pet.lookCam = 3; pet.emote('dots', 6);
-  G.voice.trainStart({ timeout: 9, cb: (utt) => {
+  G.voice.trainStart({ timeout: 9, label: 'Say “' + pet.name + '”!', cb: (utt) => {
     const tpl = utt.feats ? { f: utt.feats } : { t: utt.text };
-    if (st.name.length && utt.text !== undefined) { const ok = st.name.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55) || G.voice.textSim(utt.text, pet.name) >= 0.55; if (!ok) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('Hmm, that sounded different. Say the same name each time!'); return; } }
+    if (st.name.length && utt.text !== undefined) { const ok = st.name.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55) || G.voice.textSim(utt.text, pet.name) >= 0.55; if (!ok) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('Hmm, that sounded different. Say the same name each time!'); setTimeout(() => G.voiceTeachName(pet, onProgress), 900); return; } }
     st.name.push(tpl); if (st.name.length > 5) st.name.shift(); delete st.thr;
     pet.d.nameLearn = Math.min(1, (pet.d.nameLearn || 0) + 0.34);
     if (onProgress) onProgress(pet.d.nameLearn);
@@ -154,11 +192,12 @@ G.voiceTeachTrick = function (pet, trickId, n = 0) {
   if (n === 0) st.tricks[trickId] = [];
   G.ui.hint('Say your command for "' + tr.name + '" (' + (n + 1) + '/2)', 6000);
   pet.lookCam = 3; pet.emote('dots', 6);
-  G.voice.trainStart({ timeout: 9, cb: (utt) => {
+  G.voice.trainStart({ timeout: 9, label: 'Say your word for ' + tr.name + '!', cb: (utt) => {
     st.tricks[trickId].push(utt.feats ? { f: utt.feats } : { t: utt.text });
     pet.tiltT = 1; pet.emote('bang', 0.8);
     if (st.tricks[trickId].length < 2) setTimeout(() => G.voiceTeachTrick(pet, trickId, 1), 700);
     else { G.audio.play('chime'); G.ui.banner(pet.name + ' knows the word', 'for ' + tr.name + '!', 2000); pet.happy(4); G.save(); }
   } });
 };
+for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => { if (G.state && G.curName && G.curName !== 'title') G.voice.ensure(); }, true);
 G.ui.voiceHeard = function (utt) { const el = $('#voiceHeard'); if (!el) return; el.textContent = utt.text !== undefined ? 'Heard: “' + utt.text.trim().slice(0, 40) + '”' : 'Heard a sound'; el.style.opacity = 1; clearTimeout(G.ui._vh); G.ui._vh = setTimeout(() => (el.style.opacity = 0), 1800); };

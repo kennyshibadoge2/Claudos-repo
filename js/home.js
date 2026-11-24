@@ -275,7 +275,7 @@ G.scenes.home = (() => {
     if (G.curName !== 'home') return;
     const t = G.state.tut; const p = G.activePet(); if (!p) return;
     if (!t.pet) G.ui.hint('Press and stroke ' + p.name + ' to pet them!', 0);
-    else if ((p.d.nameLearn || 0) < 1 && G.voice.supported() && !t.name) G.ui.hint('Teach ' + p.name + ' their name: tap the mic (top bar), then press Call and say it!', 0);
+    else if ((p.d.nameLearn || 0) < 1 && G.voice.supported() && !t.name) G.ui.hint('Teach ' + p.name + ' their name: press Call, then say their name out loud!', 0);
     else if (!t.call) G.ui.hint('Tap the floor to call ' + p.name + ' over.', 0);
     else if (!t.toy) G.ui.hint('Open Toys, pick the ball and flick it up to throw!', 0);
     else if (!t.trick) G.ui.hint('Teach a trick: stroke down along ' + p.name + '’s back while they stand.', 0);
@@ -344,31 +344,28 @@ G.scenes.home = (() => {
     p.spinV = 0; p.setPose('sit'); p.emote('sweat', 1.2); G.stamp('tail'); yield* p.wait(1.2);
   }
   H.onVoice = function (kind, id) { if (kind === 'name') H.callName(); else H.command(id); };
-  H.callName = function () {
-    const p = G.activePet(); if (!p) return;
-    G.audio.play('call'); const d = p.d; d.nameLearn = d.nameLearn || 0;
-    if (p.ctl) return;
-    if (d.nameLearn < 1 && G.voice.on) {
-      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 4); })()); setFocus(p, 6);
-      G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
-        if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
-        else G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Press Call and say it again.'); });
-      return;
-    }
-    if (d.nameLearn < 1 && G.voice.supported()) {
-      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 3; p.tiltT = 1.2; p.emote('q', 1.2); yield* p.act('sit', 1.5); })());
-      G.ui.hint(p.name + ' doesn\u2019t know their name yet. Turn on the mic and say it!', 5000);
-      G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) H.callName(); }, 700); } }]);
-      return;
-    }
-    if (d.nameLearn < 1) {
-      if (G.voice.supported() && !p._micTip) { p._micTip = 1; G.ui.toast('Tip: tap the mic in the top bar, then press Call and say ' + p.name + '\u2019s name to teach it by voice!'); }
+  function teachName(p) {
+    G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
+      if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
+      else { G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Say it again!'); setTimeout(() => { if (G.curName === 'home' && (p.d.nameLearn || 0) < 1 && G.voice.on) teachName(p); }, 900); } });
+  }
+  function tapLearnName(p) {
+    const d = p.d;
       const now = G.time; if (!p._lastCall || now - p._lastCall > 1.0) { d.nameLearn = Math.min(1, d.nameLearn + 0.2); p._lastCall = now; }
       p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 2; p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(d.nameLearn >= 1 ? 'heart' : 'q', 1.2); yield* p.act('sit', 1.5); })());
       if (d.nameLearn >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Now they\u2019ll come when called', 2400); p.happy(8); G.stamp('named'); }
       else G.ui.toast(p.name + ' tilts their head... learning their name (' + Math.round(d.nameLearn * 100) + '%). Keep calling!');
+  }
+  H.callName = function () {
+    const p = G.activePet(); if (!p) return;
+    G.audio.play('call'); const d = p.d; d.nameLearn = d.nameLearn || 0;
+    if (p.ctl) return;
+    if (d.nameLearn < 1 && G.voice.supported() && !G.voice.denied) {
+      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 5); })()); setFocus(p, 6);
+      G.voice.need((ok) => { if (ok) teachName(p); else tapLearnName(p); });
       return;
     }
+    if (d.nameLearn < 1) { tapLearnName(p); return; }
     p.baseY = 0; if (p.carry) p.drop(scene);
     p.stop(); p.emote('heart', 1); p.voice();
     p.do((function* () { yield* p.goto(CALL.x, CALL.z - 0.3, { speed: 2.6 }); yield* p.face(cam.position.x, cam.position.z); p.lookCam = 3; p.excite = 1; yield* p.act('sit', 2.5); })());
@@ -408,8 +405,8 @@ G.scenes.home = (() => {
     yield* p.goto(BED.x + off[0], BED.z + off[1], { speed: 0.8, near: 0.08 });
     yield* p.face(BED.x + 1, BED.z + 2);
     yield* p.act('lie', 1);
-    p.setPose('sleep'); p.baseY = 0.1; let t = 0, z = 0;
-    while (p.d.energy < 92 && t < 40) { t += p.dt; z += p.dt; if (z > 1.8) { z = 0; p.fx('zzz', 1); } yield; }
+    p.setPose('sleep'); p.baseY = 0.1; let t = 0, z = 0, dz = U.rand(3, 6);
+    while (p.d.energy < 92 && t < 40) { t += p.dt; z += p.dt; dz -= p.dt; if (z > 1.8) { z = 0; p.fx('zzz', 1); } if (dz <= 0) { dz = U.rand(7, 12); G.dreams.show(p, scene); } yield; }
     p.baseY = 0; yield* p.yawn(); yield* p.stretch();
   }
   function* social(p, o) {
@@ -695,7 +692,7 @@ G.scenes.home = (() => {
     }
     while (T.accum > 85) {
       T.accum -= 85;
-      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
+      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
       else { pet.happy(1.1, false); G.fx.spawn('heart', hit.point.clone().add(new V3(0, 0.05, 0)), 1); }
       G.state.stats.pets++; tutDone('pet');
       if (praise && praise.pet === pet && !praise.voice) doPraise();
@@ -764,12 +761,11 @@ G.scenes.home = (() => {
         praise = { pet, id, until: G.time + 5 };
         G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]);
         G.ui.hint(pet.name + ' tried "' + tr.name + '"! Praise them to teach it.', 3500);
-      } else if (!G.voice.on) {
-        G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) G.ui.hint('Mic on! Do the gesture again, then say the command.', 4000); }, 600); } }]);
-        G.ui.hint(pet.name + ' tried "' + tr.name + '"! Turn on the mic to teach it with your voice.', 5000);
       } else {
-        praise = { pet, id, until: G.time + 9, voice: true };
-        voiceTeachStep(pet, id);
+        G.voice.need((ok) => {
+          if (ok) { praise = { pet, id, until: G.time + 9, voice: true }; voiceTeachStep(pet, id); }
+          else { praise = { pet, id, until: G.time + 5 }; G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]); G.ui.hint('No mic available \u2014 praise ' + pet.name + ' to teach "' + tr.name + '".', 3500); }
+        });
       }
     } else { pet.happy(2); G.ui.toast(pet.name + ': ' + tr.name + '!'); }
   }
@@ -779,7 +775,7 @@ G.scenes.home = (() => {
     G.ui.hint(have ? 'Say your word for "' + tr.name + '" again!' : 'Now say a command word for "' + tr.name + '" (like "' + tr.name.toLowerCase() + '")!', 7000);
     G.ui.prompts([]);
     pet.emote('dots', 8);
-    G.voice.trainStart({ timeout: 9, cb: (utt) => {
+    G.voice.trainStart({ timeout: 9, label: have ? 'Say \u201c' + (st.tricks[id][0].t || tr.name.toLowerCase()) + '\u201d again!' : 'Say a word for ' + tr.name + '!', cb: (utt) => {
       if (!praise || praise.pet !== pet || praise.id !== id) return;
       const list = st.tricks[id] = st.tricks[id] || [];
       if (list.length && utt.text !== undefined && !list.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55)) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('That sounded like a different word. Use the same word each time!'); praise.until = G.time + 9; voiceTeachStep(pet, id); return; }
@@ -947,7 +943,7 @@ G.scenes.home = (() => {
     p.pos.set(0, 0, 1.9);
     if (!cancel) {
       p.d.clean = 100; p.wet = 1; p.happy(8); G.stamp('bath');
-      p.do((function* () { p.jump(2.6); yield* p.waitUntil(() => !p.airborne, 2); yield* p.shake(); p.fx('sparkle', 8); G.audio.play('sparkle'); G.ui.toast(p.name + ' is squeaky clean!'); p.excite = 1; yield* p.act('sit', 1.5); })());
+      p.do((function* () { p.jump(2.6); yield* p.waitUntil(() => !p.airborne, 2); yield* p.shake(); p.fx('sparkle', 8); G.audio.play('sparkle'); G.ui.toast(p.name + ' is squeaky clean!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; p.excite = 1; yield* p.act('sit', 1.5); })());
     }
   }
   function endModes() {

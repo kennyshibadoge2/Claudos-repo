@@ -85,15 +85,17 @@ G.scenes.kennel = (() => {
     for (let i = 0; i < 3; i++) { const b = G.M.item(U.pick(['ball', 'duck', 'squeaky'])); b.position.set(U.rand(-2, 2), 0.06, U.rand(-1.2, 1.2)); scene.add(b); }
     const hills = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), G.M.mat(season === 'winter' ? '#e8f0f6' : '#8fc46a', { r: 1 })); hills.scale.set(1.6, 0.25, 1); hills.position.set(0, -0.5, -26); scene.add(hills);
   };
+  // first pet is free; each extra pet costs more (cats a little less)
+  function adoptPrice(cat) { const base = [0, 600, 900, 1200][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
   function candidates() {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
     const seed = G.state.day * 7 + G.state.pets.length * 13;
     const r = (i) => U.hash(seed, i, 3);
     const coats = G.PET_COATS.dog.slice();
-    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: G.state.pets.length ? 200 : 0 });
+    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(false) });
     const cc = G.PET_COATS.cat;
-    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: G.state.pets.length ? 150 : 0 });
+    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: adoptPrice(true) });
     if (G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
     return out;
   }

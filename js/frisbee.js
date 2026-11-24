@@ -17,7 +17,8 @@ G.scenes.frisbee = (() => {
   let scene, cam, pet, mc, crowd, crowdData = [], disc, discId = 'disc', from = 'home', lookV = new V3(0, 0.8, 10);
   let boardCtx, boardTex, st = null, tiers = [], rivals = [], balloons = [], blimp = null, shibaBalloon = null, jumbo = null, jumboCam = null, jumboRT = null, frame = 0, boardEl = null;
   const SIT = new V3(0.9, 0, 0.7);
-  const LANES = [-10, -5.2, 5.2, 10];
+  const LANES = [-10.5, -6, 6];
+  let introFocus = null;
   F.init = function () {
     scene = new THREE.Scene(); F.scene = scene; scene.background = new THREE.Color('#9fd4ff'); scene.fog = new THREE.Fog('#9fd4ff', 55, 130);
     cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam; F.hand = new G.DiscHand(scene, cam);
@@ -105,18 +106,19 @@ G.scenes.frisbee = (() => {
   const COATS = { shiba: ['red', 'sesame', 'cream', 'blacktan'], mame: ['red', 'cream'], corgi: ['corgi'], husky: ['husky'], golden: ['golden'], dachshund: ['dachs'], pug: ['pug'] };
   function randLook() { return { skin: U.pick(['#f6d2b8', '#e6b894', '#c99a76', '#8a5a3a', '#f3d0b5']), hair: U.pick(['#2a1d18', '#5a3a26', '#c4622a', '#e8d2a8', '#3b2420', '#7a5cff']), style: U.pick(['short', 'bob', 'pony', 'bun', 'messy']), top: U.pick(['#e2574c', '#4aa6e0', '#79b25a', '#f2c24b', '#7a5cff', '#f39bb0', '#33415c']), bottom: U.pick(['#3b4a6a', '#3a3a3a', '#5a4a3a', '#2c2c3a']), h: U.rand(0.92, 1.05), extra: U.chance(0.3) ? ['cap'] : U.chance(0.2) ? ['band'] : [] }; }
   function clearRivals() { for (const r of rivals) { scene.remove(r.pet.root); scene.remove(r.person.root); scene.remove(r.disc); scene.remove(r.tag); } rivals = []; }
+  const RIVAL_SKILL = [8, 28, 48, 68, 88], RIVAL_F = [[4.5, 9], [6, 11], [7.5, 13], [9, 15], [10, 17]];
   function makeRivals(cls) {
     clearRivals();
-    const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+    const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
     const skill = G.CONTEST_RIVALS[cls.tier];
     pool.forEach(([owner, dog, breed], i) => {
       const x = LANES[i];
-      const p = new G.Pet({ name: dog, breed, coat: U.pick(COATS[breed] || ['red']), mood: 90, acc: { collar: U.pick(['collar_blue', 'collar_red', 'collar_pink', 'collar_gold']) } }, { npc: true });
-      p.pos.set(x + 0.9, 0, 0.7); p.heading = 0; p.brain = null; p.bounds = null; scene.add(p.root);
+      const p = new G.Pet({ name: dog, breed, coat: U.pick(COATS[breed] || ['red']), mood: 90, disc: Math.max(0, RIVAL_SKILL[cls.tier] + U.rand(-6, 6)), acc: { collar: U.pick(['collar_blue', 'collar_red', 'collar_pink', 'collar_gold']) } }, { npc: true });
+      p.pos.set(x + 0.9, 0, 0.7); p.heading = 0; p.brain = null; p.bounds = (q) => { q.pos.x = U.clamp(q.pos.x, x - 2, x + 2); q.pos.z = U.clamp(q.pos.z, -0.5, 70); }; scene.add(p.root);
       const per = new G.Person(randLook()); per.pos.set(x, 0, 0); per.heading = 0; scene.add(per.root);
       const d = G.M.item('disc'); d.scale.setScalar(1.6); scene.add(d);
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: G.textTex(dog, { font: '700 44px Fredoka, sans-serif', bg: 'rgba(59,42,31,.75)', color: '#fff', pad: 12, radius: 22 }), depthTest: false })); tag.scale.set(1.0, 0.3, 1); tag.renderOrder = 15; scene.add(tag);
-      rivals.push({ owner, dog, breed, x, pet: p, person: per, disc: d, tag, skill, score: 0, state: 'ready', t: U.rand(0.5, 2.2), throw: null });
+      rivals.push({ owner, dog, breed, x, pet: p, person: per, disc: d, tag, skill, tier: cls.tier, score: 0, state: 'ready', t: U.rand(0.8, 2.4), fl: null });
     });
   }
   function updateRival(r, dt, running) {
@@ -124,32 +126,41 @@ G.scenes.frisbee = (() => {
     r.tag.position.copy(p.pos).setY(p.sizeH + 0.45);
     if (r.state === 'ready') {
       r.disc.position.copy(r.person.pos).add(new V3(0.3, 1.0, 0.3)); r.disc.rotation.set(0.5, 0, 0);
-      p.setPose('sit'); p.moveTarget = null; p.heading = 0;
+      p.setPose('sit'); p.moveTarget = null; p.heading = 0; p.extraPitch = 0;
       if (running && r.t <= 0) {
-        const sk = r.skill; const D = U.rand(sk.d[0], sk.d[1]); const T = 0.6 + D / 9;
-        const caught = Math.random() < sk.catch; const kind = !caught ? 'miss' : Math.random() < sk.flip ? 'flip' : Math.random() < sk.jump ? 'jump' : 'ground';
-        r.throw = { D, T, k: 0, land: new V3(r.x + U.rand(-1, 1), 0, D), kind, jumped: false };
+        const fr = RIVAL_F[r.tier]; const f = U.rand(fr[0], fr[1]);
+        const pos = r.person.pos.clone().add(new V3(0.3, 1.15, 0.3)); const vel = new V3(U.rand(-0.4, 0.4), U.rand(1.8, 2.8) + f * 0.1, f);
+        const path = G.discSim(pos, vel, { wind: st ? st.wind * 0.7 : 0, bounds: { x0: r.x - 2, x1: r.x + 2, z0: 0.2, z1: 70 } });
+        let plan = null;
+        if (Math.random() < r.skill.catch) {
+          plan = G.discPlan(p, path);
+          if (!plan) { // trained dogs sprint for a low catch just before it lands
+            let gi = path.findIndex((q) => q.ground); gi = Math.max(1, (gi < 0 ? path.length : gi) - 2);
+            const q = path[gi]; const S0 = G.discSkill(p); const dist = U.d2(p.pos.x, p.pos.z, q.p.x, q.p.z);
+            plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, dist / Math.max(0.3, q.t - S0.delay)) }) };
+          }
+        }
+        r.fl = { path, t: 0, i: 0, plan, jumped: false };
         r.state = 'fly'; r.person.waveT = 0.4; if (Math.random() < 0.3) G.audio.play('whoosh');
         p.setPose('stand'); p.excite = 1;
       }
     } else if (r.state === 'fly') {
-      const th = r.throw; th.k = Math.min(1, th.k + dt / th.T);
-      const start = r.person.pos.clone().add(new V3(0.3, 1.1, 0.3));
-      r.disc.position.copy(start).lerp(th.land, th.k); r.disc.position.y = 1.1 * (1 - th.k) + Math.sin(th.k * Math.PI) * (1 + th.D * 0.08) + (th.kind === 'miss' ? 0 : 0.5 * th.k); r.disc.rotation.y += dt * 20;
-      const catchK = th.kind === 'miss' ? 1 : 0.9;
-      const target = start.clone().lerp(th.land, catchK).setY(0);
-      const remain = Math.max(0.1, (catchK - th.k) * th.T);
-      const dist = U.d2(p.pos.x, p.pos.z, target.x, target.z);
-      p.moveTarget = target; p.speedMul = U.clamp(dist / remain / p.S, 1, 9);
-      if ((th.kind === 'jump' || th.kind === 'flip') && !th.jumped && th.k > catchK - 0.12) { th.jumped = true; p.jump(th.kind === 'flip' ? 4 : 3.4); p.setPose('leap', 10); th.flipT0 = G.time; }
-      if (th.kind === 'flip' && th.jumped && p.airborne) p.extraPitch = -Math.PI * 2 * U.clamp((G.time - th.flipT0) / 0.75, 0, 1); else if (!p.airborne) p.extraPitch = 0;
-      if (th.k >= catchK) {
-        p.moveTarget = null;
-        if (th.kind !== 'miss') { const mult = th.kind === 'flip' ? 3 : th.kind === 'jump' ? 2 : 1; const pts = Math.round(th.D * mult); r.score += pts; popText(p.pos.clone().setY(1.4), '+' + pts + (mult > 1 ? (mult === 3 ? ' FLIP!' : ' JUMP') : ''), mult === 3 ? '#7a5cff' : '#ee8a3c'); if (mult === 3 && Math.random() < 0.5) commentary(r.dog + ' with a flip catch!'); crowdJump(0.3 * mult, r.x); hud(); }
-        else r.disc.position.y = 0.03;
-        r.state = Math.random() < r.skill.wander ? 'wander' : 'back'; r.t = U.rand(2.5, 4.5);
-        if (r.state === 'wander') { p.emote('note', 1.5); if (Math.random() < 0.4) commentary(r.dog + ' is taking a little detour...'); }
-      }
+      const F2 = r.fl; F2.t += dt; const P = F2.path; while (F2.i < P.length - 1 && P[F2.i].t < F2.t) F2.i++;
+      r.disc.position.copy(P[F2.i].p); r.disc.rotation.y += dt * 20; r.disc.rotation.z = P[F2.i].bank || 0;
+      const plan = F2.plan; const S = plan ? plan.S : G.discSkill(p);
+      const tgt = plan ? plan.p : P[P.length - 1].p;
+      if (F2.t > S.delay) { if (U.d2(p.pos.x, p.pos.z, tgt.x, tgt.z) > 0.25) { p.moveTarget = new V3(tgt.x, 0, tgt.z); p.speedMul = S.spd / p.S; } else p.moveTarget = null; }
+      if (plan && plan.kind !== 'ground' && !F2.jumped && F2.t >= plan.t - 0.34) { F2.jumped = true; F2.t0 = G.time; p.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.2 : 0.4)); p.setPose('leap', 10); }
+      if (plan && plan.kind === 'flip' && F2.jumped && p.airborne) p.extraPitch = -Math.PI * 2 * U.clamp((G.time - F2.t0) / 0.8, 0, 1);
+      if (plan && F2.t >= plan.t) {
+        const mult = plan.kind === 'flip' ? 3 : plan.kind === 'jump' ? 2 : 1; const pts = Math.round(Math.max(1, plan.p.z - 1) * mult); r.score += pts;
+        popText(p.pos.clone().setY(1.4), '+' + pts + (mult > 1 ? (mult === 3 ? ' FLIP!' : ' JUMP') : ''), mult === 3 ? '#7a5cff' : '#ee8a3c');
+        if (mult >= 2 && Math.random() < 0.5) commentary(r.dog + (mult === 3 ? ' with a flip catch!' : ' leaps for it!')); crowdJump(0.3 * mult, r.x); hud();
+        r.state = 'got'; p.moveTarget = null;
+      } else if (!plan && (F2.i >= P.length - 1 && (U.d2(p.pos.x, p.pos.z, tgt.x, tgt.z) < 0.6 || F2.t > P[P.length - 1].t + 4))) { r.state = 'got'; p.moveTarget = null; if (Math.random() < 0.3) commentary('Ooh, ' + r.dog + ' misses that one!'); }
+    } else if (r.state === 'got') {
+      r.disc.position.copy(p.mouthWorld());
+      if (!p.airborne) { p.extraPitch = 0; r.state = Math.random() < r.skill.wander ? 'wander' : 'back'; r.t = U.rand(2.5, 4.5); if (r.state === 'wander') { p.emote('note', 1.5); if (Math.random() < 0.4) commentary(r.dog + ' is taking a little detour...'); } }
     } else if (r.state === 'wander') {
       r.disc.position.copy(p.mouthWorld());
       if (!p.task) p.do(p.zoomies(p.pos.x, p.pos.z, 1.2, 1));
@@ -190,7 +201,7 @@ G.scenes.frisbee = (() => {
     if (pet) { if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; } scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.gnaw = false; }
     clearRivals(); $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.prompts([]); st = null;
   };
-  F.debug = () => ({ st, rivals, pet });
+  F.debug = () => ({ st, rivals, pet, start, bringBack });
   F.dock = () => [{ label: 'Cups', icon: 'trophy', fn: () => { if (!st || st.phase === 'done' || st.phase === 'done2') { st = null; clearRivals(); classMenu(); } } }, { label: 'Leave', icon: 'door', cls: 'go', fn: () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' }) }];
   function setTier(t) { t = Math.max(0, t); tiers.forEach((g, i) => (g.visible = i === t)); crowd.body.count = crowd.head.count = [70, 130, 220, 280, 320][t]; jumbo = tiers[t].userData.jumbo || null; }
   function* sitBrain(p) { p.lookCam = 2; yield* p.face(p.pos.x, p.pos.z + 5); p.setPose('sit'); yield* p.wait(2); }
@@ -216,7 +227,11 @@ G.scenes.frisbee = (() => {
       makeRivals(cls);
       const port = G.M.icons.person('pepper');
       await G.ui.say('MC Pepper', U.pick(['Welcome, welcome to the ' + cls.name + '!', 'Laaadies and gentlemen and GOOD DOGS! The ' + cls.name + ' is ON!']), port);
-      await G.ui.say('MC Pepper', cls.time + ' seconds on the clock! Five teams, one field. In the center lane: ' + pet.name + ' the ' + G.BREEDS[pet.d.breed].name + '!', port);
+      await G.ui.say('MC Pepper', 'Four teams, one field! Let\u2019s meet our competitors!', port); if (!st) return;
+      for (const r of rivals) { introFocus = r.pet.pos; await G.ui.say('MC Pepper', U.pick(['In lane ', 'Over in lane ', 'Lane ']) + (LANES.indexOf(r.x) + 1) + ': ' + r.owner + ' and ' + r.dog + ' the ' + G.BREEDS[r.breed].name + '! ' + U.pick(['A crowd favorite!', 'Watch those jumps!', 'They trained all winter!', 'First time at this level!', 'Last year\u2019s runner-up!']), port); if (!st) { introFocus = null; return; } r.pet.voiceCd = 0; r.pet.voice(); }
+      introFocus = pet.pos;
+      await G.ui.say('MC Pepper', 'And in the center lane: YOU and ' + pet.name + ' the ' + G.BREEDS[pet.d.breed].name + '! ' + cls.time + ' seconds on the clock. Most points wins!', port);
+      introFocus = null;
       G.ui.endDialog(); if (!st) return; boardEl.classList.remove('hidden'); hud();
       if (cls.tier >= 4) fireworks(6);
       for (const n of ['3', '2', '1']) { G.ui.banner(n, null, 700); G.audio.play('blip'); await G.wait(800); if (!st) return; }
@@ -239,14 +254,14 @@ G.scenes.frisbee = (() => {
   }
 
   /* ---------------- player throwing ---------------- */
-  F.onDown = function (p) { if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
-  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); };
+  F.onDown = function (p) { if (st && st.phase === 'tug' && st.tug) { st.tug.ly = p.y; return; } if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
+  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); const tg = st && st.phase === 'tug' && st.tug; if (tg && down) { if (tg.ly == null) tg.ly = p.y; const dy = p.y - tg.ly; tg.ly = p.y; if (dy > 0) { tg.prog = Math.min(1, tg.prog + dy / innerHeight * (tg.resist < 0.45 ? 2.2 : 0.6)); if (Math.random() < 0.15) G.audio.play('tick'); } } };
   F.onUp = function (p) { if (!st || st.phase !== 'ready') return; const r = F.hand.up(p); if (r) throwDisc(r); };
   function skillInfo() { return G.discSkill(pet); }
   function throwDisc(r) {
     st.phase = 'flight'; st.throws++; G.ui.hint(null);
     if (r.power > 4) G.audio.play('whoosh'); G.state.stats.throws++;
-    const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -4.5, x1: 4.5, z0: -3, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
+    const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -3.4, x1: 3.4, z0: 0.4, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
     const plan = G.discPlan(pet, path); const S = plan ? plan.S : G.discSkill(pet);
     st.plan = plan; st.landing = path[path.length - 1].p.clone();
     pet.stop(); pet.brain = null; pet.excite = 1;
@@ -301,18 +316,41 @@ G.scenes.frisbee = (() => {
     pet.do((function* () {
       yield* pet.wait(0.25);
       yield* pet.goto(SIT.x, SIT.z + 0.3, { speed: 4.5 + (pet.d.disc || 0) * 0.02, timeout: 20 }); yield* pet.face(0, -3);
+      const tugP = st && st.cls && st.time > 3 && pet.carry ? U.clamp(0.42 - (pet.d.disc || 0) * 0.004 - (pet.d.bond || 0) * 0.002, 0.08, 0.42) * (st.cls.dis * 0.6 + 0.4) : 0;
+      if (st && (st.forceTug || Math.random() < tugP)) { st.forceTug = false; yield* tugOfWar(); if (!st) return; }
       pet.setPose('sit'); pet.lookCam = 2; yield* pet.wait(0.3);
       if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; }
       pet.happy(2); pet.voice('happy');
       if (st && st.phase === 'return') { if (st.practice || st.time > 0) { st.phase = 'ready'; F.hand.show(discId); } else { st.phase = 'done'; finish(); } }
     })());
   }
+  function* tugOfWar() {
+    st.phase = 'tug'; st.tug = { prog: 0, t: 0, resist: 1, ly: null };
+    commentary(pet.name + ' won\u2019t let go! Pull it away!'); G.audio.play('growl');
+    G.ui.hint('TUG OF WAR! Drag DOWN on the screen to pull the disc away \u2014 pull hardest when ' + pet.name + ' relaxes!', 4500);
+    pet.moveTarget = null; pet.lookCam = 1;
+    const base = pet.pos.clone();
+    while (st && st.phase === 'tug') {
+      const tg = st.tug; tg.t += pet.dt; tg.resist = 0.5 + 0.5 * Math.sin(tg.t * 3.2);
+      pet.setPose('tug'); pet.excite = 1; pet.heading = Math.PI; pet.lookTarget = new V3(base.x + Math.sin(tg.t * 13) * 1.4, 0.35, base.z - 2.5);
+      pet.pos.x = base.x + Math.sin(tg.t * 9) * 0.04; pet.pos.z = base.z + 0.2 * tg.resist - tg.prog * 0.35;
+      if (tg.prog >= 1) break;
+      tg.prog = Math.max(0, tg.prog - pet.dt * 0.07);
+      if (Math.random() < pet.dt * 0.7) G.audio.play('growl');
+      $('#contestHud').innerHTML = 'TUG! <span class="tugbar"><i style="width:' + Math.round(tg.prog * 100) + '%;background:' + (tg.resist < 0.45 ? '#79b25a' : '#e2574c') + '"></i></span> Time <span>' + Math.max(0, Math.ceil(st.time)) + 's</span>';
+      if (st.time <= 0) break;
+      yield;
+    }
+    if (!st) return;
+    pet.lookTarget = null; pet.pos.copy(base); G.audio.play('pop'); G.audio.play('cheer'); crowdJump(0.6, 0); pet.emote('sweat', 1);
+    commentary('Got it! ' + pet.name + ' finally lets go!'); G.stamp('tug'); st.phase = 'return'; st.tug = null; hud();
+  }
   function goRogue() {
     st.phase = 'rogue'; st.obey = 0;
     const kind = U.pick(['chew', 'chew', 'zoom', 'sniff']);
-    G.ui.prompts([{ label: G.voice.on ? 'Say "' + pet.name + '"! (or tap)' : 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]);
+    G.ui.prompts([{ label: 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]); if (G.voice.listenFor) G.voice.listenFor('Say "' + pet.name + '"!', 20);
     commentary(kind === 'chew' ? 'Uh oh, ' + pet.name + ' is chewing the disc!' : kind === 'zoom' ? pet.name + ' has the zoomies!' : pet.name + ' found something interesting to sniff...');
-    G.ui.toast('Tap "Call" (or tap ' + pet.name + ') again and again to get them back!');
+    G.ui.toast(G.voice.on ? 'Say "' + pet.name + '" to call them back, or tap Call a few times!' : 'Tap Call (or tap ' + pet.name + ') a few times to get them back!');
     pet.do((function* () {
       const spot = new V3(U.clamp(pet.pos.x + U.rand(-4, 4), -3, 3), 0, U.clamp(pet.pos.z + U.rand(-2, 4), 3, 40));
       yield* pet.goto(spot.x, spot.z, { speed: 2.2, timeout: 3 });
@@ -329,7 +367,7 @@ G.scenes.frisbee = (() => {
   F.call = function (voiced) {
     if (!st || st.phase !== 'rogue') return;
     G.audio.play('call'); const learned = (pet.d.nameLearn || 0) >= 1;
-    st.obey += voiced ? 0.6 : (learned ? 0.3 : 0.18) + (pet.d.bond || 0) * 0.002;
+    st.obey += voiced ? 1 : (learned ? 0.36 : 0.26) + (pet.d.bond || 0) * 0.002;
     pet.lookCam = 1; pet.tiltT = 0.6; pet.emote(st.obey >= 1 ? 'bang' : 'q', 0.6);
     if (st.obey >= 1) { G.ui.prompts([]); pet.gnaw = false; pet.stop(); commentary(pet.name + ' is coming back!'); pet.voice(); bringBack(); }
   };
@@ -373,7 +411,7 @@ G.scenes.frisbee = (() => {
   F.update = function (dt) {
     if (!pet) return;
     frame++;
-    const running = !!(st && st.cls && ['ready', 'flight', 'return', 'rogue'].includes(st.phase) && st.time > 0);
+    const running = !!(st && st.cls && ['ready', 'flight', 'return', 'rogue', 'tug'].includes(st.phase) && st.time > 0);
     if (running) {
       st.time -= dt;
       if (st.time <= 0) {
@@ -401,11 +439,13 @@ G.scenes.frisbee = (() => {
     if (blimp && blimp.parent.visible) { const a = G.time * 0.05; blimp.position.set(Math.cos(a) * 40, 32, 40 + Math.sin(a) * 30); blimp.rotation.y = -a + Math.PI; }
     if (jumbo && jumbo.parent.visible && frame % 3 === 0) { jumboCam.position.copy(pet.pos).add(new V3(2.2, 1.4, 2.8)); jumboCam.lookAt(pet.pos.clone().setY(0.5)); jumbo.visible = false; G.renderer.setRenderTarget(jumboRT); G.renderer.render(scene, jumboCam); G.renderer.setRenderTarget(null); jumbo.visible = true; }
     const portrait = G.aspect() < 0.9;
-    let pos = portrait ? new V3(0.5, 2.6, -5.2) : new V3(0.6, 1.8, -3.4), look = new V3(0, 0.9, 10);
+    let pos = portrait ? new V3(0.5, 3.2, -6.6) : new V3(0.6, 2.2, -4.4), look = new V3(0, 0.7, 11);
+    if (introFocus) { look = introFocus.clone().setY(0.5); pos = look.clone().add(new V3(introFocus.x > 0.5 ? -1.6 : introFocus.x < -0.5 ? 1.6 : 0.4, 1.5, -3.6)); }
     if (st && (st.phase === 'flight' || st.phase === 'return' || st.phase === 'rogue')) {
       const dz = disc.flying ? disc.pos.z : pet.pos.z;
       look = new V3(pet.pos.x * 0.6, 0.7, (pet.pos.z + Math.min(dz, pet.pos.z + 10)) / 2 + 1.5); pos = new V3(pet.pos.x * 0.4 + 0.4, portrait ? 3.6 : 2.7, Math.max(-3.4, pet.pos.z - (portrait ? 8.5 : 6.5)));
     }
+    if (st && st.phase === 'tug') { look = pet.pos.clone().setY(0.35); pos = pet.pos.clone().add(new V3(0.5, 1.3, -2.4)); }
     if (st && (st.phase === 'done' || st.phase === 'done2')) { look = pet.pos.clone().setY(0.4); pos = pet.pos.clone().add(new V3(1.2, 1.2, -2.6)); }
     const k = 1 - Math.exp(-2.6 * dt); cam.position.lerp(pos, k); lookV.lerp(look, k); cam.lookAt(lookV);
   };

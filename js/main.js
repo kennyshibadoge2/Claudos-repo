@@ -41,8 +41,8 @@
     if (dt > 0.1) dt = 0.1;
     G.time += dt;
     try { if (G.cur && G.cur.update) G.cur.update(dt); } catch (e) { console.error(e); }
-    G.fx.update(dt);
-    if (G.cur) G.renderer.render(G.cur.scene, G.cur.camera);
+    G.fx.update(dt); G.dreams.update(dt);
+    if (G.cur) { G.renderer.render(G.cur.scene, G.cur.camera); G.photos.afterRender(); }
     saveT += dt; if (saveT > 15) { saveT = 0; G.save(); G.checkStamps(); }
     // adaptive quality: drop pixel ratio if the device struggles
     fpsAcc += dt; frames++;

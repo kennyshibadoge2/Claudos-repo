@@ -206,6 +206,17 @@ h3{margin:14px 0 6px;font-size:18px}
   #prompts{bottom:calc(80px + var(--safe-b))}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.tugbar{display:inline-block;width:130px;height:13px;background:#ead7bb;border-radius:8px;vertical-align:middle;overflow:hidden;margin:0 6px}.tugbar i{display:block;height:100%;border-radius:8px;transition:width .08s}
+#listenBubble{position:fixed;left:50%;top:22%;transform:translate(-50%,-10px) scale(.9);opacity:0;pointer-events:none;z-index:40;background:#fff;border:3px solid #f39bb0;border-radius:24px;padding:10px 18px 10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 8px 24px rgba(59,42,31,.25);transition:all .25s;font:700 18px Fredoka,sans-serif;color:#3b2a1f}
+#listenBubble.show{opacity:1;transform:translate(-50%,0) scale(1)}
+#listenBubble::before{content:'';width:22px;height:22px;border-radius:50%;background:#e2574c;box-shadow:0 0 0 0 rgba(226,87,76,.6);animation:lbPulse 1.2s infinite}
+@keyframes lbPulse{0%{box-shadow:0 0 0 0 rgba(226,87,76,.55)}100%{box-shadow:0 0 0 14px rgba(226,87,76,0)}}
+.lbBars{display:flex;gap:3px;align-items:center;height:26px}.lbBars i{display:block;width:5px;height:6px;border-radius:3px;background:#f39bb0;transition:height .06s}
+#btnMic.muted{opacity:.55}
+.qrow{background:#fff;border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:0 2px 0 #ead7bb}.qrow.done{opacity:.6}.qtxt{font-weight:700}.qbar{height:10px;background:#f1e3cc;border-radius:6px;overflow:hidden;margin:6px 0 2px}.qbar i{display:block;height:100%;background:linear-gradient(90deg,#f39bb0,#ee8a3c)}.qrew{font-size:13px;color:#a0846a}
+.album{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.album img{width:100%;border-radius:10px;border:4px solid #fff;box-shadow:0 2px 6px rgba(59,42,31,.25);cursor:pointer;transform:rotate(-1deg)}.album img:nth-child(2n){transform:rotate(1.2deg)}
+.photoPrev{display:block;width:100%;max-height:52vh;object-fit:contain;border-radius:10px;border:5px solid #fff;box-shadow:0 3px 10px rgba(59,42,31,.3);margin:6px 0 10px}
+.photoFlash{position:fixed;inset:0;background:#fff;z-index:90;pointer-events:none;animation:pflash .45s ease-out forwards}@keyframes pflash{from{opacity:.95}to{opacity:0}}
 </style>
 </head>
 <body>
@@ -218,6 +229,7 @@ h3{margin:14px 0 6px;font-size:18px}
     <div class="stat" id="clock"></div>
     <button class="iconbtn hidden" id="btnMic" aria-label="Voice commands" style="position:relative"></button>
     <button class="iconbtn" id="btnMail" aria-label="Mail" style="position:relative"></button>
+    <button class="iconbtn" id="btnCam" aria-label="Take a photo"></button>
     <button class="iconbtn" id="btnStamps" aria-label="Stamp book"></button>
     <button class="iconbtn hidden" id="btnFull" aria-label="Full screen"></button>
     <button class="iconbtn" id="btnSettings" aria-label="Settings"></button>
@@ -860,6 +872,8 @@ G.ITEMS = {
   ring: { name: 'Rubber Ring', cat: 'toy', price: 90, toy: 'throw', bounce: 0.5, r: 0.09, desc: 'Rolls in silly directions.' },
   carrot: { name: 'Squeaky Carrot', cat: 'toy', price: 60, toy: 'squeak', bounce: 0.3, r: 0.07, desc: 'Crinkly, squeaky, orange.' },
   yarn: { name: 'Yarn Ball', cat: 'toy', price: 35, toy: 'throw', bounce: 0.3, r: 0.06, desc: 'Cats lose their minds.' },
+  chicken: { name: 'Rubber Chicken', cat: 'toy', price: 75, toy: 'squeak', bounce: 0.35, r: 0.08, desc: 'Honks. Loudly. Every time.' },
+  glowball: { name: 'Glow Ball', cat: 'toy', price: 110, toy: 'throw', bounce: 0.62, r: 0.06, desc: 'Glows in the dark. Perfect for night play.' },
   mouse: { name: 'Toy Mouse', cat: 'toy', price: 45, toy: 'squeak', bounce: 0.3, r: 0.05, desc: 'Catnip inside. For cats.' },
   collar_red: { name: 'Red Collar', cat: 'acc', slot: 'collar', price: 40, color: '#e2574c', desc: 'A classic.' },
   collar_blue: { name: 'Sky Collar', cat: 'acc', slot: 'collar', price: 60, color: '#4aa6e0', desc: 'Like a clear day.' },
@@ -874,6 +888,10 @@ G.ITEMS = {
   flower: { name: 'Flower Crown', cat: 'acc', slot: 'head', price: 150, color: '#f39bb0', desc: 'Spring picnic royalty.' },
   straw: { name: 'Straw Hat', cat: 'acc', slot: 'head', price: 140, color: '#e8c87a', desc: 'Summer festival vibes.' },
   bow: { name: 'Big Bow', cat: 'acc', slot: 'head', price: 70, color: '#ff6f91', desc: 'Adorable. Non-negotiable.' },
+  bunny: { name: 'Bunny Ears', cat: 'acc', slot: 'head', price: 160, color: '#ffffff', desc: 'Hop hop. Floppy on one side.' },
+  sailor: { name: 'Sailor Cap', cat: 'acc', slot: 'head', price: 170, color: '#ffffff', desc: 'Ahoy! Ready for the pond pier.' },
+  tiara: { name: 'Sparkle Tiara', cat: 'acc', slot: 'head', price: 280, color: '#d9dde6', desc: 'For the royalty of the dog park.' },
+  patch: { name: 'Pirate Patch', cat: 'acc', slot: 'face', price: 120, color: '#1a1a1a', desc: 'Arr. Strictly for treasure hunts.' },
   frog: { name: 'Frog Hat', cat: 'acc', slot: 'head', price: 220, color: '#79b25a', desc: 'Ribbit.' },
   crown: { name: 'Champion Crown', cat: 'acc', slot: 'head', price: 900, color: '#f2c24b', desc: 'For legends of the disc.', metal: true },
   glasses: { name: 'Round Glasses', cat: 'acc', slot: 'face', price: 110, color: '#3b2a1f', desc: 'Very scholarly.' },
@@ -1610,6 +1628,38 @@ M.acc = function (id) {
       mesh(new THREE.TorusGeometry(0.02, 0.006, 6, 12, Math.PI), fm, null, g).position.set(0, 0.004, 0.012);
       break;
     }
+    case 'bunny': {
+      const fur = M.mat('#ffffff', { r: 1 }), pink = M.mat('#f6b6c4', { r: 0.9 });
+      const band = mesh(new THREE.TorusGeometry(0.15, 0.012, 8, 30, Math.PI), M.mat('#f39bb0', { r: 0.6 }), null, g); band.position.y = -0.03;
+      for (const s of [-1, 1]) {
+        const e = new THREE.Group(); e.position.set(s * 0.06, 0.05, 0); e.rotation.z = -s * 0.18; if (s > 0) { e.rotation.z = -0.9; e.position.y = 0.03; } g.add(e);
+        const ear = mesh(new THREE.SphereGeometry(0.035, 14, 10), fur, null, e); ear.scale.set(0.8, 2.6, 0.45); ear.position.y = 0.08;
+        const inner = mesh(new THREE.SphereGeometry(0.022, 12, 8), pink, null, e); inner.scale.set(0.8, 2.6, 0.3); inner.position.set(0, 0.08, 0.012);
+      }
+      break;
+    }
+    case 'sailor': {
+      const wm = M.mat('#ffffff', { r: 0.7 });
+      const top = mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.07, 28), wm, null, g); top.position.y = 0.0;
+      const rim = mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.015, 28), wm, null, g); rim.position.y = -0.03;
+      const stripe = mesh(new THREE.CylinderGeometry(0.103, 0.103, 0.02, 28, 1, true), M.mat('#2e4a8a', { r: 0.6, side: THREE.DoubleSide }), null, g); stripe.position.y = -0.012;
+      const anc = mesh(new THREE.TorusGeometry(0.012, 0.004, 6, 12), M.mat('#f2c24b', { r: 0.3, m: 0.8 }), null, g); anc.position.set(0, 0.0, 0.105);
+      g.rotation.z = -0.12;
+      break;
+    }
+    case 'tiara': {
+      const sm = M.mat('#d9dde6', { r: 0.2, m: 0.95 });
+      const band = mesh(new THREE.TorusGeometry(0.1, 0.008, 8, 30, Math.PI), sm, null, g); band.rotation.y = Math.PI / 2; band.rotation.z = Math.PI / 2; band.rotation.x = 0; band.position.y = -0.01;
+      for (let i = -2; i <= 2; i++) { const pk = mesh(new THREE.ConeGeometry(0.012, 0.05 - Math.abs(i) * 0.01, 6), sm, null, g); pk.position.set(i * 0.03, 0.025 - Math.abs(i) * 0.005, 0.07 - Math.abs(i) * 0.012); pk.rotation.z = -i * 0.25; }
+      const gem = mesh(new THREE.OctahedronGeometry(0.018), M.mat('#f39bb0', { r: 0.1, m: 0.3, em: '#a03a5a', ei: 0.6 }), null, g); gem.position.set(0, 0.04, 0.075);
+      break;
+    }
+    case 'patch': {
+      const pm = M.mat('#1a1a1a', { r: 0.6 });
+      const pt = mesh(new THREE.CircleGeometry(0.045, 20), pm, null, g); pt.position.set(0.068, 0, 0.016); pt.scale.y = 0.85;
+      const strap = mesh(new THREE.TorusGeometry(0.13, 0.004, 4, 30), pm, null, g); strap.rotation.set(0, 0, 0.5); strap.position.z = -0.07;
+      break;
+    }
     default: break;
   }
   g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.userData.acc = id; } });
@@ -1762,6 +1812,20 @@ M.item = function (id) {
       mesh(new THREE.LatheGeometry(pts, 24), m('#4aa6e0', { side: THREE.DoubleSide }), null, g);
       mesh(new THREE.SphereGeometry(0.058, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), m('#fff7ea', { r: 1 }), null, g).position.y = 0.02;
       mesh(new THREE.BoxGeometry(0.05, 0.015, 0.03), m('#ff9e80'), null, g).position.set(0, 0.05, 0);
+      break;
+    }
+    case 'chicken': {
+      const y = m('#f6d23a', { r: 0.5 });
+      const b = mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.16, 14), y, null, g); b.rotation.x = Math.PI / 2;
+      const h = mesh(new THREE.SphereGeometry(0.035, 14, 10), y, null, g); h.position.set(0, 0.03, 0.09);
+      const beak = mesh(new THREE.ConeGeometry(0.014, 0.04, 8), m('#ff8a3c'), null, h); beak.rotation.x = Math.PI / 2; beak.position.z = 0.04;
+      const comb = mesh(new THREE.SphereGeometry(0.016, 8, 6), m('#e2574c'), null, h); comb.scale.set(0.5, 1.2, 1.4); comb.position.y = 0.035;
+      for (const s of [-1, 1]) { mesh(new THREE.SphereGeometry(0.006, 6, 6), m('#111', { r: 0.2 }), null, h).position.set(s * 0.02, 0.01, 0.028); const f = mesh(new THREE.ConeGeometry(0.012, 0.05, 6), m('#ff8a3c'), null, g); f.position.set(s * 0.018, -0.02, -0.09); f.rotation.x = -1.8; }
+      break;
+    }
+    case 'glowball': {
+      const gb = mesh(new THREE.SphereGeometry(0.06, 24, 18), M.mat('#9dffb0', { r: 0.4, em: '#3dff7a', ei: 1.2 }), null, g);
+      const halo = mesh(new THREE.SphereGeometry(0.09, 16, 12), M.basic('#7dffa0', { op: 0.25, dw: false }), null, g, false);
       break;
     }
     default: mesh(new THREE.SphereGeometry(0.05, 12, 10), m('#ccc'), null, g);
@@ -2662,6 +2726,7 @@ G.DiscHand = class {
     const vel = fwd.clone().multiplyScalar(f).addScaledVector(right, U.clamp(vl * 1.4, -0.35 * f - 0.6, 0.35 * f + 0.6));
     vel.y = f > 0.5 ? U.clamp(f * 0.16, 0.5, 4) : Math.max(-0.5, vu * 0.3);
     const pos = this.cam.localToWorld(this.local.clone());
+    if (f < 1.6) { G.ui.hint('Swing the disc upward and let go to throw!', 2000); this.drag = false; return null; }
     const id = this.id; this.hide();
     return { pos, vel, power: f, id };
   }
@@ -2685,7 +2750,14 @@ G.discChase = function* (pet, flight, plan, o = {}) {
       if (plan.kind !== 'ground' && !jumped && flight.t >= plan.t - 0.34) { jumped = true; t0 = G.time; pet.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.2 : 0.4)); pet.setPose('leap', 10); }
       if (plan.kind === 'flip' && jumped && pet.airborne) pet.extraPitch = -Math.PI * 2 * U.clamp((G.time - t0) / 0.8, 0, 1);
       if (flight.t >= plan.t) { flight.caught = true; break; }
-    } else if (flight.onGround && U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z) < 0.35 * pet.S + 0.1) { flight.caught = true; break; }
+    } else if (flight.onGround) {
+      const dd = U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z);
+      if (dd < 0.35 * pet.S + 0.1) { flight.caught = true; break; }
+      // can't get any closer (wall, fence, out of reach)? grab it anyway so play never gets stuck
+      if (dd >= (flight._best || 1e9) - 0.02) flight._stuck = (flight._stuck || 0) + pet.dt; else { flight._best = dd; flight._stuck = 0; }
+      if (flight._stuck > 1.2 && dd < 3.5) { flight.caught = true; break; }
+      if (flight._stuck > 4) { flight.caught = true; break; }
+    }
     yield;
   }
   pet.moveTarget = null; pet.lookTarget = null;
@@ -2729,6 +2801,7 @@ const IC = {
   hand: '<svg viewBox="0 0 64 64"><path d="M22 34V14a4 4 0 018 0v14-18a4 4 0 018 0v18-14a4 4 0 018 0v16-8a4 4 0 018 0v16c0 12-8 20-20 20-8 0-12-3-16-9l-8-12a4 4 0 016-5z" fill="#fff4e8" stroke="#7a5c46" stroke-width="3" stroke-linejoin="round"/></svg>',
   full: '<svg viewBox="0 0 32 32"><path d="M5 12V5h7M20 5h7v7M27 20v7h-7M12 27H5v-7" stroke="#3b2a1f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   unfull: '<svg viewBox="0 0 32 32"><path d="M12 5v7H5M27 12h-7V5M20 27v-7h7M5 20h7v7" stroke="#3b2a1f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  cam: '<svg viewBox="0 0 32 32"><rect x="4" y="9" width="24" height="17" rx="4" fill="currentColor"/><path d="M11 9l2-3h6l2 3" fill="currentColor"/><circle cx="16" cy="17.5" r="5.2" fill="#fff"/><circle cx="16" cy="17.5" r="3" fill="currentColor"/></svg>',
   mic: '<svg viewBox="0 0 32 32"><rect x="11" y="4" width="10" height="16" rx="5" fill="currentColor"/><path d="M7 15a9 9 0 0018 0M16 24v4M11 28h10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>',
   whistle: '<svg viewBox="0 0 32 32"><path d="M4 13h14a7 7 0 110 8H9a5 5 0 01-5-5z" fill="#f2c24b" stroke="#c8922a" stroke-width="1.6"/><circle cx="19" cy="17" r="3" fill="#c8922a"/><path d="M24 6l2-3M28 9l3-2M21 5l0-3" stroke="#ee8a3c" stroke-width="2" stroke-linecap="round"/></svg>',
   mail: '<svg viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="17" rx="3" fill="#fff" stroke="#e2574c" stroke-width="2"/><path d="M5 10l11 8 11-8" stroke="#e2574c" stroke-width="2" fill="none"/></svg>',
@@ -2764,6 +2837,7 @@ G.ui = (() => {
     addEventListener('keydown', (e) => { if (e.code === 'KeyF' && !e.repeat && e.target.tagName !== 'INPUT' && !e.ctrlKey && !e.metaKey && G.curName !== 'walk' && G.curName !== 'park' && G.curName !== 'trials') ui.toggleFull(); });
     $('#btnMail').innerHTML = IC.mail + '<span class="badge" id="mailBadge"></span>'; $('#btnMail').onclick = () => { G.audio.play('pop'); G.ui.mailSheet(); };
     $('#btnMic').innerHTML = '<span id="micRing"></span>' + IC.mic; $('#btnMic').onclick = () => { G.audio.init(); G.voice.toggle(); }; G.voice.ui();
+    $('#btnCam').innerHTML = IC.cam; $('#btnCam').onclick = () => { G.audio.init(); G.photos.request(); };
     $('#btnStamps').innerHTML = IC.book; $('#btnStamps').onclick = () => { G.audio.play('pop'); G.ui.stampSheet(); };
     $('#shClose').onclick = () => ui.closeSheet();
     $('#sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') ui.closeSheet(); });
@@ -2928,9 +3002,9 @@ G.ui = (() => {
     const p = G.activePet(); if (!p) return;
     ui.sheet({
       title: p.name + '’s tricks', render(body) {
-        note(body, G.voice && G.voice.supported() ? 'Teach tricks like a real trainer: turn on the mic, do the gesture on your pet, then say your command word. Say it three times (once after each try) and the trick is learned. After that, just say the word!' : 'Teach tricks by touch: do the gesture on your pet, then tap "Good job!" to praise. Three praises and the trick is learned. (Voice teaching isn\u2019t available in this browser.)');
+        note(body, G.voice && G.voice.supported() ? 'Teach tricks like a real trainer: do the gesture on your pet, and when the listening bubble pops up, say your command word. Three tries and it\u2019s learned \u2014 then just say the word anytime! (The mic switches on by itself; tap it up top to mute.)' : 'Teach tricks by touch: do the gesture on your pet, then tap "Good job!" to praise. Three praises and the trick is learned. (Voice teaching isn\u2019t available in this browser.)');
         const l = list(body);
-        if (G.voice && G.voice.supported()) { const vb = document.createElement('div'); vb.className = 'list'; vb.style.marginBottom = '10px'; const learnedT = G.TRICKS.filter((t) => (p.d.tricks[t.id] || 0) >= 1); if (learnedT.length) { const h3 = document.createElement('h3'); h3.textContent = 'Voice commands'; body.appendChild(h3); note(body, 'Turn on the mic, then pick a trick and say your command word twice. After that, just say it!'); const g2 = document.createElement('div'); g2.className = 'row'; g2.style.flexWrap = 'wrap'; learnedT.forEach((t) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = (G.voice.store(p.d.id).tricks[t.id] || []).length ? t.name + ' \u2713' : 'Teach \u201c' + t.name + '\u201d'; b.onclick = () => { if (!G.voice.on) { G.ui.toast('Tap the mic in the top bar first!'); return; } ui.closeSheet(true); G.voiceTeachTrick(p, t.id); }; g2.appendChild(b); }); body.appendChild(g2); const h4 = document.createElement('h3'); h4.textContent = 'All tricks'; body.appendChild(h4); } void vb; }
+        if (G.voice && G.voice.supported()) { const vb = document.createElement('div'); vb.className = 'list'; vb.style.marginBottom = '10px'; const learnedT = G.TRICKS.filter((t) => (p.d.tricks[t.id] || 0) >= 1); if (learnedT.length) { const h3 = document.createElement('h3'); h3.textContent = 'Voice commands'; body.appendChild(h3); note(body, 'Pick a trick and say your command word twice when the bubble pops up. After that, just say it!'); const g2 = document.createElement('div'); g2.className = 'row'; g2.style.flexWrap = 'wrap'; learnedT.forEach((t) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = (G.voice.store(p.d.id).tricks[t.id] || []).length ? t.name + ' \u2713' : 'Teach \u201c' + t.name + '\u201d'; b.onclick = () => { ui.closeSheet(true); G.voice.need((ok) => { if (ok) G.voiceTeachTrick(p, t.id); else G.ui.toast('The microphone isn\u2019t available here.'); }); }; g2.appendChild(b); }); body.appendChild(g2); const h4 = document.createElement('h3'); h4.textContent = 'All tricks'; body.appendChild(h4); } void vb; }
         G.TRICKS.forEach((tr) => {
           if (p.cat && (tr.id === 'beg' || tr.id === 'rollover' || tr.id === 'dead')) return;
           const prog = Math.min(1, p.d.tricks[tr.id] || 0); const learned = prog >= 1;
@@ -3193,6 +3267,9 @@ G.HOLIDAY_NAMES = { halloween: 'Halloween', xmas: 'the holidays', newyear: 'New 
 /* ---------------- stamps (achievements) ---------------- */
 G.STAMPS = [
   { id: 'first', name: 'Hello, friend', desc: 'Adopt your first pet.', coins: 20 },
+  { id: 'quests', name: 'Busy bee', desc: 'Finish all three daily quests in one day.', coins: 50 },
+  { id: 'tug', name: 'Tug champion', desc: 'Win a tug of war at a Disc Cup.', coins: 40 },
+  { id: 'dream', name: 'Sweet dreams', desc: 'Watch your pet dream 10 times.', coins: 30, secret: true },
   { id: 'pets100', name: 'Gentle hands', desc: 'Give 100 pets.', coins: 30 },
   { id: 'pets1000', name: 'Professional petter', desc: 'Give 1,000 pets.', coins: 150 },
   { id: 'named', name: 'That’s me!', desc: 'Teach a pet its name.', coins: 30 },
@@ -3271,8 +3348,10 @@ G.checkStamps = function () {
   if (s.trophies.some((t) => t.place === 1 && t.kind === 'obedience')) G.stamp('obedience');
 };
 G.ui.stampSheet = function () {
-  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'stamps', name: 'Stamps' }, { id: 'caps', name: 'Capsule figures' }, { id: 'stats', name: 'Records' }], render(body, tab) {
+  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
     const s = G.state; s.stamps = s.stamps || {};
+    if (tab === 'quests') { G.quests.tab(body); return; }
+    if (tab === 'album') { G.photos.tab(body); return; }
     if (tab === 'stamps') {
       const got = G.STAMPS.filter((x) => s.stamps[x.id]).length;
       G.ui.note(body, got + ' of ' + G.STAMPS.length + ' stamps. Secret stamps show as ??? until you find them.');
@@ -3780,33 +3859,71 @@ G.voice = (() => {
   try { if (window.claude && window.claude.use) window.claude.use('dictation').then((d) => { V.dict = d; if (d) { d.onFinal(({ text }) => emit({ text })); d.onState(({ state }) => { if (state === 'idle' && V.on && V.engine === 'dict') { V.on = false; ui(); } }); } ui(); }).catch(() => { }); } catch (e) { /* not in claude.ai */ }
   V.supported = () => !!(V.dict || SR || (navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
   const pref = () => (G.state && G.state.settings.voiceEngine) || 'auto';
-  V.toggle = function () {
-    if (V.on) { V.stop(); return; }
+  // start listening; resolves true when the mic is live. quiet = no error toasts (automatic starts)
+  V.start = function (quiet) {
+    if (V.on) return Promise.resolve(true);
+    if (V._starting) return V._starting;
     const p = pref();
-    if (p !== 'match' && V.dict) {
-      V.engine = 'dict'; V.on = true; ui();
-      V.dict.start().catch((e) => { V.on = false; ui(); const m = String((e && (e.code || e.message)) || e); G.ui.toast(m.includes('not_granted') ? 'Microphone permission was declined.' : 'Voice could not start here. Try the sound-matching engine in Settings.'); });
-      return;
-    }
-    if (p !== 'match' && SR) {
-      try {
-        rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = navigator.language || 'en-US';
-        rec.onresult = (ev) => { for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) emit({ text: ev.results[i][0].transcript }); };
-        rec.onerror = (ev) => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { V.on = false; rec = null; ui(); startMatch(); } };
-        rec.onend = () => { if (V.on && V.engine === 'sr' && rec) { try { rec.start(); } catch (e) { /* ignore */ } } };
-        rec.start(); V.engine = 'sr'; V.on = true; ui(); return;
-      } catch (e) { rec = null; }
-    }
-    startMatch();
+    V._starting = new Promise((res) => {
+      if (p !== 'match' && V.dict) {
+        V.engine = 'dict';
+        V.dict.start().then(() => { V.on = true; ui(); res(true); }).catch((e) => { const m = String((e && (e.code || e.message)) || e); if (m.includes('not_granted')) { V.denied = true; res(false); } else startMatch().then(res); });
+        return;
+      }
+      if (p !== 'match' && SR) {
+        try {
+          rec = new SR(); rec.continuous = true; rec.interimResults = false; rec.lang = navigator.language || 'en-US';
+          rec.onresult = (ev) => { for (let i = ev.resultIndex; i < ev.results.length; i++) if (ev.results[i].isFinal) emit({ text: ev.results[i][0].transcript }); };
+          rec.onerror = (ev) => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') { V.on = false; rec = null; ui(); startMatch(); } };
+          rec.onend = () => { if (V.on && V.engine === 'sr' && rec) { try { rec.start(); } catch (e) { /* ignore */ } } };
+          rec.start(); V.engine = 'sr'; V.on = true; ui(); res(true); return;
+        } catch (e) { rec = null; }
+      }
+      startMatch().then(res);
+    }).then((ok) => { V._starting = null; if (!ok && !V.on) { ui(); if (!quiet) G.ui.toast('Couldn’t use the microphone here. Check your browser’s mic permission.'); } return ok || V.on; });
+    return V._starting;
   };
+  // mic button: mute / unmute the always-on listening
+  V.toggle = function () {
+    const s = G.state.settings;
+    if (V.on) { s.voiceOn = false; V.stop(); G.ui.toast('Mic muted. Tap again to turn voice back on.'); G.save(); return; }
+    s.voiceOn = true; V.denied = false; V.start(false).then((ok) => { if (ok) G.ui.toast('Listening! Just talk to your pet.'); }); G.save();
+  };
+  // called on user gestures: starts the mic automatically (once allowed)
+  let lastTry = -99;
+  V.ensure = function () {
+    if (V.on || V._starting || V.denied || !V.supported()) return;
+    if (G.state && G.state.settings.voiceOn === false) return;
+    const now = performance.now() / 1000; if (now - lastTry < 5) return; lastTry = now;
+    V.start(true).then((ok) => { if (ok && !G.state.tut.voiceTip) { G.state.tut.voiceTip = 1; G.ui.toast('Voice is on \u2014 just talk to your pet! (tap the mic up top to mute)'); } });
+  };
+  // something needs the mic right now (teaching). cb(true) if listening, cb(false) to fall back
+  V.need = function (cb) {
+    if (!V.supported()) { cb(false); return; }
+    if (V.on) { cb(true); return; }
+    G.state.settings.voiceOn = true; V.denied = false;
+    V.start(false).then((ok) => cb(!!ok));
+  };
+  // big "listening" bubble with a live level meter
+  let bubT = null;
+  V.listenFor = function (label, secs = 8) {
+    if (!V.on) return;
+    let el = $('#listenBubble');
+    if (!el) { el = document.createElement('div'); el.id = 'listenBubble'; el.innerHTML = '<div class="lbTxt"></div><div class="lbBars"><i></i><i></i><i></i><i></i><i></i></div>'; document.body.appendChild(el); }
+    el.querySelector('.lbTxt').textContent = label; el.classList.add('show');
+    clearTimeout(bubT); bubT = setTimeout(() => V.hideListen(), secs * 1000);
+  };
+  V.hideListen = function () { const el = $('#listenBubble'); if (el) el.classList.remove('show'); clearTimeout(bubT); };
   function startMatch() {
-    if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { G.ui.toast('Voice isn’t available in this browser.'); return; }
-    navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((s) => {
-      stream = s; ctx = G.audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
-      const src = ctx.createMediaStreamSource(s); an = ctx.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; src.connect(an);
-      fbuf = new Float32Array(an.frequencyBinCount); tbuf = new Float32Array(an.fftSize);
-      V.engine = 'match'; V.on = true; ui(); timer = setInterval(frame, 20);
-    }).catch(() => { V.on = false; ui(); G.ui.toast('Microphone unavailable here (the claude.ai viewer may block it). It works when the game is hosted on its own page.'); });
+    return new Promise((res) => {
+      if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { res(false); return; }
+      navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }).then((s) => {
+        stream = s; ctx = G.audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const src = ctx.createMediaStreamSource(s); an = ctx.createAnalyser(); an.fftSize = 1024; an.smoothingTimeConstant = 0.2; src.connect(an);
+        fbuf = new Float32Array(an.frequencyBinCount); tbuf = new Float32Array(an.fftSize);
+        V.engine = 'match'; V.on = true; ui(); timer = setInterval(frame, 20); res(true);
+      }).catch(() => { V.denied = true; V.on = false; ui(); res(false); });
+    });
   }
   V.stop = function () {
     V.on = false;
@@ -3881,26 +3998,26 @@ G.voice = (() => {
     if (b0.r.feat) { const thr = b0.c.thr || (b0.c.thr = thrOf(b0.c.list)); if (b0.r.d > thr) return null; if (res[1] && res[1].r.feat && b0.r.d > res[1].r.d * 0.88) return null; }
     return { kind: b0.c.kind, id: b0.c.id, weak: b0.c.weak };
   };
-  V.trainStart = function (opts) { V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); };
+  V.trainStart = function (opts) { V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); V.listenFor(opts.label || 'Listening…', opts.timeout || 9); };
   /* ---------- dispatch ---------- */
   function emit(utt) {
     if (utt.text !== undefined && !norm(utt.text)) return;
-    G.ui.voiceHeard(utt);
+    G.ui.voiceHeard(utt); V.hideListen();
     if (V.train && G.time < V.train.until) { const t = V.train; V.train = null; try { t.cb(utt); } catch (e) { console.error(e); } return; }
     V.train = null;
     const pet = G.activePet(); if (!pet || !pet.root.parent) return;
     const m = V.classify(utt, pet);
     if (!m) { pet.tiltT = 1.2; pet.tiltDir = U.chance(0.5) ? 1 : -1; pet.emote('q', 1); pet.lookCam = 2; return; }
-    if (m.kind === 'name' && m.weak && (pet.d.nameLearn || 0) < 1) { pet.emote('q', 1); pet.tiltT = 1.2; G.ui.toast(pet.name + ' doesn’t know that name yet. Press Call to teach it by voice!'); return; }
+    if (m.kind === 'name' && m.weak && (pet.d.nameLearn || 0) < 1) { pet.emote('q', 1); pet.tiltT = 1.2; G.ui.toast(pet.name + ' doesn’t know that name yet. Press Call to teach it!'); return; }
     const sc = G.cur; if (sc && sc.onVoice && sc.onVoice(m.kind, m.id, pet) !== false) return;
     if (m.kind === 'name') { pet.emote('bang', 0.8); pet.lookCam = 3; pet.excite = 1; pet.voice(); }
     else { pet.do((function* () { pet.lookCam = 3; yield* pet.trick(m.id); pet.happy(2); })()); }
   }
   V.emit = emit; V.textSim = textSim; V.dtw = dtw;
   /* ---------- HUD ---------- */
-  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.title = V.on ? 'Listening (' + V.engine + ') — tap to stop' : 'Voice commands: tap to start'; }
+  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.classList.toggle('muted', !V.on); b.title = V.on ? 'Listening — tap to mute' : 'Voice off — tap to turn on'; }
   V.ui = ui;
-  setInterval(() => { const r = $('#micRing'); if (r) r.style.transform = 'scale(' + (1 + (V.on ? (V.engine === 'match' ? V.level * 0.7 : 0.15 + Math.abs(Math.sin(G.time * 3)) * 0.15) : 0)) + ')'; }, 60);
+  setInterval(() => { const lb = $('#listenBubble'); if (lb && lb.classList.contains('show')) { const lv = V.engine === 'match' ? V.level : 0.3 + 0.3 * Math.abs(Math.sin(G.time * 5)); lb.querySelectorAll('.lbBars i').forEach((e, i) => (e.style.height = (4 + 22 * U.clamp(lv * (1.4 - Math.abs(i - 2) * 0.25) + Math.random() * 0.12, 0, 1)) + 'px')); } const r = $('#micRing'); if (r) r.style.transform = 'scale(' + (1 + (V.on ? (V.engine === 'match' ? V.level * 0.7 : 0.15 + Math.abs(Math.sin(G.time * 3)) * 0.15) : 0)) + ')'; }, 60);
   return V;
 })();
 
@@ -3909,9 +4026,9 @@ G.voiceTeachName = function (pet, onProgress) {
   const st = G.voice.store(pet.d.id);
   G.ui.hint('Say ' + pet.name + '’s name into the mic!', 6000);
   pet.lookCam = 3; pet.emote('dots', 6);
-  G.voice.trainStart({ timeout: 9, cb: (utt) => {
+  G.voice.trainStart({ timeout: 9, label: 'Say “' + pet.name + '”!', cb: (utt) => {
     const tpl = utt.feats ? { f: utt.feats } : { t: utt.text };
-    if (st.name.length && utt.text !== undefined) { const ok = st.name.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55) || G.voice.textSim(utt.text, pet.name) >= 0.55; if (!ok) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('Hmm, that sounded different. Say the same name each time!'); return; } }
+    if (st.name.length && utt.text !== undefined) { const ok = st.name.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55) || G.voice.textSim(utt.text, pet.name) >= 0.55; if (!ok) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('Hmm, that sounded different. Say the same name each time!'); setTimeout(() => G.voiceTeachName(pet, onProgress), 900); return; } }
     st.name.push(tpl); if (st.name.length > 5) st.name.shift(); delete st.thr;
     pet.d.nameLearn = Math.min(1, (pet.d.nameLearn || 0) + 0.34);
     if (onProgress) onProgress(pet.d.nameLearn);
@@ -3922,14 +4039,170 @@ G.voiceTeachTrick = function (pet, trickId, n = 0) {
   if (n === 0) st.tricks[trickId] = [];
   G.ui.hint('Say your command for "' + tr.name + '" (' + (n + 1) + '/2)', 6000);
   pet.lookCam = 3; pet.emote('dots', 6);
-  G.voice.trainStart({ timeout: 9, cb: (utt) => {
+  G.voice.trainStart({ timeout: 9, label: 'Say your word for ' + tr.name + '!', cb: (utt) => {
     st.tricks[trickId].push(utt.feats ? { f: utt.feats } : { t: utt.text });
     pet.tiltT = 1; pet.emote('bang', 0.8);
     if (st.tricks[trickId].length < 2) setTimeout(() => G.voiceTeachTrick(pet, trickId, 1), 700);
     else { G.audio.play('chime'); G.ui.banner(pet.name + ' knows the word', 'for ' + tr.name + '!', 2000); pet.happy(4); G.save(); }
   } });
 };
+for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => { if (G.state && G.curName && G.curName !== 'title') G.voice.ensure(); }, true);
 G.ui.voiceHeard = function (utt) { const el = $('#voiceHeard'); if (!el) return; el.textContent = utt.text !== undefined ? 'Heard: “' + utt.text.trim().slice(0, 40) + '”' : 'Heard a sound'; el.style.opacity = 1; clearTimeout(G.ui._vh); G.ui._vh = setTimeout(() => (el.style.opacity = 0), 1800); };
+
+</script>
+<script>/* js/content.js */
+'use strict';
+/* =========================================================
+   Shiba Days — extra content: daily quests, photo album,
+   nap dreams
+   ========================================================= */
+
+/* ---------------- daily quests ---------------- */
+G.QUESTS = [
+  { id: 'pet', text: 'Pet your pals 10 times', stat: 'pets', n: 10, reward: 40 },
+  { id: 'treats', text: 'Give 3 treats', stat: 'treats', n: 3, reward: 35 },
+  { id: 'walk', text: 'Go for a walk', stat: 'walks', n: 1, reward: 45 },
+  { id: 'catch', text: 'Make 5 catches (disc or ball)', stat: 'catches', n: 5, reward: 60 },
+  { id: 'throws', text: 'Throw toys 12 times', stat: 'throws', n: 12, reward: 40 },
+  { id: 'cafe', text: 'Visit Café Pawsome', stat: 'cafe', n: 1, reward: 35 },
+  { id: 'park', text: 'Visit the dog park', stat: 'park', n: 1, reward: 45 },
+  { id: 'present', text: 'Find a present on a walk', stat: 'presents', n: 1, reward: 50 },
+  { id: 'cup', text: 'Enter a Disc Cup', stat: 'contests', n: 1, reward: 80 },
+  { id: 'photo', text: 'Take 2 photos', stat: 'photos', n: 2, reward: 30 },
+  { id: 'mail', text: 'Read a letter', stat: 'mailRead', n: 1, reward: 20 },
+  { id: 'baths', text: 'Give a bath or a brush', stat: 'groom', n: 1, reward: 35 },
+];
+G.quests = (() => {
+  const Q = {};
+  const key = () => new Date().toDateString();
+  const stat = (k) => (G.state.stats[k] || 0);
+  Q.today = function () {
+    const s = G.state; const k = key();
+    if (!s.quests || s.quests.day !== k) {
+      const seed = Array.from(k).reduce((a, c) => a * 31 + c.charCodeAt(0) | 0, 7);
+      const pool = G.QUESTS.slice(); const pick = [];
+      for (let i = 0; i < 3; i++) { const j = Math.abs(seed * (i + 3) * 2654435761 | 0) % pool.length; pick.push(pool.splice(j, 1)[0]); }
+      s.quests = { day: k, list: pick.map((q) => ({ id: q.id, base: stat(q.stat), done: false })), bonus: false };
+    }
+    return s.quests;
+  };
+  Q.progress = function (e) { const q = G.QUESTS.find((x) => x.id === e.id); return { q, n: Math.min(q.n, stat(q.stat) - e.base) }; };
+  Q.check = function () {
+    if (!G.state || !G.state.pets.length) return;
+    const t = Q.today(); let changed = false;
+    for (const e of t.list) {
+      if (e.done) continue; const { q, n } = Q.progress(e);
+      if (n >= q.n) { e.done = true; changed = true; G.state.coins += q.reward; G.audio.play('chime'); G.ui.banner('Daily quest complete!', q.text + '  +' + q.reward + ' coins', 2600); }
+    }
+    if (!t.bonus && t.list.every((e) => e.done)) { t.bonus = true; G.state.coins += 100; setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('All quests done!', 'Bonus +100 coins. See you tomorrow!', 3000); G.stamp && G.stamp('quests'); }, 2800); changed = true; }
+    if (changed) { G.ui.refresh && G.ui.refresh(); G.save(); }
+  };
+  Q.tab = function (body) {
+    const t = Q.today();
+    G.ui.note(body, 'Three new quests every day. Rewards are paid automatically when you finish one. Finish all three for a bonus!');
+    const l = document.createElement('div'); l.className = 'list'; body.appendChild(l);
+    for (const e of t.list) {
+      const { q, n } = Q.progress(e);
+      const row = document.createElement('div'); row.className = 'qrow' + (e.done ? ' done' : '');
+      row.innerHTML = '<div class="qtxt">' + (e.done ? '✔ ' : '') + q.text + '</div><div class="qbar"><i style="width:' + Math.round(n / q.n * 100) + '%"></i></div><div class="qrew">' + n + '/' + q.n + ' · ' + q.reward + 'c</div>';
+      l.appendChild(row);
+    }
+    if (t.bonus) G.ui.note(body, '⭐ All done today! New quests tomorrow.');
+  };
+  setInterval(() => { try { Q.check(); } catch (e) { /* ignore */ } }, 2500);
+  return Q;
+})();
+
+/* ---------------- photo mode ---------------- */
+G.photos = (() => {
+  const P = {}; const KEY = 'shibadays.photos.v1';
+  P.list = function () { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } };
+  P.saveList = function (l) { try { localStorage.setItem(KEY, JSON.stringify(l)); return true; } catch (e) { return false; } };
+  P.request = function () { if (!G.cur || G.curName === 'title') return; P.want = true; };
+  // called by the main loop right after rendering, while the frame is still in the buffer
+  P.afterRender = function () {
+    if (!P.want) return; P.want = false;
+    const src = G.renderer.domElement; const W = 560, H = Math.round(W * src.height / src.width);
+    const c = document.createElement('canvas'); c.width = W; c.height = H + 46; const x = c.getContext('2d');
+    x.fillStyle = '#fff8ec'; x.fillRect(0, 0, c.width, c.height);
+    try { x.drawImage(src, 0, 0, W, H); } catch (e) { return; }
+    x.fillStyle = '#3b2a1f'; x.font = '700 20px Fredoka, sans-serif'; x.textBaseline = 'middle';
+    const p = G.activePet(); const place = { home: 'At home', walk: 'Maple Hill', cafe: 'Café Pawsome', park: 'Maple Dog Park', frisbee: 'Disc Cup', shop: 'Maple Pets', kennel: 'Kennel', trials: 'Training Grounds' }[G.curName] || '';
+    x.fillText((p ? p.name + ' · ' : '') + place, 14, H + 23);
+    x.textAlign = 'right'; x.fillStyle = '#b08a6a'; x.font = '600 16px Fredoka, sans-serif'; x.fillText(new Date().toLocaleDateString(), W - 14, H + 23);
+    const url = c.toDataURL('image/jpeg', 0.78);
+    G.state.stats.photos = (G.state.stats.photos || 0) + 1;
+    // shutter flash + sound
+    const f = document.createElement('div'); f.className = 'photoFlash'; document.body.appendChild(f); setTimeout(() => f.remove(), 500);
+    try { G.audio.noise(0.06, 0.3, 'highpass', 3000, 1); G.audio.noise(0.05, 0.2, 'highpass', 2000, 1, 0.09); } catch (e) { /* ignore */ }
+    if (p) { p.lookCam = 2; p.emote('note', 1); }
+    P.preview(url);
+  };
+  // small modal with a photo and buttons: [{label, cls, fn}]
+  function photoModal(title, url, buttons) {
+    const html = '<h2>' + U.esc(title) + '</h2><img class="photoPrev" src="' + url + '" alt="Photo"><div class="mrow">' + buttons.map((b, i) => '<button class="btn ' + (b.cls || 'ghost') + '" data-i="' + i + '">' + U.esc(b.label) + '</button>').join('') + '</div>';
+    G.ui.modal(html, (m, done) => { m.querySelectorAll('.mrow button').forEach((el) => (el.onclick = () => { done(); const b = buttons[+el.dataset.i]; if (b.fn) b.fn(); })); });
+  }
+  P.preview = function (url) {
+    photoModal('Snap!', url, [
+      { label: 'Toss it' },
+      { label: 'Download', fn: () => P.download(url) },
+      { label: 'Keep in album', cls: 'orange', fn: () => { const l = P.list(); l.unshift({ url, t: Date.now() }); while (l.length > 12) l.pop(); if (!P.saveList(l)) { l.pop(); P.saveList(l); } G.ui.toast('Saved to your album (Stamp book → Album)'); } },
+    ]);
+  };
+  P.download = function (url) { try { const a = document.createElement('a'); a.href = url; a.download = 'shiba-days-' + Date.now() + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); } catch (e) { G.ui.toast('Downloads are blocked here. Long-press the photo to save it.'); } };
+  P.tab = function (body) {
+    const l = P.list();
+    G.ui.note(body, l.length ? l.length + ' of 12 photos. Tap a photo to download or delete it.' : 'No photos yet! Tap the camera in the top bar to snap your pets anywhere.');
+    const g = document.createElement('div'); g.className = 'album'; body.appendChild(g);
+    l.forEach((ph, i) => {
+      const im = document.createElement('img'); im.src = ph.url; im.title = new Date(ph.t).toLocaleString();
+      im.onclick = () => { G.ui.closeSheet && G.ui.closeSheet(true); photoModal(new Date(ph.t).toLocaleDateString(), ph.url, [
+        { label: 'Delete', fn: () => { const l2 = P.list(); l2.splice(i, 1); P.saveList(l2); G.ui.toast('Photo deleted'); } },
+        { label: 'Download', fn: () => P.download(ph.url) },
+        { label: 'Close' },
+      ]); };
+      g.appendChild(im);
+    });
+  };
+  return P;
+})();
+
+/* ---------------- nap dreams ---------------- */
+G.dreams = (() => {
+  const D = { list: [] };
+  const THEMES = [
+    ['🦴', 'a giant bone'], ['🎾', 'endless tennis balls'], ['🥏', 'the perfect catch'], ['🦋', 'butterflies'],
+    ['🍖', 'dinner'], ['🐿️', 'THE squirrel'], ['⭐', 'winning the cup'], ['💤', 'more sleep'], ['❤️', 'you'], ['🍰', 'cake'], ['🌙', 'the moon'], ['🐟', 'a fish'],
+  ];
+  function tex(icon) {
+    return G.canvasTex(128, 128, (c) => {
+      c.fillStyle = 'rgba(255,255,255,.95)'; c.strokeStyle = 'rgba(160,140,200,.8)'; c.lineWidth = 4;
+      const puff = [[64, 58, 38], [36, 64, 22], [92, 64, 22], [50, 40, 22], [80, 42, 22]];
+      c.beginPath(); for (const [x, y, r] of puff) { c.moveTo(x + r, y); c.arc(x, y, r, 0, Math.PI * 2); } c.fill();
+      c.beginPath(); c.arc(30, 104, 9, 0, 7); c.fill(); c.stroke(); c.beginPath(); c.arc(16, 120, 5, 0, 7); c.fill(); c.stroke();
+      c.font = '48px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(icon, 64, 58);
+    });
+  }
+  D.show = function (pet, scene) {
+    const th = U.pick(pet.cat ? THEMES.filter((t) => t[1] !== 'the perfect catch') : THEMES);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex(th[0]), transparent: true, depthTest: false, opacity: 0 })); sp.renderOrder = 20;
+    sp.scale.setScalar(0.45 * pet.S); scene.add(sp);
+    D.list.push({ sp, pet, scene, t: 0, life: 4 });
+    if (pet.root.parent && Math.random() < 0.35) pet.voice('whine');
+    if (Math.random() < 0.25) G.ui.toast(pet.name + ' is dreaming about ' + th[1] + '...');
+    pet.d.dreams = (pet.d.dreams || 0) + 1; if (pet.d.dreams >= 10) G.stamp('dream');
+  };
+  D.update = function (dt) {
+    for (let i = D.list.length - 1; i >= 0; i--) {
+      const d = D.list[i]; d.t += dt; const k = d.t / d.life;
+      d.sp.position.copy(d.pet.pos).add(new V3(0.18 * d.pet.S, d.pet.sizeH + 0.25 + k * 0.15, 0));
+      d.sp.material.opacity = Math.min(1, d.t * 2, (d.life - d.t) * 2);
+      if (d.t >= d.life || !d.pet.root.parent || d.pet.poseName !== 'sleep') { d.scene.remove(d.sp); d.sp.material.map.dispose(); d.sp.material.dispose(); D.list.splice(i, 1); }
+    }
+  };
+  return D;
+})();
 
 </script>
 <script>/* js/home.js */
@@ -4210,7 +4483,7 @@ G.scenes.home = (() => {
     if (G.curName !== 'home') return;
     const t = G.state.tut; const p = G.activePet(); if (!p) return;
     if (!t.pet) G.ui.hint('Press and stroke ' + p.name + ' to pet them!', 0);
-    else if ((p.d.nameLearn || 0) < 1 && G.voice.supported() && !t.name) G.ui.hint('Teach ' + p.name + ' their name: tap the mic (top bar), then press Call and say it!', 0);
+    else if ((p.d.nameLearn || 0) < 1 && G.voice.supported() && !t.name) G.ui.hint('Teach ' + p.name + ' their name: press Call, then say their name out loud!', 0);
     else if (!t.call) G.ui.hint('Tap the floor to call ' + p.name + ' over.', 0);
     else if (!t.toy) G.ui.hint('Open Toys, pick the ball and flick it up to throw!', 0);
     else if (!t.trick) G.ui.hint('Teach a trick: stroke down along ' + p.name + '’s back while they stand.', 0);
@@ -4279,31 +4552,28 @@ G.scenes.home = (() => {
     p.spinV = 0; p.setPose('sit'); p.emote('sweat', 1.2); G.stamp('tail'); yield* p.wait(1.2);
   }
   H.onVoice = function (kind, id) { if (kind === 'name') H.callName(); else H.command(id); };
-  H.callName = function () {
-    const p = G.activePet(); if (!p) return;
-    G.audio.play('call'); const d = p.d; d.nameLearn = d.nameLearn || 0;
-    if (p.ctl) return;
-    if (d.nameLearn < 1 && G.voice.on) {
-      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 4); })()); setFocus(p, 6);
-      G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
-        if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
-        else G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Press Call and say it again.'); });
-      return;
-    }
-    if (d.nameLearn < 1 && G.voice.supported()) {
-      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 3; p.tiltT = 1.2; p.emote('q', 1.2); yield* p.act('sit', 1.5); })());
-      G.ui.hint(p.name + ' doesn\u2019t know their name yet. Turn on the mic and say it!', 5000);
-      G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) H.callName(); }, 700); } }]);
-      return;
-    }
-    if (d.nameLearn < 1) {
-      if (G.voice.supported() && !p._micTip) { p._micTip = 1; G.ui.toast('Tip: tap the mic in the top bar, then press Call and say ' + p.name + '\u2019s name to teach it by voice!'); }
+  function teachName(p) {
+    G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
+      if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
+      else { G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Say it again!'); setTimeout(() => { if (G.curName === 'home' && (p.d.nameLearn || 0) < 1 && G.voice.on) teachName(p); }, 900); } });
+  }
+  function tapLearnName(p) {
+    const d = p.d;
       const now = G.time; if (!p._lastCall || now - p._lastCall > 1.0) { d.nameLearn = Math.min(1, d.nameLearn + 0.2); p._lastCall = now; }
       p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 2; p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(d.nameLearn >= 1 ? 'heart' : 'q', 1.2); yield* p.act('sit', 1.5); })());
       if (d.nameLearn >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Now they\u2019ll come when called', 2400); p.happy(8); G.stamp('named'); }
       else G.ui.toast(p.name + ' tilts their head... learning their name (' + Math.round(d.nameLearn * 100) + '%). Keep calling!');
+  }
+  H.callName = function () {
+    const p = G.activePet(); if (!p) return;
+    G.audio.play('call'); const d = p.d; d.nameLearn = d.nameLearn || 0;
+    if (p.ctl) return;
+    if (d.nameLearn < 1 && G.voice.supported() && !G.voice.denied) {
+      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 5); })()); setFocus(p, 6);
+      G.voice.need((ok) => { if (ok) teachName(p); else tapLearnName(p); });
       return;
     }
+    if (d.nameLearn < 1) { tapLearnName(p); return; }
     p.baseY = 0; if (p.carry) p.drop(scene);
     p.stop(); p.emote('heart', 1); p.voice();
     p.do((function* () { yield* p.goto(CALL.x, CALL.z - 0.3, { speed: 2.6 }); yield* p.face(cam.position.x, cam.position.z); p.lookCam = 3; p.excite = 1; yield* p.act('sit', 2.5); })());
@@ -4343,8 +4613,8 @@ G.scenes.home = (() => {
     yield* p.goto(BED.x + off[0], BED.z + off[1], { speed: 0.8, near: 0.08 });
     yield* p.face(BED.x + 1, BED.z + 2);
     yield* p.act('lie', 1);
-    p.setPose('sleep'); p.baseY = 0.1; let t = 0, z = 0;
-    while (p.d.energy < 92 && t < 40) { t += p.dt; z += p.dt; if (z > 1.8) { z = 0; p.fx('zzz', 1); } yield; }
+    p.setPose('sleep'); p.baseY = 0.1; let t = 0, z = 0, dz = U.rand(3, 6);
+    while (p.d.energy < 92 && t < 40) { t += p.dt; z += p.dt; dz -= p.dt; if (z > 1.8) { z = 0; p.fx('zzz', 1); } if (dz <= 0) { dz = U.rand(7, 12); G.dreams.show(p, scene); } yield; }
     p.baseY = 0; yield* p.yawn(); yield* p.stretch();
   }
   function* social(p, o) {
@@ -4630,7 +4900,7 @@ G.scenes.home = (() => {
     }
     while (T.accum > 85) {
       T.accum -= 85;
-      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
+      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
       else { pet.happy(1.1, false); G.fx.spawn('heart', hit.point.clone().add(new V3(0, 0.05, 0)), 1); }
       G.state.stats.pets++; tutDone('pet');
       if (praise && praise.pet === pet && !praise.voice) doPraise();
@@ -4699,12 +4969,11 @@ G.scenes.home = (() => {
         praise = { pet, id, until: G.time + 5 };
         G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]);
         G.ui.hint(pet.name + ' tried "' + tr.name + '"! Praise them to teach it.', 3500);
-      } else if (!G.voice.on) {
-        G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) G.ui.hint('Mic on! Do the gesture again, then say the command.', 4000); }, 600); } }]);
-        G.ui.hint(pet.name + ' tried "' + tr.name + '"! Turn on the mic to teach it with your voice.', 5000);
       } else {
-        praise = { pet, id, until: G.time + 9, voice: true };
-        voiceTeachStep(pet, id);
+        G.voice.need((ok) => {
+          if (ok) { praise = { pet, id, until: G.time + 9, voice: true }; voiceTeachStep(pet, id); }
+          else { praise = { pet, id, until: G.time + 5 }; G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]); G.ui.hint('No mic available \u2014 praise ' + pet.name + ' to teach "' + tr.name + '".', 3500); }
+        });
       }
     } else { pet.happy(2); G.ui.toast(pet.name + ': ' + tr.name + '!'); }
   }
@@ -4714,7 +4983,7 @@ G.scenes.home = (() => {
     G.ui.hint(have ? 'Say your word for "' + tr.name + '" again!' : 'Now say a command word for "' + tr.name + '" (like "' + tr.name.toLowerCase() + '")!', 7000);
     G.ui.prompts([]);
     pet.emote('dots', 8);
-    G.voice.trainStart({ timeout: 9, cb: (utt) => {
+    G.voice.trainStart({ timeout: 9, label: have ? 'Say \u201c' + (st.tricks[id][0].t || tr.name.toLowerCase()) + '\u201d again!' : 'Say a word for ' + tr.name + '!', cb: (utt) => {
       if (!praise || praise.pet !== pet || praise.id !== id) return;
       const list = st.tricks[id] = st.tricks[id] || [];
       if (list.length && utt.text !== undefined && !list.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55)) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('That sounded like a different word. Use the same word each time!'); praise.until = G.time + 9; voiceTeachStep(pet, id); return; }
@@ -4882,7 +5151,7 @@ G.scenes.home = (() => {
     p.pos.set(0, 0, 1.9);
     if (!cancel) {
       p.d.clean = 100; p.wet = 1; p.happy(8); G.stamp('bath');
-      p.do((function* () { p.jump(2.6); yield* p.waitUntil(() => !p.airborne, 2); yield* p.shake(); p.fx('sparkle', 8); G.audio.play('sparkle'); G.ui.toast(p.name + ' is squeaky clean!'); p.excite = 1; yield* p.act('sit', 1.5); })());
+      p.do((function* () { p.jump(2.6); yield* p.waitUntil(() => !p.airborne, 2); yield* p.shake(); p.fx('sparkle', 8); G.audio.play('sparkle'); G.ui.toast(p.name + ' is squeaky clean!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; p.excite = 1; yield* p.act('sit', 1.5); })());
     }
   }
   function endModes() {
@@ -5907,7 +6176,8 @@ G.scenes.frisbee = (() => {
   let scene, cam, pet, mc, crowd, crowdData = [], disc, discId = 'disc', from = 'home', lookV = new V3(0, 0.8, 10);
   let boardCtx, boardTex, st = null, tiers = [], rivals = [], balloons = [], blimp = null, shibaBalloon = null, jumbo = null, jumboCam = null, jumboRT = null, frame = 0, boardEl = null;
   const SIT = new V3(0.9, 0, 0.7);
-  const LANES = [-10, -5.2, 5.2, 10];
+  const LANES = [-10.5, -6, 6];
+  let introFocus = null;
   F.init = function () {
     scene = new THREE.Scene(); F.scene = scene; scene.background = new THREE.Color('#9fd4ff'); scene.fog = new THREE.Fog('#9fd4ff', 55, 130);
     cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam; F.hand = new G.DiscHand(scene, cam);
@@ -5995,18 +6265,19 @@ G.scenes.frisbee = (() => {
   const COATS = { shiba: ['red', 'sesame', 'cream', 'blacktan'], mame: ['red', 'cream'], corgi: ['corgi'], husky: ['husky'], golden: ['golden'], dachshund: ['dachs'], pug: ['pug'] };
   function randLook() { return { skin: U.pick(['#f6d2b8', '#e6b894', '#c99a76', '#8a5a3a', '#f3d0b5']), hair: U.pick(['#2a1d18', '#5a3a26', '#c4622a', '#e8d2a8', '#3b2420', '#7a5cff']), style: U.pick(['short', 'bob', 'pony', 'bun', 'messy']), top: U.pick(['#e2574c', '#4aa6e0', '#79b25a', '#f2c24b', '#7a5cff', '#f39bb0', '#33415c']), bottom: U.pick(['#3b4a6a', '#3a3a3a', '#5a4a3a', '#2c2c3a']), h: U.rand(0.92, 1.05), extra: U.chance(0.3) ? ['cap'] : U.chance(0.2) ? ['band'] : [] }; }
   function clearRivals() { for (const r of rivals) { scene.remove(r.pet.root); scene.remove(r.person.root); scene.remove(r.disc); scene.remove(r.tag); } rivals = []; }
+  const RIVAL_SKILL = [8, 28, 48, 68, 88], RIVAL_F = [[4.5, 9], [6, 11], [7.5, 13], [9, 15], [10, 17]];
   function makeRivals(cls) {
     clearRivals();
-    const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 4);
+    const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
     const skill = G.CONTEST_RIVALS[cls.tier];
     pool.forEach(([owner, dog, breed], i) => {
       const x = LANES[i];
-      const p = new G.Pet({ name: dog, breed, coat: U.pick(COATS[breed] || ['red']), mood: 90, acc: { collar: U.pick(['collar_blue', 'collar_red', 'collar_pink', 'collar_gold']) } }, { npc: true });
-      p.pos.set(x + 0.9, 0, 0.7); p.heading = 0; p.brain = null; p.bounds = null; scene.add(p.root);
+      const p = new G.Pet({ name: dog, breed, coat: U.pick(COATS[breed] || ['red']), mood: 90, disc: Math.max(0, RIVAL_SKILL[cls.tier] + U.rand(-6, 6)), acc: { collar: U.pick(['collar_blue', 'collar_red', 'collar_pink', 'collar_gold']) } }, { npc: true });
+      p.pos.set(x + 0.9, 0, 0.7); p.heading = 0; p.brain = null; p.bounds = (q) => { q.pos.x = U.clamp(q.pos.x, x - 2, x + 2); q.pos.z = U.clamp(q.pos.z, -0.5, 70); }; scene.add(p.root);
       const per = new G.Person(randLook()); per.pos.set(x, 0, 0); per.heading = 0; scene.add(per.root);
       const d = G.M.item('disc'); d.scale.setScalar(1.6); scene.add(d);
       const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: G.textTex(dog, { font: '700 44px Fredoka, sans-serif', bg: 'rgba(59,42,31,.75)', color: '#fff', pad: 12, radius: 22 }), depthTest: false })); tag.scale.set(1.0, 0.3, 1); tag.renderOrder = 15; scene.add(tag);
-      rivals.push({ owner, dog, breed, x, pet: p, person: per, disc: d, tag, skill, score: 0, state: 'ready', t: U.rand(0.5, 2.2), throw: null });
+      rivals.push({ owner, dog, breed, x, pet: p, person: per, disc: d, tag, skill, tier: cls.tier, score: 0, state: 'ready', t: U.rand(0.8, 2.4), fl: null });
     });
   }
   function updateRival(r, dt, running) {
@@ -6014,32 +6285,41 @@ G.scenes.frisbee = (() => {
     r.tag.position.copy(p.pos).setY(p.sizeH + 0.45);
     if (r.state === 'ready') {
       r.disc.position.copy(r.person.pos).add(new V3(0.3, 1.0, 0.3)); r.disc.rotation.set(0.5, 0, 0);
-      p.setPose('sit'); p.moveTarget = null; p.heading = 0;
+      p.setPose('sit'); p.moveTarget = null; p.heading = 0; p.extraPitch = 0;
       if (running && r.t <= 0) {
-        const sk = r.skill; const D = U.rand(sk.d[0], sk.d[1]); const T = 0.6 + D / 9;
-        const caught = Math.random() < sk.catch; const kind = !caught ? 'miss' : Math.random() < sk.flip ? 'flip' : Math.random() < sk.jump ? 'jump' : 'ground';
-        r.throw = { D, T, k: 0, land: new V3(r.x + U.rand(-1, 1), 0, D), kind, jumped: false };
+        const fr = RIVAL_F[r.tier]; const f = U.rand(fr[0], fr[1]);
+        const pos = r.person.pos.clone().add(new V3(0.3, 1.15, 0.3)); const vel = new V3(U.rand(-0.4, 0.4), U.rand(1.8, 2.8) + f * 0.1, f);
+        const path = G.discSim(pos, vel, { wind: st ? st.wind * 0.7 : 0, bounds: { x0: r.x - 2, x1: r.x + 2, z0: 0.2, z1: 70 } });
+        let plan = null;
+        if (Math.random() < r.skill.catch) {
+          plan = G.discPlan(p, path);
+          if (!plan) { // trained dogs sprint for a low catch just before it lands
+            let gi = path.findIndex((q) => q.ground); gi = Math.max(1, (gi < 0 ? path.length : gi) - 2);
+            const q = path[gi]; const S0 = G.discSkill(p); const dist = U.d2(p.pos.x, p.pos.z, q.p.x, q.p.z);
+            plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, dist / Math.max(0.3, q.t - S0.delay)) }) };
+          }
+        }
+        r.fl = { path, t: 0, i: 0, plan, jumped: false };
         r.state = 'fly'; r.person.waveT = 0.4; if (Math.random() < 0.3) G.audio.play('whoosh');
         p.setPose('stand'); p.excite = 1;
       }
     } else if (r.state === 'fly') {
-      const th = r.throw; th.k = Math.min(1, th.k + dt / th.T);
-      const start = r.person.pos.clone().add(new V3(0.3, 1.1, 0.3));
-      r.disc.position.copy(start).lerp(th.land, th.k); r.disc.position.y = 1.1 * (1 - th.k) + Math.sin(th.k * Math.PI) * (1 + th.D * 0.08) + (th.kind === 'miss' ? 0 : 0.5 * th.k); r.disc.rotation.y += dt * 20;
-      const catchK = th.kind === 'miss' ? 1 : 0.9;
-      const target = start.clone().lerp(th.land, catchK).setY(0);
-      const remain = Math.max(0.1, (catchK - th.k) * th.T);
-      const dist = U.d2(p.pos.x, p.pos.z, target.x, target.z);
-      p.moveTarget = target; p.speedMul = U.clamp(dist / remain / p.S, 1, 9);
-      if ((th.kind === 'jump' || th.kind === 'flip') && !th.jumped && th.k > catchK - 0.12) { th.jumped = true; p.jump(th.kind === 'flip' ? 4 : 3.4); p.setPose('leap', 10); th.flipT0 = G.time; }
-      if (th.kind === 'flip' && th.jumped && p.airborne) p.extraPitch = -Math.PI * 2 * U.clamp((G.time - th.flipT0) / 0.75, 0, 1); else if (!p.airborne) p.extraPitch = 0;
-      if (th.k >= catchK) {
-        p.moveTarget = null;
-        if (th.kind !== 'miss') { const mult = th.kind === 'flip' ? 3 : th.kind === 'jump' ? 2 : 1; const pts = Math.round(th.D * mult); r.score += pts; popText(p.pos.clone().setY(1.4), '+' + pts + (mult > 1 ? (mult === 3 ? ' FLIP!' : ' JUMP') : ''), mult === 3 ? '#7a5cff' : '#ee8a3c'); if (mult === 3 && Math.random() < 0.5) commentary(r.dog + ' with a flip catch!'); crowdJump(0.3 * mult, r.x); hud(); }
-        else r.disc.position.y = 0.03;
-        r.state = Math.random() < r.skill.wander ? 'wander' : 'back'; r.t = U.rand(2.5, 4.5);
-        if (r.state === 'wander') { p.emote('note', 1.5); if (Math.random() < 0.4) commentary(r.dog + ' is taking a little detour...'); }
-      }
+      const F2 = r.fl; F2.t += dt; const P = F2.path; while (F2.i < P.length - 1 && P[F2.i].t < F2.t) F2.i++;
+      r.disc.position.copy(P[F2.i].p); r.disc.rotation.y += dt * 20; r.disc.rotation.z = P[F2.i].bank || 0;
+      const plan = F2.plan; const S = plan ? plan.S : G.discSkill(p);
+      const tgt = plan ? plan.p : P[P.length - 1].p;
+      if (F2.t > S.delay) { if (U.d2(p.pos.x, p.pos.z, tgt.x, tgt.z) > 0.25) { p.moveTarget = new V3(tgt.x, 0, tgt.z); p.speedMul = S.spd / p.S; } else p.moveTarget = null; }
+      if (plan && plan.kind !== 'ground' && !F2.jumped && F2.t >= plan.t - 0.34) { F2.jumped = true; F2.t0 = G.time; p.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.2 : 0.4)); p.setPose('leap', 10); }
+      if (plan && plan.kind === 'flip' && F2.jumped && p.airborne) p.extraPitch = -Math.PI * 2 * U.clamp((G.time - F2.t0) / 0.8, 0, 1);
+      if (plan && F2.t >= plan.t) {
+        const mult = plan.kind === 'flip' ? 3 : plan.kind === 'jump' ? 2 : 1; const pts = Math.round(Math.max(1, plan.p.z - 1) * mult); r.score += pts;
+        popText(p.pos.clone().setY(1.4), '+' + pts + (mult > 1 ? (mult === 3 ? ' FLIP!' : ' JUMP') : ''), mult === 3 ? '#7a5cff' : '#ee8a3c');
+        if (mult >= 2 && Math.random() < 0.5) commentary(r.dog + (mult === 3 ? ' with a flip catch!' : ' leaps for it!')); crowdJump(0.3 * mult, r.x); hud();
+        r.state = 'got'; p.moveTarget = null;
+      } else if (!plan && (F2.i >= P.length - 1 && (U.d2(p.pos.x, p.pos.z, tgt.x, tgt.z) < 0.6 || F2.t > P[P.length - 1].t + 4))) { r.state = 'got'; p.moveTarget = null; if (Math.random() < 0.3) commentary('Ooh, ' + r.dog + ' misses that one!'); }
+    } else if (r.state === 'got') {
+      r.disc.position.copy(p.mouthWorld());
+      if (!p.airborne) { p.extraPitch = 0; r.state = Math.random() < r.skill.wander ? 'wander' : 'back'; r.t = U.rand(2.5, 4.5); if (r.state === 'wander') { p.emote('note', 1.5); if (Math.random() < 0.4) commentary(r.dog + ' is taking a little detour...'); } }
     } else if (r.state === 'wander') {
       r.disc.position.copy(p.mouthWorld());
       if (!p.task) p.do(p.zoomies(p.pos.x, p.pos.z, 1.2, 1));
@@ -6080,7 +6360,7 @@ G.scenes.frisbee = (() => {
     if (pet) { if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; } scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.gnaw = false; }
     clearRivals(); $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.prompts([]); st = null;
   };
-  F.debug = () => ({ st, rivals, pet });
+  F.debug = () => ({ st, rivals, pet, start, bringBack });
   F.dock = () => [{ label: 'Cups', icon: 'trophy', fn: () => { if (!st || st.phase === 'done' || st.phase === 'done2') { st = null; clearRivals(); classMenu(); } } }, { label: 'Leave', icon: 'door', cls: 'go', fn: () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' }) }];
   function setTier(t) { t = Math.max(0, t); tiers.forEach((g, i) => (g.visible = i === t)); crowd.body.count = crowd.head.count = [70, 130, 220, 280, 320][t]; jumbo = tiers[t].userData.jumbo || null; }
   function* sitBrain(p) { p.lookCam = 2; yield* p.face(p.pos.x, p.pos.z + 5); p.setPose('sit'); yield* p.wait(2); }
@@ -6106,7 +6386,11 @@ G.scenes.frisbee = (() => {
       makeRivals(cls);
       const port = G.M.icons.person('pepper');
       await G.ui.say('MC Pepper', U.pick(['Welcome, welcome to the ' + cls.name + '!', 'Laaadies and gentlemen and GOOD DOGS! The ' + cls.name + ' is ON!']), port);
-      await G.ui.say('MC Pepper', cls.time + ' seconds on the clock! Five teams, one field. In the center lane: ' + pet.name + ' the ' + G.BREEDS[pet.d.breed].name + '!', port);
+      await G.ui.say('MC Pepper', 'Four teams, one field! Let\u2019s meet our competitors!', port); if (!st) return;
+      for (const r of rivals) { introFocus = r.pet.pos; await G.ui.say('MC Pepper', U.pick(['In lane ', 'Over in lane ', 'Lane ']) + (LANES.indexOf(r.x) + 1) + ': ' + r.owner + ' and ' + r.dog + ' the ' + G.BREEDS[r.breed].name + '! ' + U.pick(['A crowd favorite!', 'Watch those jumps!', 'They trained all winter!', 'First time at this level!', 'Last year\u2019s runner-up!']), port); if (!st) { introFocus = null; return; } r.pet.voiceCd = 0; r.pet.voice(); }
+      introFocus = pet.pos;
+      await G.ui.say('MC Pepper', 'And in the center lane: YOU and ' + pet.name + ' the ' + G.BREEDS[pet.d.breed].name + '! ' + cls.time + ' seconds on the clock. Most points wins!', port);
+      introFocus = null;
       G.ui.endDialog(); if (!st) return; boardEl.classList.remove('hidden'); hud();
       if (cls.tier >= 4) fireworks(6);
       for (const n of ['3', '2', '1']) { G.ui.banner(n, null, 700); G.audio.play('blip'); await G.wait(800); if (!st) return; }
@@ -6129,14 +6413,14 @@ G.scenes.frisbee = (() => {
   }
 
   /* ---------------- player throwing ---------------- */
-  F.onDown = function (p) { if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
-  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); };
+  F.onDown = function (p) { if (st && st.phase === 'tug' && st.tug) { st.tug.ly = p.y; return; } if (st && st.phase === 'rogue') { const h = G.pick(p, pet.m.meshes, false)[0]; if (h) F.call(); return; } if (st && st.phase === 'ready') F.hand.down(p); };
+  F.onMove = function (p, down) { if (st && st.phase === 'ready' && down) F.hand.move(p); const tg = st && st.phase === 'tug' && st.tug; if (tg && down) { if (tg.ly == null) tg.ly = p.y; const dy = p.y - tg.ly; tg.ly = p.y; if (dy > 0) { tg.prog = Math.min(1, tg.prog + dy / innerHeight * (tg.resist < 0.45 ? 2.2 : 0.6)); if (Math.random() < 0.15) G.audio.play('tick'); } } };
   F.onUp = function (p) { if (!st || st.phase !== 'ready') return; const r = F.hand.up(p); if (r) throwDisc(r); };
   function skillInfo() { return G.discSkill(pet); }
   function throwDisc(r) {
     st.phase = 'flight'; st.throws++; G.ui.hint(null);
     if (r.power > 4) G.audio.play('whoosh'); G.state.stats.throws++;
-    const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -4.5, x1: 4.5, z0: -3, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
+    const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -3.4, x1: 3.4, z0: 0.4, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
     const plan = G.discPlan(pet, path); const S = plan ? plan.S : G.discSkill(pet);
     st.plan = plan; st.landing = path[path.length - 1].p.clone();
     pet.stop(); pet.brain = null; pet.excite = 1;
@@ -6191,18 +6475,41 @@ G.scenes.frisbee = (() => {
     pet.do((function* () {
       yield* pet.wait(0.25);
       yield* pet.goto(SIT.x, SIT.z + 0.3, { speed: 4.5 + (pet.d.disc || 0) * 0.02, timeout: 20 }); yield* pet.face(0, -3);
+      const tugP = st && st.cls && st.time > 3 && pet.carry ? U.clamp(0.42 - (pet.d.disc || 0) * 0.004 - (pet.d.bond || 0) * 0.002, 0.08, 0.42) * (st.cls.dis * 0.6 + 0.4) : 0;
+      if (st && (st.forceTug || Math.random() < tugP)) { st.forceTug = false; yield* tugOfWar(); if (!st) return; }
       pet.setPose('sit'); pet.lookCam = 2; yield* pet.wait(0.3);
       if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; }
       pet.happy(2); pet.voice('happy');
       if (st && st.phase === 'return') { if (st.practice || st.time > 0) { st.phase = 'ready'; F.hand.show(discId); } else { st.phase = 'done'; finish(); } }
     })());
   }
+  function* tugOfWar() {
+    st.phase = 'tug'; st.tug = { prog: 0, t: 0, resist: 1, ly: null };
+    commentary(pet.name + ' won\u2019t let go! Pull it away!'); G.audio.play('growl');
+    G.ui.hint('TUG OF WAR! Drag DOWN on the screen to pull the disc away \u2014 pull hardest when ' + pet.name + ' relaxes!', 4500);
+    pet.moveTarget = null; pet.lookCam = 1;
+    const base = pet.pos.clone();
+    while (st && st.phase === 'tug') {
+      const tg = st.tug; tg.t += pet.dt; tg.resist = 0.5 + 0.5 * Math.sin(tg.t * 3.2);
+      pet.setPose('tug'); pet.excite = 1; pet.heading = Math.PI; pet.lookTarget = new V3(base.x + Math.sin(tg.t * 13) * 1.4, 0.35, base.z - 2.5);
+      pet.pos.x = base.x + Math.sin(tg.t * 9) * 0.04; pet.pos.z = base.z + 0.2 * tg.resist - tg.prog * 0.35;
+      if (tg.prog >= 1) break;
+      tg.prog = Math.max(0, tg.prog - pet.dt * 0.07);
+      if (Math.random() < pet.dt * 0.7) G.audio.play('growl');
+      $('#contestHud').innerHTML = 'TUG! <span class="tugbar"><i style="width:' + Math.round(tg.prog * 100) + '%;background:' + (tg.resist < 0.45 ? '#79b25a' : '#e2574c') + '"></i></span> Time <span>' + Math.max(0, Math.ceil(st.time)) + 's</span>';
+      if (st.time <= 0) break;
+      yield;
+    }
+    if (!st) return;
+    pet.lookTarget = null; pet.pos.copy(base); G.audio.play('pop'); G.audio.play('cheer'); crowdJump(0.6, 0); pet.emote('sweat', 1);
+    commentary('Got it! ' + pet.name + ' finally lets go!'); G.stamp('tug'); st.phase = 'return'; st.tug = null; hud();
+  }
   function goRogue() {
     st.phase = 'rogue'; st.obey = 0;
     const kind = U.pick(['chew', 'chew', 'zoom', 'sniff']);
-    G.ui.prompts([{ label: G.voice.on ? 'Say "' + pet.name + '"! (or tap)' : 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]);
+    G.ui.prompts([{ label: 'Call ' + pet.name + '!', cls: 'pink', fn: () => F.call() }]); if (G.voice.listenFor) G.voice.listenFor('Say "' + pet.name + '"!', 20);
     commentary(kind === 'chew' ? 'Uh oh, ' + pet.name + ' is chewing the disc!' : kind === 'zoom' ? pet.name + ' has the zoomies!' : pet.name + ' found something interesting to sniff...');
-    G.ui.toast('Tap "Call" (or tap ' + pet.name + ') again and again to get them back!');
+    G.ui.toast(G.voice.on ? 'Say "' + pet.name + '" to call them back, or tap Call a few times!' : 'Tap Call (or tap ' + pet.name + ') a few times to get them back!');
     pet.do((function* () {
       const spot = new V3(U.clamp(pet.pos.x + U.rand(-4, 4), -3, 3), 0, U.clamp(pet.pos.z + U.rand(-2, 4), 3, 40));
       yield* pet.goto(spot.x, spot.z, { speed: 2.2, timeout: 3 });
@@ -6219,7 +6526,7 @@ G.scenes.frisbee = (() => {
   F.call = function (voiced) {
     if (!st || st.phase !== 'rogue') return;
     G.audio.play('call'); const learned = (pet.d.nameLearn || 0) >= 1;
-    st.obey += voiced ? 0.6 : (learned ? 0.3 : 0.18) + (pet.d.bond || 0) * 0.002;
+    st.obey += voiced ? 1 : (learned ? 0.36 : 0.26) + (pet.d.bond || 0) * 0.002;
     pet.lookCam = 1; pet.tiltT = 0.6; pet.emote(st.obey >= 1 ? 'bang' : 'q', 0.6);
     if (st.obey >= 1) { G.ui.prompts([]); pet.gnaw = false; pet.stop(); commentary(pet.name + ' is coming back!'); pet.voice(); bringBack(); }
   };
@@ -6263,7 +6570,7 @@ G.scenes.frisbee = (() => {
   F.update = function (dt) {
     if (!pet) return;
     frame++;
-    const running = !!(st && st.cls && ['ready', 'flight', 'return', 'rogue'].includes(st.phase) && st.time > 0);
+    const running = !!(st && st.cls && ['ready', 'flight', 'return', 'rogue', 'tug'].includes(st.phase) && st.time > 0);
     if (running) {
       st.time -= dt;
       if (st.time <= 0) {
@@ -6291,11 +6598,13 @@ G.scenes.frisbee = (() => {
     if (blimp && blimp.parent.visible) { const a = G.time * 0.05; blimp.position.set(Math.cos(a) * 40, 32, 40 + Math.sin(a) * 30); blimp.rotation.y = -a + Math.PI; }
     if (jumbo && jumbo.parent.visible && frame % 3 === 0) { jumboCam.position.copy(pet.pos).add(new V3(2.2, 1.4, 2.8)); jumboCam.lookAt(pet.pos.clone().setY(0.5)); jumbo.visible = false; G.renderer.setRenderTarget(jumboRT); G.renderer.render(scene, jumboCam); G.renderer.setRenderTarget(null); jumbo.visible = true; }
     const portrait = G.aspect() < 0.9;
-    let pos = portrait ? new V3(0.5, 2.6, -5.2) : new V3(0.6, 1.8, -3.4), look = new V3(0, 0.9, 10);
+    let pos = portrait ? new V3(0.5, 3.2, -6.6) : new V3(0.6, 2.2, -4.4), look = new V3(0, 0.7, 11);
+    if (introFocus) { look = introFocus.clone().setY(0.5); pos = look.clone().add(new V3(introFocus.x > 0.5 ? -1.6 : introFocus.x < -0.5 ? 1.6 : 0.4, 1.5, -3.6)); }
     if (st && (st.phase === 'flight' || st.phase === 'return' || st.phase === 'rogue')) {
       const dz = disc.flying ? disc.pos.z : pet.pos.z;
       look = new V3(pet.pos.x * 0.6, 0.7, (pet.pos.z + Math.min(dz, pet.pos.z + 10)) / 2 + 1.5); pos = new V3(pet.pos.x * 0.4 + 0.4, portrait ? 3.6 : 2.7, Math.max(-3.4, pet.pos.z - (portrait ? 8.5 : 6.5)));
     }
+    if (st && st.phase === 'tug') { look = pet.pos.clone().setY(0.35); pos = pet.pos.clone().add(new V3(0.5, 1.3, -2.4)); }
     if (st && (st.phase === 'done' || st.phase === 'done2')) { look = pet.pos.clone().setY(0.4); pos = pet.pos.clone().add(new V3(1.2, 1.2, -2.6)); }
     const k = 1 - Math.exp(-2.6 * dt); cam.position.lerp(pos, k); lookV.lerp(look, k); cam.lookAt(lookV);
   };
@@ -6391,15 +6700,17 @@ G.scenes.kennel = (() => {
     for (let i = 0; i < 3; i++) { const b = G.M.item(U.pick(['ball', 'duck', 'squeaky'])); b.position.set(U.rand(-2, 2), 0.06, U.rand(-1.2, 1.2)); scene.add(b); }
     const hills = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), G.M.mat(season === 'winter' ? '#e8f0f6' : '#8fc46a', { r: 1 })); hills.scale.set(1.6, 0.25, 1); hills.position.set(0, -0.5, -26); scene.add(hills);
   };
+  // first pet is free; each extra pet costs more (cats a little less)
+  function adoptPrice(cat) { const base = [0, 600, 900, 1200][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
   function candidates() {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
     const seed = G.state.day * 7 + G.state.pets.length * 13;
     const r = (i) => U.hash(seed, i, 3);
     const coats = G.PET_COATS.dog.slice();
-    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: G.state.pets.length ? 200 : 0 });
+    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(false) });
     const cc = G.PET_COATS.cat;
-    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: G.state.pets.length ? 150 : 0 });
+    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: adoptPrice(true) });
     if (G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
     return out;
   }
@@ -7243,8 +7554,8 @@ G.scenes.trials = (() => {
     if (dt > 0.1) dt = 0.1;
     G.time += dt;
     try { if (G.cur && G.cur.update) G.cur.update(dt); } catch (e) { console.error(e); }
-    G.fx.update(dt);
-    if (G.cur) G.renderer.render(G.cur.scene, G.cur.camera);
+    G.fx.update(dt); G.dreams.update(dt);
+    if (G.cur) { G.renderer.render(G.cur.scene, G.cur.camera); G.photos.afterRender(); }
     saveT += dt; if (saveT > 15) { saveT = 0; G.save(); G.checkStamps(); }
     // adaptive quality: drop pixel ratio if the device struggles
     fpsAcc += dt; frames++;

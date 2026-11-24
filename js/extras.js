@@ -50,6 +50,9 @@ G.HOLIDAY_NAMES = { halloween: 'Halloween', xmas: 'the holidays', newyear: 'New 
 /* ---------------- stamps (achievements) ---------------- */
 G.STAMPS = [
   { id: 'first', name: 'Hello, friend', desc: 'Adopt your first pet.', coins: 20 },
+  { id: 'quests', name: 'Busy bee', desc: 'Finish all three daily quests in one day.', coins: 50 },
+  { id: 'tug', name: 'Tug champion', desc: 'Win a tug of war at a Disc Cup.', coins: 40 },
+  { id: 'dream', name: 'Sweet dreams', desc: 'Watch your pet dream 10 times.', coins: 30, secret: true },
   { id: 'pets100', name: 'Gentle hands', desc: 'Give 100 pets.', coins: 30 },
   { id: 'pets1000', name: 'Professional petter', desc: 'Give 1,000 pets.', coins: 150 },
   { id: 'named', name: 'That’s me!', desc: 'Teach a pet its name.', coins: 30 },
@@ -128,8 +131,10 @@ G.checkStamps = function () {
   if (s.trophies.some((t) => t.place === 1 && t.kind === 'obedience')) G.stamp('obedience');
 };
 G.ui.stampSheet = function () {
-  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'stamps', name: 'Stamps' }, { id: 'caps', name: 'Capsule figures' }, { id: 'stats', name: 'Records' }], render(body, tab) {
+  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
     const s = G.state; s.stamps = s.stamps || {};
+    if (tab === 'quests') { G.quests.tab(body); return; }
+    if (tab === 'album') { G.photos.tab(body); return; }
     if (tab === 'stamps') {
       const got = G.STAMPS.filter((x) => s.stamps[x.id]).length;
       G.ui.note(body, got + ' of ' + G.STAMPS.length + ' stamps. Secret stamps show as ??? until you find them.');

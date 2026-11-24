@@ -465,6 +465,38 @@ M.acc = function (id) {
       mesh(new THREE.TorusGeometry(0.02, 0.006, 6, 12, Math.PI), fm, null, g).position.set(0, 0.004, 0.012);
       break;
     }
+    case 'bunny': {
+      const fur = M.mat('#ffffff', { r: 1 }), pink = M.mat('#f6b6c4', { r: 0.9 });
+      const band = mesh(new THREE.TorusGeometry(0.15, 0.012, 8, 30, Math.PI), M.mat('#f39bb0', { r: 0.6 }), null, g); band.position.y = -0.03;
+      for (const s of [-1, 1]) {
+        const e = new THREE.Group(); e.position.set(s * 0.06, 0.05, 0); e.rotation.z = -s * 0.18; if (s > 0) { e.rotation.z = -0.9; e.position.y = 0.03; } g.add(e);
+        const ear = mesh(new THREE.SphereGeometry(0.035, 14, 10), fur, null, e); ear.scale.set(0.8, 2.6, 0.45); ear.position.y = 0.08;
+        const inner = mesh(new THREE.SphereGeometry(0.022, 12, 8), pink, null, e); inner.scale.set(0.8, 2.6, 0.3); inner.position.set(0, 0.08, 0.012);
+      }
+      break;
+    }
+    case 'sailor': {
+      const wm = M.mat('#ffffff', { r: 0.7 });
+      const top = mesh(new THREE.CylinderGeometry(0.11, 0.1, 0.07, 28), wm, null, g); top.position.y = 0.0;
+      const rim = mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.015, 28), wm, null, g); rim.position.y = -0.03;
+      const stripe = mesh(new THREE.CylinderGeometry(0.103, 0.103, 0.02, 28, 1, true), M.mat('#2e4a8a', { r: 0.6, side: THREE.DoubleSide }), null, g); stripe.position.y = -0.012;
+      const anc = mesh(new THREE.TorusGeometry(0.012, 0.004, 6, 12), M.mat('#f2c24b', { r: 0.3, m: 0.8 }), null, g); anc.position.set(0, 0.0, 0.105);
+      g.rotation.z = -0.12;
+      break;
+    }
+    case 'tiara': {
+      const sm = M.mat('#d9dde6', { r: 0.2, m: 0.95 });
+      const band = mesh(new THREE.TorusGeometry(0.1, 0.008, 8, 30, Math.PI), sm, null, g); band.rotation.y = Math.PI / 2; band.rotation.z = Math.PI / 2; band.rotation.x = 0; band.position.y = -0.01;
+      for (let i = -2; i <= 2; i++) { const pk = mesh(new THREE.ConeGeometry(0.012, 0.05 - Math.abs(i) * 0.01, 6), sm, null, g); pk.position.set(i * 0.03, 0.025 - Math.abs(i) * 0.005, 0.07 - Math.abs(i) * 0.012); pk.rotation.z = -i * 0.25; }
+      const gem = mesh(new THREE.OctahedronGeometry(0.018), M.mat('#f39bb0', { r: 0.1, m: 0.3, em: '#a03a5a', ei: 0.6 }), null, g); gem.position.set(0, 0.04, 0.075);
+      break;
+    }
+    case 'patch': {
+      const pm = M.mat('#1a1a1a', { r: 0.6 });
+      const pt = mesh(new THREE.CircleGeometry(0.045, 20), pm, null, g); pt.position.set(0.068, 0, 0.016); pt.scale.y = 0.85;
+      const strap = mesh(new THREE.TorusGeometry(0.13, 0.004, 4, 30), pm, null, g); strap.rotation.set(0, 0, 0.5); strap.position.z = -0.07;
+      break;
+    }
     default: break;
   }
   g.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.userData.acc = id; } });
@@ -617,6 +649,20 @@ M.item = function (id) {
       mesh(new THREE.LatheGeometry(pts, 24), m('#4aa6e0', { side: THREE.DoubleSide }), null, g);
       mesh(new THREE.SphereGeometry(0.058, 18, 8, 0, Math.PI * 2, 0, Math.PI / 2), m('#fff7ea', { r: 1 }), null, g).position.y = 0.02;
       mesh(new THREE.BoxGeometry(0.05, 0.015, 0.03), m('#ff9e80'), null, g).position.set(0, 0.05, 0);
+      break;
+    }
+    case 'chicken': {
+      const y = m('#f6d23a', { r: 0.5 });
+      const b = mesh(new THREE.CylinderGeometry(0.03, 0.04, 0.16, 14), y, null, g); b.rotation.x = Math.PI / 2;
+      const h = mesh(new THREE.SphereGeometry(0.035, 14, 10), y, null, g); h.position.set(0, 0.03, 0.09);
+      const beak = mesh(new THREE.ConeGeometry(0.014, 0.04, 8), m('#ff8a3c'), null, h); beak.rotation.x = Math.PI / 2; beak.position.z = 0.04;
+      const comb = mesh(new THREE.SphereGeometry(0.016, 8, 6), m('#e2574c'), null, h); comb.scale.set(0.5, 1.2, 1.4); comb.position.y = 0.035;
+      for (const s of [-1, 1]) { mesh(new THREE.SphereGeometry(0.006, 6, 6), m('#111', { r: 0.2 }), null, h).position.set(s * 0.02, 0.01, 0.028); const f = mesh(new THREE.ConeGeometry(0.012, 0.05, 6), m('#ff8a3c'), null, g); f.position.set(s * 0.018, -0.02, -0.09); f.rotation.x = -1.8; }
+      break;
+    }
+    case 'glowball': {
+      const gb = mesh(new THREE.SphereGeometry(0.06, 24, 18), M.mat('#9dffb0', { r: 0.4, em: '#3dff7a', ei: 1.2 }), null, g);
+      const halo = mesh(new THREE.SphereGeometry(0.09, 16, 12), M.basic('#7dffa0', { op: 0.25, dw: false }), null, g, false);
       break;
     }
     default: mesh(new THREE.SphereGeometry(0.05, 12, 10), m('#ccc'), null, g);

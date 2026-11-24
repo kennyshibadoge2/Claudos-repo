@@ -84,6 +84,7 @@ G.DiscHand = class {
     const vel = fwd.clone().multiplyScalar(f).addScaledVector(right, U.clamp(vl * 1.4, -0.35 * f - 0.6, 0.35 * f + 0.6));
     vel.y = f > 0.5 ? U.clamp(f * 0.16, 0.5, 4) : Math.max(-0.5, vu * 0.3);
     const pos = this.cam.localToWorld(this.local.clone());
+    if (f < 1.6) { G.ui.hint('Swing the disc upward and let go to throw!', 2000); this.drag = false; return null; }
     const id = this.id; this.hide();
     return { pos, vel, power: f, id };
   }
@@ -107,7 +108,14 @@ G.discChase = function* (pet, flight, plan, o = {}) {
       if (plan.kind !== 'ground' && !jumped && flight.t >= plan.t - 0.34) { jumped = true; t0 = G.time; pet.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.2 : 0.4)); pet.setPose('leap', 10); }
       if (plan.kind === 'flip' && jumped && pet.airborne) pet.extraPitch = -Math.PI * 2 * U.clamp((G.time - t0) / 0.8, 0, 1);
       if (flight.t >= plan.t) { flight.caught = true; break; }
-    } else if (flight.onGround && U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z) < 0.35 * pet.S + 0.1) { flight.caught = true; break; }
+    } else if (flight.onGround) {
+      const dd = U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z);
+      if (dd < 0.35 * pet.S + 0.1) { flight.caught = true; break; }
+      // can't get any closer (wall, fence, out of reach)? grab it anyway so play never gets stuck
+      if (dd >= (flight._best || 1e9) - 0.02) flight._stuck = (flight._stuck || 0) + pet.dt; else { flight._best = dd; flight._stuck = 0; }
+      if (flight._stuck > 1.2 && dd < 3.5) { flight.caught = true; break; }
+      if (flight._stuck > 4) { flight.caught = true; break; }
+    }
     yield;
   }
   pet.moveTarget = null; pet.lookTarget = null;
