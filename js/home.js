@@ -275,6 +275,7 @@ G.scenes.home = (() => {
     if (G.curName !== 'home') return;
     const t = G.state.tut; const p = G.activePet(); if (!p) return;
     if (!t.pet) G.ui.hint('Press and stroke ' + p.name + ' to pet them!', 0);
+    else if ((p.d.nameLearn || 0) < 1 && G.voice.supported() && !t.name) G.ui.hint('Teach ' + p.name + ' their name: tap the mic (top bar), then press Call and say it!', 0);
     else if (!t.call) G.ui.hint('Tap the floor to call ' + p.name + ' over.', 0);
     else if (!t.toy) G.ui.hint('Open Toys, pick the ball and flick it up to throw!', 0);
     else if (!t.trick) G.ui.hint('Teach a trick: stroke down along ' + p.name + '’s back while they stand.', 0);
@@ -350,8 +351,14 @@ G.scenes.home = (() => {
     if (d.nameLearn < 1 && G.voice.on) {
       p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 4; yield* p.act('sit', 4); })()); setFocus(p, 6);
       G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
-        if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); }
+        if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
         else G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Press Call and say it again.'); });
+      return;
+    }
+    if (d.nameLearn < 1 && G.voice.supported()) {
+      p.stop(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z, 0.4); p.lookCam = 3; p.tiltT = 1.2; p.emote('q', 1.2); yield* p.act('sit', 1.5); })());
+      G.ui.hint(p.name + ' doesn\u2019t know their name yet. Turn on the mic and say it!', 5000);
+      G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) H.callName(); }, 700); } }]);
       return;
     }
     if (d.nameLearn < 1) {
@@ -691,7 +698,7 @@ G.scenes.home = (() => {
       if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
       else { pet.happy(1.1, false); G.fx.spawn('heart', hit.point.clone().add(new V3(0, 0.05, 0)), 1); }
       G.state.stats.pets++; tutDone('pet');
-      if (praise && praise.pet === pet) doPraise();
+      if (praise && praise.pet === pet && !praise.voice) doPraise();
     }
     if (part === 'belly' && !pet.cat) { if (pet.poseName === 'lie') pet.setPose('roll', 5); if (pet.poseName === 'roll') pet.kickT = 0.4; }
     if (pet.cat) { T.purr -= dtp; if (T.purr <= 0) { T.purr = 2; pet.voice('purr'); } }
@@ -753,10 +760,32 @@ G.scenes.home = (() => {
     pet.do((function* () { pet.lookCam = 4; if (pet.poseName === 'stand') yield* pet.face(cam.position.x, cam.position.z, 0.4); yield* pet.trick(id); pet.excite = Math.max(pet.excite, 0.5); pet.lookCam = 3; yield* pet.wait(1.5); })());
     setFocus(pet, 5);
     if (!learned) {
-      praise = { pet, id, until: G.time + 5 };
-      G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]);
-      G.ui.hint(pet.name + ' tried "' + tr.name + '"! Praise them to teach it.', 3500);
+      if (!G.voice.supported()) {
+        praise = { pet, id, until: G.time + 5 };
+        G.ui.prompts([{ label: 'Good job!', cls: 'pink', fn: () => doPraise() }]);
+        G.ui.hint(pet.name + ' tried "' + tr.name + '"! Praise them to teach it.', 3500);
+      } else if (!G.voice.on) {
+        G.ui.prompts([{ label: 'Turn on the mic', cls: 'pink', fn: () => { G.ui.prompts([]); G.voice.toggle(); setTimeout(() => { if (G.voice.on) G.ui.hint('Mic on! Do the gesture again, then say the command.', 4000); }, 600); } }]);
+        G.ui.hint(pet.name + ' tried "' + tr.name + '"! Turn on the mic to teach it with your voice.', 5000);
+      } else {
+        praise = { pet, id, until: G.time + 9, voice: true };
+        voiceTeachStep(pet, id);
+      }
     } else { pet.happy(2); G.ui.toast(pet.name + ': ' + tr.name + '!'); }
+  }
+  function voiceTeachStep(pet, id) {
+    const tr = G.TRICKS.find((t) => t.id === id); const st = G.voice.store(pet.d.id);
+    const have = (st.tricks[id] || []).length;
+    G.ui.hint(have ? 'Say your word for "' + tr.name + '" again!' : 'Now say a command word for "' + tr.name + '" (like "' + tr.name.toLowerCase() + '")!', 7000);
+    G.ui.prompts([]);
+    pet.emote('dots', 8);
+    G.voice.trainStart({ timeout: 9, cb: (utt) => {
+      if (!praise || praise.pet !== pet || praise.id !== id) return;
+      const list = st.tricks[id] = st.tricks[id] || [];
+      if (list.length && utt.text !== undefined && !list.some((t) => t.t && G.voice.textSim(utt.text, t.t) >= 0.55)) { pet.tiltT = 1.2; pet.emote('q'); G.ui.toast('That sounded like a different word. Use the same word each time!'); praise.until = G.time + 9; voiceTeachStep(pet, id); return; }
+      list.push(utt.feats ? { f: utt.feats } : { t: utt.text }); if (list.length > 4) list.shift();
+      doPraise();
+    } });
   }
   function doPraise() {
     if (!praise) return; const { pet, id } = praise; praise = null; G.ui.prompts([]);
@@ -855,7 +884,7 @@ G.scenes.home = (() => {
       pet.d.hunger = U.clamp(pet.d.hunger + it.hunger, 0, 100); pet.happy(it.mood); pet.fx('heart', 3); pet.excite = 1; pet.voice('happy');
       pet.lickT = 1.2; yield* pet.wait(1.2);
     })());
-    if (praise && praise.pet === pet) doPraise();
+    if (praise && praise.pet === pet && !praise.voice) doPraise();
   }
   /* ---------------- brush ---------------- */
   H.startBrush = function () {
@@ -950,7 +979,7 @@ G.scenes.home = (() => {
       if (d < r && d > 0.001) { const push = (r - d) * 0.5; a.pos.x -= dx / d * push; a.pos.z -= dz / d * push; b.pos.x += dx / d * push; b.pos.z += dz / d * push; }
     }
     updateToys(dt); updateTug(dt); updateBath(dt); H.hand.update(dt); for (const f of H.flights) f.update(dt);
-    if (praise && G.time > praise.until) { praise = null; G.ui.prompts([]); }
+    if (praise && G.time > praise.until) { if (praise.voice) { G.voice.train = null; G.ui.hint(praise.pet.name + ' got bored waiting. Do the gesture again!', 2500); } praise = null; G.ui.prompts([]); }
     if (held && !held.dragging && !G.input.down) held.mesh.rotation.y += dt * 0.8;
     // camera
     if (focus && focusUntil < G.time && mode === 'idle') focus = null;
