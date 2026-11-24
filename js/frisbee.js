@@ -213,7 +213,7 @@ G.scenes.frisbee = (() => {
           if (!plan) { // trained dogs sprint for a low catch just before it lands
             let gi = path.findIndex((q) => q.ground); gi = Math.max(1, (gi < 0 ? path.length : gi) - 2);
             const q = path[gi]; const S0 = G.discSkill(p); const dist = U.d2(p.pos.x, p.pos.z, q.p.x, q.p.z);
-            if (r.tier >= 2 || Math.random() < 0.5) plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, dist / Math.max(0.3, q.t - S0.delay)) }) };
+            if (r.tier >= 2 || Math.random() < 0.5) plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, 1.18 * dist / Math.max(0.3, q.t - S0.delay - 0.15)) }) };
           }
         }
         r.fl = { path, t: 0, i: 0, plan, jumped: false };
@@ -228,7 +228,7 @@ G.scenes.frisbee = (() => {
       if (F2.t > S.delay) { if (U.d2(p.pos.x, p.pos.z, tgt.x, tgt.z) > 0.25) { p.moveTarget = new V3(tgt.x, 0, tgt.z); p.speedMul = S.spd / p.S; } else p.moveTarget = null; }
       if (plan && plan.kind !== 'ground' && !F2.jumped && F2.t >= plan.t - 0.34) F2.jumped = G.discLeap(p, plan);
       G.discFlip(p, F2.jumped);
-      if (plan && F2.t >= plan.t && U.d2(p.pos.x, p.pos.z, plan.p.x, plan.p.z) > 0.5 * p.S + 1.0) { F2.plan = null; }
+      if (plan && F2.t >= plan.t && U.d2(p.pos.x, p.pos.z, plan.p.x, plan.p.z) > 0.5 * p.S + 1.3) { F2.plan = null; }
       else if (plan && F2.t >= plan.t) {
         const mult = plan.kind === 'flip' ? 3 : plan.kind === 'jump' ? 2 : 1; const zb = zoneBonus(plan.p); const pts = Math.round(Math.max(1, plan.p.z - 1) * mult) + zb; r.score += pts; r.person.cheerT = mult > 1 || zb ? 1.6 : 0; if (!r.person.cheerT) r.person.clapT = 0.9;
         popText(p.pos.clone().setY(1.4), '+' + pts + (zb ? ' ZONE' : mult > 1 ? (mult === 3 ? ' FLIP!' : ' JUMP') : ''), mult === 3 ? '#7a5cff' : '#ee8a3c');
@@ -362,7 +362,7 @@ G.scenes.frisbee = (() => {
           if (plan.kind !== 'ground' && !jumped && st.ft >= plan.t - 0.34) jumped = G.discLeap(pet, plan);
           G.discFlip(pet, jumped);
           if (st.ft >= plan.t - 0.001 || disc.landed) {
-            if (U.d2(pet.pos.x, pet.pos.z, plan.p.x, plan.p.z) < 0.5 * pet.S + 1.0) { catchIt(); break; }
+            if (U.d2(pet.pos.x, pet.pos.z, plan.p.x, plan.p.z) < 0.5 * pet.S + 1.3) { catchIt(); break; }
             // got slowed down (sand!) and arrived too late
             st.plan = null; if (disc.landed) { missed(); break; } pet.moveTarget = new V3(st.landing.x, 0, st.landing.z);
             yield* (function* () { while (st && st.phase === 'flight' && !disc.landed) yield; })(); break;

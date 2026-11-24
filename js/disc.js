@@ -152,7 +152,7 @@ G.discChase = function* (pet, flight, plan, o = {}) {
     if (plan) {
       if (plan.kind !== 'ground' && !jumped && flight.t >= plan.t - 0.34) { jumped = G.discLeap(pet, plan); }
       G.discFlip(pet, jumped);
-      if (flight.t >= plan.t) { if (U.d2(pet.pos.x, pet.pos.z, plan.p.x, plan.p.z) < 0.5 * pet.S + 1.0) { flight.caught = true; break; } plan = null; } // too late: chase it down instead
+      if (flight.t >= plan.t) { if (U.d2(pet.pos.x, pet.pos.z, plan.p.x, plan.p.z) < 0.5 * pet.S + 1.3) { flight.caught = true; break; } plan = null; } // too late: chase it down instead
     } else if (flight.onGround) {
       const dd = U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z);
       if (dd < 0.35 * pet.S + 0.1) { flight.caught = true; break; }

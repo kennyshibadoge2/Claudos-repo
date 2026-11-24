@@ -183,7 +183,7 @@ class Pet {
       const diff = U.angDiff(this.heading, this.turnTo); const tr = 4.5 * dt;
       this.heading += U.clamp(diff, -tr, tr); turning = Math.abs(diff) > 0.05 ? 1 : 0;
     }
-    this.vel = U.damp(this.vel, target, target > this.vel ? 5 : 7, dt);
+    this.vel = U.damp(this.vel, target, target > this.vel ? (this.speedMul > 3 ? 11 : 5) : 7, dt); // sprints get a quick burst off the line
     if (this.vel > 0.002) {
       this.pos.x += Math.sin(this.heading) * this.vel * dt;
       this.pos.z += Math.cos(this.heading) * this.vel * dt;
