@@ -26,6 +26,8 @@ const IC = {
   kennel: '<svg viewBox="0 0 32 32"><path d="M4 15L16 6l12 9v12H4z" fill="#c8622a"/><path d="M11 27v-7a5 5 0 0110 0v7z" fill="#3b2a1f"/></svg>',
   map: '<svg viewBox="0 0 32 32"><path d="M4 8l7-3 10 3 7-3v19l-7 3-10-3-7 3z" fill="#fff7ea" stroke="#79b25a" stroke-width="2" stroke-linejoin="round"/><path d="M11 5v19M21 8v19" stroke="#79b25a" stroke-width="2"/></svg>',
   hand: '<svg viewBox="0 0 64 64"><path d="M22 34V14a4 4 0 018 0v14-18a4 4 0 018 0v18-14a4 4 0 018 0v16-8a4 4 0 018 0v16c0 12-8 20-20 20-8 0-12-3-16-9l-8-12a4 4 0 016-5z" fill="#fff4e8" stroke="#7a5c46" stroke-width="3" stroke-linejoin="round"/></svg>',
+  full: '<svg viewBox="0 0 32 32"><path d="M5 12V5h7M20 5h7v7M27 20v7h-7M12 27H5v-7" stroke="#3b2a1f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  unfull: '<svg viewBox="0 0 32 32"><path d="M12 5v7H5M27 12h-7V5M20 27v-7h7M5 20h7v7" stroke="#3b2a1f" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   mic: '<svg viewBox="0 0 32 32"><rect x="11" y="4" width="10" height="16" rx="5" fill="currentColor"/><path d="M7 15a9 9 0 0018 0M16 24v4M11 28h10" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>',
   whistle: '<svg viewBox="0 0 32 32"><path d="M4 13h14a7 7 0 110 8H9a5 5 0 01-5-5z" fill="#f2c24b" stroke="#c8922a" stroke-width="1.6"/><circle cx="19" cy="17" r="3" fill="#c8922a"/><path d="M24 6l2-3M28 9l3-2M21 5l0-3" stroke="#ee8a3c" stroke-width="2" stroke-linecap="round"/></svg>',
   mail: '<svg viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="17" rx="3" fill="#fff" stroke="#e2574c" stroke-width="2"/><path d="M5 10l11 8 11-8" stroke="#e2574c" stroke-width="2" fill="none"/></svg>',
@@ -52,6 +54,13 @@ G.ui = (() => {
   ui.init = function () {
     $('#btnSettings').innerHTML = IC.gear;
     $('#btnSettings').onclick = () => ui.settings();
+    const canFull = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    const fb = $('#btnFull'); fb.classList.toggle('hidden', !canFull);
+    const fsIcon = () => { fb.innerHTML = ui.isFull() ? IC.unfull : IC.full; fb.title = ui.isFull() ? 'Exit full screen (F)' : 'Full screen (F)'; };
+    fsIcon(); fb.onclick = () => { G.audio.init(); ui.toggleFull(); };
+    document.addEventListener('fullscreenchange', () => { fsIcon(); setTimeout(G.onResize, 60); });
+    document.addEventListener('webkitfullscreenchange', () => { fsIcon(); setTimeout(G.onResize, 60); });
+    addEventListener('keydown', (e) => { if (e.code === 'KeyF' && !e.repeat && e.target.tagName !== 'INPUT' && !e.ctrlKey && !e.metaKey && G.curName !== 'walk' && G.curName !== 'park' && G.curName !== 'trials') ui.toggleFull(); });
     $('#btnMail').innerHTML = IC.mail + '<span class="badge" id="mailBadge"></span>'; $('#btnMail').onclick = () => { G.audio.play('pop'); G.ui.mailSheet(); };
     $('#btnMic').innerHTML = '<span id="micRing"></span>' + IC.mic; $('#btnMic').onclick = () => { G.audio.init(); G.voice.toggle(); }; G.voice.ui();
     $('#btnStamps').innerHTML = IC.book; $('#btnStamps').onclick = () => { G.audio.play('pop'); G.ui.stampSheet(); };
@@ -59,6 +68,16 @@ G.ui = (() => {
     $('#sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') ui.closeSheet(); });
     $('#dialog').addEventListener('click', () => { if (typing) typing.skip(); });
     setInterval(() => ui.refresh(), 400);
+  };
+  ui.isFull = () => !!(document.fullscreenElement || document.webkitFullscreenElement);
+  ui.toggleFull = function () {
+    try {
+      if (ui.isFull()) { (document.exitFullscreen || document.webkitExitFullscreen).call(document); return; }
+      const el = document.documentElement; const req = el.requestFullscreen || el.webkitRequestFullscreen;
+      if (!req) { ui.toast('Full screen isn\u2019t supported in this browser. Try adding the page to your home screen.'); return; }
+      const r = req.call(el, { navigationUI: 'hide' });
+      if (r && r.catch) r.catch(() => ui.toast('Full screen was blocked here. Open the game in its own tab to use it.'));
+    } catch (e) { ui.toast('Full screen isn\u2019t available here.'); }
   };
   ui.closeAll = function () { ui.closeSheet(true); ui.prompts([]); $('#modalWrap').classList.add('hidden'); };
 
@@ -316,6 +335,7 @@ G.ui = (() => {
     ui.sheet({
       title: 'Settings', render(body) {
         body.innerHTML = '<h3>Sound</h3><div class="kv" style="align-items:center"><b>Music</b><input type="range" id="sMus" min="0" max="1" step="0.05" value="' + s.music + '"><b>Effects</b><input type="range" id="sSfx" min="0" max="1" step="0.05" value="' + s.sfx + '"></div>' +
+          '<h3>Display</h3><button class="btn" id="sFull">' + (ui.isFull() ? 'Exit full screen' : 'Full screen') + '</button><p class="note">Shortcut: press F at home (or tap the corner button in the top bar).</p>' +
           '<h3>Voice</h3><p class="note">Tap the mic in the top bar to talk to your pets: teach names with Call, and trick words from the Tricks menu. Engine:</p><div class="seg" id="sV">' + [['auto', 'Speech (auto)'], ['match', 'Sound matching']].map(([k, n]) => '<button data-v="' + k + '" class="' + ((s.voiceEngine || 'auto') === k ? 'on' : '') + '">' + n + '</button>').join('') + '</div><p class="note">Sound matching records your own voice, so any made-up word works, offline. Speech uses word recognition.</p><button class="btn ghost" id="sVc">Forget voice training for the active pet</button>' +
           '<h3>Graphics</h3><div class="seg" id="sQ">' + ['auto', 'low', 'medium', 'high'].map((k) => '<button data-q="' + k + '" class="' + ((s.quality || 'auto') === k ? 'on' : '') + '">' + (k === 'auto' ? 'Auto' : G.QUALITY[k].name) + '</button>').join('') + '</div><p class="note" id="sQn">Low: fastest, no shadows, less grass. High: sharpest, full shadows. Resolution and shadows change now; grass and shadow sharpness after a reload.</p><button class="btn ghost" id="sReload">Reload now</button>' +
           '<h3>How to play</h3><div class="note" style="line-height:1.6">' +
@@ -329,6 +349,7 @@ G.ui = (() => {
         body.querySelectorAll('#sQ button').forEach((b) => (b.onclick = () => { s.quality = b.dataset.q; G.save(); G.applyQuality(); body.querySelectorAll('#sQ button').forEach((x) => x.classList.toggle('on', x === b)); G.ui.toast('Graphics: ' + b.textContent); }));
         body.querySelectorAll('#sV button').forEach((b) => (b.onclick = () => { s.voiceEngine = b.dataset.v; if (G.voice.on) G.voice.stop(); body.querySelectorAll('#sV button').forEach((x) => x.classList.toggle('on', x === b)); G.save(); }));
         body.querySelector('#sVc').onclick = () => { const p = G.activePet(); if (!p) return; if (G.state.voice) delete G.state.voice[p.d.id]; G.ui.toast('Cleared ' + p.name + '\u2019s voice training.'); G.save(); };
+        body.querySelector('#sFull').onclick = () => { ui.toggleFull(); setTimeout(() => ui.resheet(), 400); };
         body.querySelector('#sReload').onclick = () => { G.save(); location.reload(); };
         body.querySelector('#sReset').onclick = () => ui.confirm('Start over?', 'This erases your pets, coins and items in this browser.', 'Erase and restart').then((ok) => { if (ok) { G.wipe(); G.state = null; location.reload(); } });
       }, onClose: () => G.save(),
