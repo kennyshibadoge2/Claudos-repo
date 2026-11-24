@@ -55,6 +55,7 @@ G.ui = (() => {
   ui.init = function () {
     $('#btnSettings').innerHTML = IC.gear;
     $('#btnSettings').onclick = () => ui.settings();
+    new MutationObserver(() => document.body.classList.toggle('dlg', !$('#dialog').classList.contains('hidden'))).observe($('#dialog'), { attributes: true, attributeFilter: ['class'] });
     // phones: tuck the less-used buttons into a dropdown so the pet cards fit
     const MORE = ['btnMail', 'btnCam', 'btnStamps', 'btnFull', 'btnSettings'];
     $('#btnMore').innerHTML = '<svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3" fill="currentColor"/><circle cx="16" cy="16" r="3" fill="currentColor"/><circle cx="24" cy="16" r="3" fill="currentColor"/></svg><span class="dotb hidden"></span>';
@@ -330,6 +331,22 @@ G.ui = (() => {
     box.innerHTML = '<h3>' + (got.length ? '\ud83c\udfc6 Exclusive prize!' : 'Champion again!') + '</h3>' + ids.map((k) => '<div class="prizeItem"><img src="' + G.M.icons.item(k) + '" alt=""><b>' + U.esc(G.ITEMS[k].name) + '</b><small>' + U.esc(G.ITEMS[k].desc) + '</small></div>').join('') + (got.length ? '' : '<p class="note">You already own these \u2014 a true legend.</p>');
     if (got.length && pet) { const b = document.createElement('button'); b.className = 'btn pink'; b.textContent = 'Put it on ' + pet.name + '!'; b.onclick = () => { for (const k of got) { pet.d.acc[G.ITEMS[k].slot] = k; } pet.applyAcc && pet.applyAcc(); G.audio.play('sparkle'); pet.fx && pet.fx('sparkle', 8); b.disabled = true; b.textContent = 'Looking good!'; G.save(); }; box.appendChild(b); }
     body.appendChild(box);
+  };
+  // choose which dog to enter in a contest (cats can't compete)
+  ui.dogPicker = function (body, onChange) {
+    const dogs = G.state.pets.filter((d) => d.breed !== 'cat'); if (!dogs.length) return null;
+    const act = G.activePet(); const curId = act && !act.cat ? act.d.id : dogs[0].id;
+    const wrap = document.createElement('div'); wrap.className = 'dogPick';
+    const h = document.createElement('div'); h.className = 'dpTitle'; h.textContent = dogs.length > 1 ? 'Who\u2019s competing?' : 'Competing:'; wrap.appendChild(h);
+    const row = document.createElement('div'); row.className = 'dpRow'; wrap.appendChild(row);
+    for (const d of dogs) {
+      const cups = G.petCups(d); const won = G.CONTESTS.filter((c) => cups[c.id + '_won']).length;
+      const b = document.createElement('button'); b.className = 'dpDog' + (d.id === curId ? ' on' : '');
+      b.innerHTML = '<img src="' + G.M.icons.pet(d) + '" alt=""><b>' + U.esc(d.name) + '</b><small>Disc ' + Math.round(d.disc || 0) + ' \u00b7 ' + won + '/' + G.CONTESTS.length + ' cups</small>';
+      b.onclick = () => { if (d.id === curId) return; G.state.active = d.id; G.audio.play('pop'); G.ui.refresh && G.ui.refresh(true); onChange && onChange(d); };
+      row.appendChild(b);
+    }
+    body.appendChild(wrap); return curId;
   };
   ui.petInfo = function (d) {
     const p = G.petObj(d.id);

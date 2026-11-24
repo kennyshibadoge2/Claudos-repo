@@ -5,8 +5,8 @@
    ========================================================= */
 G.CONTESTS.forEach((c, i) => { c.time = [60, 60, 60, 70, 80][i]; c.tier = i; c.dis = [1, 0.8, 0.55, 0.35, 0.25][i]; });
 G.CONTEST_RIVALS = [
-  { d: [4, 9], jump: 0, flip: 0, catch: 0.6, wander: 0.18 },
-  { d: [6, 12], jump: 0.25, flip: 0, catch: 0.7, wander: 0.1 },
+  { d: [4, 9], jump: 0, flip: 0, catch: 0.42, wander: 0.28, pace: [1.8, 3.4] },
+  { d: [6, 12], jump: 0.25, flip: 0, catch: 0.55, wander: 0.16, pace: [1.2, 2.6] },
   { d: [8, 15], jump: 0.45, flip: 0.05, catch: 0.75, wander: 0.05 },
   { d: [10, 18], jump: 0.6, flip: 0.18, catch: 0.8, wander: 0.02 },
   { d: [12, 20], jump: 0.55, flip: 0.38, catch: 0.86, wander: 0 },
@@ -21,7 +21,7 @@ G.scenes.frisbee = (() => {
   let introFocus = null;
   F.init = function () {
     scene = new THREE.Scene(); F.scene = scene; scene.background = new THREE.Color('#9fd4ff'); scene.fog = new THREE.Fog('#9fd4ff', 55, 130);
-    cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam; F.hand = new G.DiscHand(scene, cam);
+    cam = new THREE.PerspectiveCamera(50, G.aspect(), 0.1, 260); F.camera = cam; F.hand = new G.DiscHand(scene, cam, { zeroZ: 1, preview: () => ({ wind: st ? st.wind : 0, pro: discId === 'prodisc', bounds: { x0: -3.4, x1: 3.4, z0: 0.4, z1: 72 } }) });
     const L = G.outdoorLights(scene, { shadow: 30 }); L.sun.position.set(-10, 25, 15); L.sun.target.position.set(0, 0, 25); F.L = L;
     build();
   };
@@ -124,7 +124,7 @@ G.scenes.frisbee = (() => {
   function newZone(i) {
     const zn = { dx: U.rand(-1.3, 1.3), z: U.rand(9, 30 + (st.cls ? st.cls.tier * 4 : 0)), r: U.rand(1.0, 1.5), life: U.rand(10, 18), t: 0, pts: [0, 10, 15, 20, 25][st.cls ? st.cls.tier : 1], meshes: [] };
     const tx = zoneTex();
-    const beamTex = G.canvasTex(8, 64, (c) => { const g = c.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(255,230,120,0)'); g.addColorStop(1, 'rgba(255,220,90,.75)'); c.fillStyle = g; c.fillRect(0, 0, 8, 64); });
+    const beamTex = G.canvasTex(8, 64, (c) => { const g = c.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(255,200,60,0)'); g.addColorStop(0.7, 'rgba(255,200,60,.25)'); g.addColorStop(1, 'rgba(255,190,40,.7)'); c.fillStyle = g; c.fillRect(0, 0, 8, 64); });
     const lab = G.textTex('+' + zn.pts, { font: '800 60px Fredoka, sans-serif', color: '#ffcf33', stroke: '#fff', strokeW: 10, pad: 10 });
     for (const lx of laneXs()) {
       const half = lx === 0 ? 3.4 : 2; const x = U.clamp(lx + zn.dx, lx - half + 0.7, lx + half - 0.7);
@@ -134,6 +134,31 @@ G.scenes.frisbee = (() => {
     }
     return zn;
   }
+  /* ---------- little touches ---------- */
+  let shadowTex = null, signs = [];
+  function shadowMesh() { if (!shadowTex) shadowTex = G.canvasTex(64, 64, (c) => { const g = c.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(30,40,20,.55)'); g.addColorStop(1, 'rgba(30,40,20,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); }); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); return m; }
+  function placeShadow(sh, p, vis) { sh.visible = vis && p.y > 0.06; if (!sh.visible) return; sh.position.set(p.x, 0.025, p.z); const k = U.clamp(p.y / 5, 0, 1); sh.scale.setScalar(1 + k * 0.8); sh.material.opacity = 0.9 * (1 - k * 0.7); }
+  let pawTex = null;
+  function pawPrint(p) {
+    if (!fieldGrp) return; if (!pawTex) pawTex = G.canvasTex(64, 64, (c) => { c.fillStyle = 'rgba(140,105,60,.6)'; c.beginPath(); c.ellipse(32, 40, 12, 10, 0, 0, 7); c.fill(); for (const [px, py] of [[17, 24], [27, 15], [37, 15], [47, 24]]) { c.beginPath(); c.ellipse(px, py, 4.5, 6, 0, 0, 7); c.fill(); } });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(0.16 * p.S, 0.16 * p.S), new THREE.MeshBasicMaterial({ map: pawTex, transparent: true, depthWrite: false })); m.rotation.set(-Math.PI / 2, 0, -p.heading + Math.PI); m.renderOrder = 3;
+    const side = (p._pawSide = -(p._pawSide || 1)); m.position.set(p.pos.x + Math.cos(p.heading) * 0.05 * side, 0.02, p.pos.z - Math.sin(p.heading) * 0.05 * side); fieldGrp.add(m);
+    (st.paws = st.paws || []).push(m); if (st.paws.length > 90) { const o = st.paws.shift(); fieldGrp.remove(o); o.geometry.dispose(); o.material.dispose(); }
+  }
+  function makeSigns(cls) {
+    clearSigns(); if (cls.tier < 1) return;
+    const words = ['GO ' + pet.name.toUpperCase() + '!', '\u2665 ' + pet.name, pet.name + ' #1', 'CATCH IT!', 'GOOD DOG!', '\ud83e\udd4f ' + pet.name + ' \ud83e\udd4f', 'I \u2665 SHIBAS', 'PAWSOME!'];
+    const cols = ['#fff7ea', '#ffe28a', '#ffd1dc', '#d8f0ff'];
+    const n = [0, 4, 6, 8, 10][cls.tier];
+    for (let i = 0; i < n; i++) {
+      const c = crowdData[Math.floor(Math.random() * Math.min(crowd.body.count, crowdData.length))]; if (!c) continue;
+      const t = G.textTex(words[i % words.length], { font: '800 44px Fredoka, sans-serif', bg: cols[i % cols.length], color: i % 2 ? '#e2574c' : '#3b5ba8', pad: 14, radius: 6 });
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.1 * t.userData.h / t.userData.w), new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide }));
+      const side = Math.sign(c.x); m.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2; m.position.set(c.x - side * 0.35, c.y + 1.35, c.z); m.userData = { y0: c.y + 1.35, ph: Math.random() * 6, c };
+      scene.add(m); signs.push(m);
+    }
+  }
+  function clearSigns() { for (const m of signs) { scene.remove(m); m.material.map.dispose(); m.material.dispose(); m.geometry.dispose(); } signs = []; }
   function clearField() { if (fieldGrp) { scene.remove(fieldGrp); fieldGrp.traverse((o) => { if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } if (o.geometry) o.geometry.dispose(); }); fieldGrp = null; } }
   function terrainAt(x, z) { if (!st || !st.sand) return 1; for (const s of st.sand) if ((x - s.x) ** 2 + (z - s.z) ** 2 < s.r * s.r) return 0.42; return 1; }
   function zoneBonus(p) { if (!st || !st.zones) return 0; for (const zn of st.zones) { if (zn.t > zn.life - 0.6) continue; for (const m of zn.meshes) if ((p.x - m.position.x) ** 2 + (p.z - m.position.z) ** 2 < zn.r * zn.r) return zn.pts; } return 0; }
@@ -142,14 +167,19 @@ G.scenes.frisbee = (() => {
     st.zones.forEach((zn, i) => {
       zn.t += dt; const fade = Math.min(1, zn.t * 1.5, (zn.life - zn.t) * 1.5); const pulse = 0.75 + Math.sin(G.time * 4 + i) * 0.25;
       for (const m of zn.meshes) { m.material.opacity = Math.max(0, fade) * pulse; m.scale.setScalar(1 + Math.sin(G.time * 3 + i) * 0.04); }
-      for (const f of zn.fx || []) { f.material.opacity = Math.max(0, fade) * (f.isSprite ? 1 : 0.55 * pulse); if (f.isSprite) f.position.y = 1.7 + Math.sin(G.time * 2.5 + i) * 0.12; else f.rotation.y += dt * 0.5; }
+      for (const f of zn.fx || []) { f.material.opacity = Math.max(0, fade) * (f.isSprite ? 1 : 0.2 * pulse); if (f.isSprite) f.position.y = 1.7 + Math.sin(G.time * 2.5 + i) * 0.12; else f.rotation.y += dt * 0.5; }
       if (zn.t >= zn.life) { for (const m of zn.meshes.concat(zn.fx || [])) { fieldGrp.remove(m); if (m.material.map && !m.isSprite) m.material.map.dispose(); m.material.dispose(); m.geometry && !m.isSprite && m.geometry.dispose(); } st.zones[i] = newZone(i); if (Math.random() < 0.5) commentary('The bonus zone moved!'); }
     });
-    const dusty = (p) => { p.terrainMul = terrainAt(p.pos.x, p.pos.z); if (p.terrainMul < 1 && p.vel > 0.6 && Math.random() < dt * 14) G.fx.spawn('puff', p.pos.clone().setY(0.06), 1, { color: '#e2c48a' }); };
+    const dusty = (p) => {
+      p.terrainMul = terrainAt(p.pos.x, p.pos.z);
+      if (p.terrainMul < 1 && p.vel > 0.6) { if (Math.random() < dt * 14) G.fx.spawn('puff', p.pos.clone().setY(0.06), 1, { color: '#e2c48a' }); p._pawT = (p._pawT || 0) - dt; if (p._pawT <= 0) { p._pawT = 0.12; pawPrint(p); } }
+      if (p._wasAir && !p.airborne) { G.fx.spawn('puff', p.pos.clone().setY(0.05), 5, { color: p.terrainMul < 1 ? '#e2c48a' : '#d8e8c0' }); if (p === pet) G.audio.play('thud'); }
+      p._wasAir = p.airborne;
+    };
     dusty(pet); for (const r of rivals) dusty(r.pet);
   }
-  function clearRivals() { for (const r of rivals) { scene.remove(r.pet.root); scene.remove(r.person.root); scene.remove(r.disc); scene.remove(r.tag); } rivals = []; }
-  const RIVAL_SKILL = [8, 28, 48, 68, 88], RIVAL_F = [[4.5, 9], [6, 11], [7.5, 13], [9, 15], [10, 17]];
+  function clearRivals() { for (const r of rivals) { scene.remove(r.pet.root); scene.remove(r.person.root); scene.remove(r.disc); scene.remove(r.tag); if (r.shadow) scene.remove(r.shadow); } rivals = []; }
+  const RIVAL_SKILL = [4, 20, 46, 68, 88], RIVAL_F = [[3.5, 7.5], [4.5, 9.5], [7, 12.5], [9, 15], [10, 17]];
   function makeRivals(cls) {
     clearRivals();
     const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
@@ -183,7 +213,7 @@ G.scenes.frisbee = (() => {
           if (!plan) { // trained dogs sprint for a low catch just before it lands
             let gi = path.findIndex((q) => q.ground); gi = Math.max(1, (gi < 0 ? path.length : gi) - 2);
             const q = path[gi]; const S0 = G.discSkill(p); const dist = U.d2(p.pos.x, p.pos.z, q.p.x, q.p.z);
-            plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, dist / Math.max(0.3, q.t - S0.delay)) }) };
+            if (r.tier >= 2 || Math.random() < 0.5) plan = { i: gi, t: q.t, p: q.p.clone(), kind: 'ground', S: Object.assign({}, S0, { spd: Math.max(S0.spd, dist / Math.max(0.3, q.t - S0.delay)) }) };
           }
         }
         r.fl = { path, t: 0, i: 0, plan, jumped: false };
@@ -216,7 +246,7 @@ G.scenes.frisbee = (() => {
       p.extraPitch = 0;
       r.disc.position.copy(p.mouthWorld()); r.disc.rotation.set(1.2, p.heading, 0);
       p.setPose('stand'); p.moveTarget = new V3(r.x + 0.9, 0, 0.9); p.speedMul = 4.5; r.person.lookAt = p.pos; if (Math.random() < dt * 0.5) r.person.waveT = 0.6;
-      if (U.d2(p.pos.x, p.pos.z, r.x + 0.9, 0.9) < 0.4) { r.state = 'ready'; r.t = U.rand(0.6, 1.6); p.moveTarget = null; }
+      if (U.d2(p.pos.x, p.pos.z, r.x + 0.9, 0.9) < 0.4) { r.state = 'ready'; const pc = r.skill.pace || [0.6, 1.6]; r.t = U.rand(pc[0], pc[1]); p.moveTarget = null; }
     }
     p.update(dt); r.person.update(dt);
   }
@@ -232,9 +262,9 @@ G.scenes.frisbee = (() => {
   /* ---------------- enter / menus ---------------- */
   F.enter = function (opts = {}) {
     from = opts.from || 'home';
-    pet = G.activePet(); if (!pet || pet.cat) { setTimeout(() => G.go('home'), 50); return; }
-    scene.add(pet.root); pet.stop(); pet.ctl = null; pet.baseY = 0; pet.extraPitch = 0; pet.bounds = (p) => { p.pos.x = U.clamp(p.pos.x, -11.5, 11.5); p.pos.z = U.clamp(p.pos.z, -1, 70); };
-    pet.pos.copy(SIT); pet.heading = 0; pet.brain = sitBrain;
+    let a = G.activePet(); if (a && a.cat) { const dog = G.state.pets.find((d) => d.breed !== 'cat'); if (dog) { G.state.active = dog.id; G.ui.refresh && G.ui.refresh(true); a = G.activePet(); } }
+    if (!a || a.cat) { setTimeout(() => G.go('home'), 50); return; }
+    usePet(a); document.body.classList.add('contest');
     discId = G.state.toys.prodisc ? 'prodisc' : 'disc';
     if (disc) scene.remove(disc.mesh);
     disc = { mesh: G.M.item(discId), pos: new V3() }; disc.mesh.scale.setScalar(1.6); disc.mesh.visible = false; scene.add(disc.mesh);
@@ -243,7 +273,13 @@ G.scenes.frisbee = (() => {
     cam.position.set(0.6, 1.8, -3.4); lookV.set(0, 0.9, 10);
     setTimeout(classMenu, 450);
   };
+  function usePet(p) {
+    if (pet && pet !== p) { if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; } scene.remove(pet.root); pet.stop(); pet.terrainMul = 1; }
+    pet = p; scene.add(pet.root); pet.stop(); pet.ctl = null; pet.baseY = 0; pet.extraPitch = 0; pet.flipL = null; pet.bounds = (q) => { q.pos.x = U.clamp(q.pos.x, -11.5, 11.5); q.pos.z = U.clamp(q.pos.z, -1, 70); };
+    pet.pos.copy(SIT); pet.heading = 0; pet.brain = sitBrain;
+  }
   F.exit = function () {
+    document.body.classList.remove('contest'); clearSigns();
     $('#dock').style.visibility = ''; F.hand.hide(); if (boardEl) { boardEl.remove(); boardEl = null; }
     if (pet) { if (pet.carry) { pet.m.mouth.remove(pet.carry.mesh); pet.carry = null; } scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.gnaw = false; }
     G.voice.done(); clearRivals(); clearField(); pet && (pet.terrainMul = 1); $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.prompts([]); st = null;
@@ -255,7 +291,8 @@ G.scenes.frisbee = (() => {
   function classMenu() {
     $('#dock').style.visibility = ''; if (boardEl) boardEl.classList.add('hidden'); $('#contestHud').classList.add('hidden'); G.audio.track('contestIntro');
     G.ui.sheet({ title: 'Disc Cup entry', render(body) {
-      G.ui.note(body, 'Throw as many times as you can before time runs out! Points = catch distance in meters. Jumping catches x2, flip catches x3. Rivals compete in the lanes beside you.');
+      G.ui.dogPicker(body, () => { usePet(G.activePet()); pet.voiceCd = 0; pet.voice('happy'); pet.emote('heart', 1); G.ui.resheet(); });
+      G.ui.note(body, 'Throw as many times as you can before time runs out! Points = catch distance in meters. Jumping catches x2, flip catches x3. Rivals compete in the lanes beside you. A guide shows where your throw will land while you swing.');
       const sk = pet.d.disc || 0;
       G.ui.note(body, 'Want to practice? Throw the disc at home, or at the Dog Park on your walk.');
       G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, may get distracted and chew the disc, and might not let go of it!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
@@ -271,7 +308,7 @@ G.scenes.frisbee = (() => {
     setTier(cls ? cls.tier : 0); $('#dock').style.visibility = 'hidden'; $('#contestHud').classList.remove('hidden');
     pet.stop(); pet.pos.copy(SIT); pet.heading = 0; pet.brain = sitBrain; pet.gnaw = false;
     if (cls) {
-      makeRivals(cls); setupField(cls);
+      makeRivals(cls); setupField(cls); makeSigns(cls);
       const port = G.M.icons.person('pepper');
       await G.ui.say('MC Pepper', U.pick(['Welcome, welcome to the ' + cls.name + '!', 'Laaadies and gentlemen and GOOD DOGS! The ' + cls.name + ' is ON!']), port);
       await G.ui.say('MC Pepper', 'Four teams, one field! Let\u2019s meet our competitors!', port); if (!st) return;
@@ -308,7 +345,7 @@ G.scenes.frisbee = (() => {
   F.onUp = function (p) { if (!st || st.phase !== 'ready') return; const r = F.hand.up(p); if (r) throwDisc(r); };
   function skillInfo() { return G.discSkill(pet); }
   function throwDisc(r) {
-    st.phase = 'flight'; st.throws++; G.ui.hint(null);
+    st.phase = 'flight'; st.throws++; G.ui.hint(null); F.hand.preview(r, true); // keep the landing ring up while it flies
     if (r.power > 4) G.audio.play('whoosh'); G.state.stats.throws++;
     const path = G.discSim(r.pos, r.vel, { wind: st.wind, pro: discId === 'prodisc', bounds: { x0: -3.4, x1: 3.4, z0: 0.4, z1: 72 } }); st.path = path; st.ft = 0; disc.flying = true; disc.landed = false; disc.mesh.visible = true; disc.pos.copy(path[0].p); disc.mesh.position.copy(disc.pos);
     const plan = G.discPlan(pet, path, { terrain: terrainAt }); const S = plan ? plan.S : G.discSkill(pet);
@@ -341,7 +378,8 @@ G.scenes.frisbee = (() => {
     const plan = st.plan; disc.flying = false; disc.mesh.visible = false; grabDisc();
     const dist = Math.max(0, plan.p.z - 1.0); const mult = plan.kind === 'flip' ? 3 : plan.kind === 'jump' ? 2 : 1; const zb = zoneBonus(plan.p); const pts = Math.round(dist * mult) + zb;
     if (zb) { G.audio.play('chime'); G.fx.spawn('sparkle', plan.p.clone().setY(0.4), 16); setTimeout(() => popText(plan.p.clone().setY(2.1), 'ZONE +' + zb, '#e0a400'), 250); }
-    st.catches++; G.state.stats.catches++; pet.d.catches = (pet.d.catches || 0) + 1;
+    st.catches++; G.state.stats.catches++; pet.d.catches = (pet.d.catches || 0) + 1; st.streak = (st.streak || 0) + 1; st.bestStreak = Math.max(st.bestStreak || 0, st.streak);
+    if (st.streak >= 3) { setTimeout(() => { if (st) { popText(pet.pos.clone().setY(2.4), st.streak + ' IN A ROW!', '#3b5ba8'); if ([3, 5, 7, 10].includes(st.streak)) { commentary(U.pick([pet.name + ' is ON FIRE! ' + st.streak + ' in a row!', st.streak + ' straight catches! Unstoppable!', 'The crowd is chanting ' + pet.name + '\u2019s name!'])); crowdJump(1.2, 0); } } }, 500); }
     pet.d.disc = Math.min(100, (pet.d.disc || 0) + [0, 1.5, 2.5, 3][mult] * (st.practice ? 0.7 : 1));
     if (mult > 1) { G.stamp('flying'); G.audio.play('sparkle'); G.fx.spawn('confetti', plan.p.clone(), mult === 3 ? 40 : 20); G.fx.spawn('star', plan.p.clone(), 8); }
     G.audio.play('cheer'); crowdJump(0.4 * mult, 0); G.vibrate(30);
@@ -353,7 +391,7 @@ G.scenes.frisbee = (() => {
     pet.do((function* () { yield* pet.waitUntil(() => !pet.airborne && !pet.flipL, 2); pet.extraPitch = 0; afterCatch(); })());
   }
   function missed() {
-    st.phase = 'return'; G.audio.play('aww'); commentary(U.pick(['Ooh, just out of reach!', 'A little too far that time!', 'The disc wins this round!']));
+    st.phase = 'return'; st.streak = 0; G.audio.play('aww'); commentary(U.pick(['Ooh, just out of reach!', 'A little too far that time!', 'The disc wins this round!']));
     pet.stop(); pet.extraPitch = 0; pet.do((function* () {
       yield* pet.goto(disc.pos.x, disc.pos.z, { speed: skillInfo().spd / pet.S, near: 0.3 });
       disc.mesh.visible = false; grabDisc(); pet.emote('sweat');
@@ -438,6 +476,8 @@ G.scenes.frisbee = (() => {
     let unlockedNew = null;
     let prizeAcc = [];
     if (place === 1) { const cups = G.petCups(pet.d); cups[c.id + '_won'] = true; const nx = G.CONTESTS[G.CONTESTS.indexOf(c) + 1]; if (nx && !cups[nx.id]) { cups[nx.id] = true; unlockedNew = nx; } if (c.id === 'champ') prizeAcc = G.givePrize(['crown', 'cape']); }
+    pet.d.cupBest = pet.d.cupBest || {}; const prevBest = pet.d.cupBest[c.id] || 0; const newBest = Math.round(st.score) > prevBest; if (newBest) pet.d.cupBest[c.id] = Math.round(st.score);
+    const bestStreak = st.bestStreak || 0;
     G.state.coins += prize; G.checkStamps(); G.save();
     G.audio.track(place <= 3 ? 'victory' : 'contestIntro');
     if (place === 1) { G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 60); crowdJump(1.5, 0); if (c.tier >= 2) fireworks(5); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
@@ -446,7 +486,7 @@ G.scenes.frisbee = (() => {
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', 'You won the ' + c.name + '!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         board.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + Math.round(b.score) + '</span>'; body.appendChild(r); });
-        G.ui.note(body, stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + '');
+        G.ui.note(body, (newBest ? '\u2b50 New personal best for ' + pet.name + ' in this cup (' + Math.round(board.find((x) => x.me).score) + ')! ' : prevBest ? pet.name + '\u2019s best here: ' + prevBest + '. ' : '') + (bestStreak >= 3 ? 'Best streak: ' + bestStreak + ' in a row. ' : '') + stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + '');
         if (c.id === 'champ' && place === 1) G.ui.prizeBox(body, prizeAcc, ['crown', 'cape'], pet);
         const r = document.createElement('div'); r.className = 'mrow';
         const again = document.createElement('button'); again.className = 'btn ghost'; again.textContent = 'Enter another cup'; again.onclick = () => { G.ui.closeSheet(true); st = null; clearRivals(); classMenu(); };
@@ -470,7 +510,9 @@ G.scenes.frisbee = (() => {
     frame++;
     const running = !!(st && st.cls && ['ready', 'flight', 'return', 'rogue', 'tug'].includes(st.phase) && st.time > 0);
     if (running) {
-      st.time -= dt;
+      const before = st.time; st.time -= dt;
+      if (before > 30 && st.time <= 30) commentary('30 seconds left!');
+      if (before > 10 && st.time <= 10) { commentary(U.pick(['10 seconds! Make them count!', 'Final 10 seconds!', 'Last chance throws!'])); G.audio.play('blip'); }
       if (st.time <= 0) {
         st.time = 0; G.audio.play('whistle'); G.ui.banner('TIME!', null, 1400); crowdJump(1, 0);
         if (st.phase === 'rogue') { G.ui.prompts([]); pet.gnaw = false; pet.stop(); bringBack(); }
@@ -479,9 +521,13 @@ G.scenes.frisbee = (() => {
       if (Math.floor(st.time) !== st._lastSec) { st._lastSec = Math.floor(st.time); hud(); drawBoard(); if (st.time <= 5 && st.time > 0) G.audio.play('tick'); }
     }
     updateField(dt);
+    if (!disc.shadow) disc.shadow = shadowMesh(); placeShadow(disc.shadow, disc.pos, !!(st && st.phase === 'flight' && disc.mesh.visible));
+    for (const r of rivals) { if (!r.shadow) r.shadow = shadowMesh(); placeShadow(r.shadow, r.disc.position, r.state === 'fly'); }
+    for (const m of signs) { const u = m.userData; m.position.y = u.y0 + Math.abs(Math.sin(G.time * 3 + u.ph)) * 0.08 + (u.c.jump || 0) * 0.5; m.rotation.z = Math.sin(G.time * 2 + u.ph) * 0.08; }
     for (const r of rivals) updateRival(r, dt, running);
     pet.update(dt); mc.update(dt); mc.lookAt = pet.pos;
     if (st && st.phase === 'ready') F.hand.update(dt);
+    else if (F.hand.pv && F.hand.pv.ring.visible && !(st && st.phase === 'flight' && disc.flying)) F.hand.preview(null);
     if (st && st.phase === 'flight') st.ft += dt;
     if (st && st.phase === 'flight' && disc.flying) {
       const P = st.path; let i = 0; while (i < P.length - 1 && P[i].t < st.ft) i++;
@@ -497,7 +543,7 @@ G.scenes.frisbee = (() => {
     if (blimp && blimp.parent.visible) { const a = G.time * 0.05; blimp.position.set(Math.cos(a) * 40, 32, 40 + Math.sin(a) * 30); blimp.rotation.y = -a + Math.PI; }
     if (jumbo && jumbo.parent.visible && frame % 3 === 0) { jumboCam.position.copy(pet.pos).add(new V3(2.2, 1.4, 2.8)); jumboCam.lookAt(pet.pos.clone().setY(0.5)); jumbo.visible = false; G.renderer.setRenderTarget(jumboRT); G.renderer.render(scene, jumboCam); G.renderer.setRenderTarget(null); jumbo.visible = true; }
     const portrait = G.aspect() < 0.9;
-    let pos = portrait ? new V3(0.5, 3.2, -6.6) : new V3(0.6, 2.2, -4.4), look = new V3(0, 0.7, 11);
+    let pos = portrait ? new V3(0.5, 3.2, -6.6) : new V3(0.6, 3.0, -5.0), look = new V3(0, 0.3, 12);
     if (introFocus) { look = introFocus.clone().setY(0.5); pos = look.clone().add(new V3(introFocus.x > 0.5 ? -1.6 : introFocus.x < -0.5 ? 1.6 : 0.4, 1.5, -3.6)); }
     if (st && (st.phase === 'flight' || st.phase === 'return' || st.phase === 'rogue')) {
       const dz = disc.flying ? disc.pos.z : pet.pos.z;

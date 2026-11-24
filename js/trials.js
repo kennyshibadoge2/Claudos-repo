@@ -20,11 +20,12 @@ G.ui.trialsSheet = function (from) {
   const p = G.activePet();
   G.ui.sheet({ title: 'Disc Cup Field', render(body) {
     G.ui.note(body, 'Three events take place at the field. Trophies and prizes for the top 3!');
+    if (G.state.pets.some((d) => d.breed !== 'cat')) { const cur = G.activePet(); if (cur && cur.cat) { const dog = G.state.pets.find((d) => d.breed !== 'cat'); G.state.active = dog.id; G.ui.refresh && G.ui.refresh(true); } G.ui.dogPicker(body, () => G.ui.resheet()); }
     const l = G.ui.list(body);
     l.appendChild(G.ui.li({ icon: 'disc', title: 'Disc Cup', sub: 'Flick the disc, your pup makes the catch.', fn: () => { G.ui.closeSheet(true); G.go('frisbee', { from }); } }));
     l.appendChild(G.ui.li({ icon: 'paw', title: 'Agility trial', sub: 'Lead your pup over hurdles, through tunnels and weave poles. Fastest time wins.', fn: () => { G.ui.closeSheet(true); G.go('trials', { mode: 'agility', from }); } }));
     l.appendChild(G.ui.li({ icon: 'star', title: 'Obedience trial', sub: 'The judge calls commands; perform the gestures before time runs out.', fn: () => { G.ui.closeSheet(true); G.go('trials', { mode: 'obedience', from }); } }));
-    if (p && p.cat) G.ui.note(body, 'Cats are welcome to watch, but only dogs can compete.');
+    if (!G.state.pets.some((d) => d.breed !== 'cat')) G.ui.note(body, 'Cats are welcome to watch, but only dogs can compete. Adopt a dog to enter!');
   } });
 };
 

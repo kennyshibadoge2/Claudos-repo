@@ -233,6 +233,24 @@ h3{margin:14px 0 6px;font-size:18px}
 #moreMenu .iconbtn .badge{position:static;margin-left:auto;order:2}
 #btnMore .dotb{position:absolute;top:2px;right:2px;width:11px;height:11px;border-radius:50%;background:#e2574c;border:2px solid #fff}
 @media (max-width:600px){.chip:not(.on){padding-right:4px}.chip:not(.on) .nm{display:none}}
+.dogPick{background:#fff;border-radius:18px;padding:10px 12px;margin:0 0 12px;box-shadow:0 2px 0 #ead7bb}.dpTitle{font-weight:700;margin-bottom:6px}
+.dpRow{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}.dpDog{flex:none;display:flex;flex-direction:column;align-items:center;gap:2px;width:96px;padding:8px 6px;border-radius:16px;background:#fbf1e1;border:3px solid transparent;font:inherit;color:inherit;cursor:pointer}
+.dpDog img{width:56px;height:56px;border-radius:50%;background:#fbe9cf}.dpDog b{font-size:14px}.dpDog small{font-size:11px;color:#8a6a4a;text-align:center;line-height:1.15}.dpDog.on{border-color:var(--orange);background:#fff3e2}
+/* during contests: keep the score/time pill, leaderboard, commentary and dialogue from overlapping */
+body.contest #hint{top:auto;bottom:calc(16px + var(--safe-b));max-width:min(560px,92vw);font-size:15px;text-align:center;z-index:12}
+body.contest #toasts{top:calc(118px + var(--safe-t))}
+body.contest #contestHud{top:calc(60px + var(--safe-t))}
+body.contest #board{top:calc(60px + var(--safe-t))}
+body.contest #banner{top:38%}
+body.contest.dlg #hint{display:none}
+body.contest.dlg #contestHud{opacity:.35}
+@media (max-width:700px){
+  body.contest #contestHud{left:auto;right:calc(8px + var(--safe-r));transform:none;flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 156px - var(--safe-l));padding:6px 12px;font-size:13px;gap:4px 10px;top:calc(56px + var(--safe-t))}
+  body.contest #board{top:calc(56px + var(--safe-t));font-size:12px;min-width:124px;max-width:140px;padding:6px 8px}
+  body.contest #toasts{top:calc(150px + var(--safe-t))}
+  body.contest #hint{font-size:13px;padding:7px 12px}
+}
+@media (max-height:460px){body.contest #board{font-size:11px;padding:4px 8px}body.contest #contestHud{font-size:13px;padding:5px 12px}}
 </style>
 </head>
 <body>

@@ -77,7 +77,7 @@ G.DiscFlight = class {
 G.DiscHand = class {
   constructor(scene, cam, o = {}) { this.scene = scene; this.cam = cam; this.o = o; this.mesh = null; this.id = null; this.drag = false; this.hist = []; this.rest = new V3(0.32, -0.42, -1.15); this.local = this.rest.clone(); }
   show(id) { this.hide(); this.id = id; this.mesh = G.M.item(id); this.mesh.scale.setScalar(1.0); this.scene.add(this.mesh); this.local.copy(this.rest); this.drag = false; }
-  hide() { if (this.mesh) this.scene.remove(this.mesh); this.mesh = null; this.drag = false; }
+  hide() { if (this.mesh) this.scene.remove(this.mesh); this.mesh = null; this.drag = false; if (this.pv) this.preview(null); }
   get active() { return !!this.mesh; }
   screenPos() { return G.toScreen(this.cam.localToWorld(this.local.clone()), this.cam); }
   planePoint(p) { const ndc = new V3(p.nx, p.ny, 0.5).unproject(this.cam); const dir = ndc.sub(this.cam.position).normalize(); const fwd = new V3(); this.cam.getWorldDirection(fwd); const d = 1.15 / Math.max(0.2, dir.dot(fwd)); return this.cam.worldToLocal(this.cam.position.clone().addScaledVector(dir, d)); }
@@ -89,27 +89,54 @@ G.DiscHand = class {
   }
   move(p) {
     if (!this.drag) return; const l = this.planePoint(p); l.y = Math.max(l.y, -0.62); this.local.copy(l);
-    this.hist.push({ t: p.t, l: l.clone() }); if (this.hist.length > 20) this.hist.shift();
+    this.hist.push({ t: p.t, l: l.clone() }); if (this.hist.length > 20) this.hist.shift(); this._lastMoveAt = performance.now();
   }
-  up(p) {
-    if (!this.drag) return null; this.drag = false; this.move(p);
-    const h = this.hist; const e = h[h.length - 1]; let i = h.length - 1; while (i > 0 && e.t - h[i - 1].t < 110) i--; if (i === h.length - 1) i = Math.max(0, i - 1);
+  // the throw the current swing would make (used for release and the aim preview)
+  calc() {
+    const h = this.hist; if (h.length < 2) return null;
+    const e = h[h.length - 1]; let i = h.length - 1; while (i > 0 && e.t - h[i - 1].t < 110) i--; if (i === h.length - 1) i = Math.max(0, i - 1);
     const a = h[i]; const dt = Math.max(0.012, (e.t - a.t) / 1000);
-    if (e.t - (h.length > 1 ? h[h.length - 2].t : e.t) > 180) { /* finger rested before release */ }
     const vu = (e.l.y - a.l.y) / dt, vl = (e.l.x - a.l.x) / dt;
     const fwd = new V3(); this.cam.getWorldDirection(fwd); fwd.y = 0; fwd.normalize(); const right = new V3(-fwd.z, 0, fwd.x);
     const M = 18; const f = vu > 0 ? M * (1 - Math.exp(-3.2 * vu / M)) : 0;
     const vel = fwd.clone().multiplyScalar(f).addScaledVector(right, U.clamp(vl * 1.4, -0.35 * f - 0.6, 0.35 * f + 0.6));
     vel.y = f > 0.5 ? U.clamp(f * 0.16, 0.5, 4) : Math.max(-0.5, vu * 0.3);
-    const pos = this.cam.localToWorld(this.local.clone());
-    if (f < 1.6) { G.ui.hint('Swing the disc upward and let go to throw!', 2000); this.drag = false; return null; }
-    const id = this.id; this.hide();
-    return { pos, vel, power: f, id };
+    return { pos: this.cam.localToWorld(this.local.clone()), vel, power: f };
+  }
+  up(p) {
+    if (!this.drag) return null; this.drag = false; this.move(p);
+    const r = this.calc(); this.preview(null);
+    if (!r || r.power < 1.6) { G.ui.hint('Swing the disc upward and let go to throw!', 2000); this.drag = false; return null; }
+    const id = this.id; this.hide(); r.id = id;
+    return r;
+  }
+  // dotted arc + landing ring while swinging (o.preview() -> discSim options)
+  preview(r, ringOnly) {
+    if (!this.pv) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.32, 0.46, 32), new THREE.MeshBasicMaterial({ color: '#ffe14d', transparent: true, opacity: 0.95, depthWrite: false, depthTest: false })); ring.rotation.x = -Math.PI / 2; ring.renderOrder = 20;
+      const dot = new THREE.Mesh(new THREE.CircleGeometry(0.12, 16), new THREE.MeshBasicMaterial({ color: '#ee8a3c', transparent: true, opacity: 0.9, depthWrite: false, depthTest: false })); dot.rotation.x = -Math.PI / 2; dot.renderOrder = 21;
+      const line = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({ color: '#ffffff', dashSize: 0.25, gapSize: 0.18, transparent: true, opacity: 0.75, depthTest: false })); line.renderOrder = 19; line.frustumCulled = false;
+      const lab = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true })); lab.renderOrder = 22;
+      this.pv = { ring, dot, line, lab, txt: '' }; for (const o of [ring, dot, line, lab]) { o.visible = false; this.scene.add(o); }
+    }
+    const P = this.pv;
+    if (!r) { for (const o of [P.ring, P.dot, P.line, P.lab]) o.visible = false; return; }
+    const path = G.discSim(r.pos, r.vel, this.o.preview ? this.o.preview() : {});
+    const end = path[path.length - 1].p; const pts = [];
+    for (let i = 0; i < path.length; i += 2) pts.push(path[i].p); pts.push(end);
+    P.line.geometry.dispose(); P.line.geometry = new THREE.BufferGeometry().setFromPoints(pts); P.line.computeLineDistances();
+    P.ring.position.set(end.x, 0.05, end.z); P.dot.position.set(end.x, 0.05, end.z);
+    const m = Math.round(Math.max(0, end.z - (this.o.zeroZ ?? r.pos.z))) + ' m';
+    if (m !== P.txt) { P.txt = m; if (P.lab.material.map) P.lab.material.map.dispose(); const t = G.textTex(m, { font: '800 56px Fredoka, sans-serif', color: '#fff', stroke: '#3b2a1f', strokeW: 10, pad: 10 }); P.lab.material.map = t; P.lab.material.needsUpdate = true; P.lab.scale.set(0.42 * t.userData.w / t.userData.h, 0.42, 1); }
+    P.lab.position.set(end.x, 0.6, end.z);
+    const sc = 1 + U.d2(this.cam.position.x, this.cam.position.z, end.x, end.z) * 0.08; P.ring.scale.setScalar(sc); P.dot.scale.setScalar(sc); const t2 = P.lab.material.map; if (t2) P.lab.scale.set(0.42 * sc * 1.05 * t2.userData.w / t2.userData.h, 0.42 * sc * 1.05, 1); P.lab.position.y = 0.4 + sc * 0.3;
+    for (const o of [P.ring, P.dot, P.line, P.lab]) o.visible = true; if (ringOnly) P.line.visible = false;
   }
   update(dt) {
     if (!this.mesh) return;
-    const hh = 1.15 * Math.tan(this.cam.fov * Math.PI / 360), hw = hh * this.cam.aspect; this.rest.set(Math.min(hw * 0.45, 0.35), -hh * 0.5, -1.15);
+    const hh = 1.15 * Math.tan(this.cam.fov * Math.PI / 360), hw = hh * this.cam.aspect; const tall = this.cam.aspect < 0.9; this.rest.set(Math.min(hw * 0.45, 0.35), -hh * (tall ? 0.66 : 0.5), -1.15); this.mesh.scale.setScalar(tall ? 0.62 : 1);
     if (!this.drag) this.local.lerp(this.rest, 1 - Math.exp(-8 * dt));
+    if (this.o.preview && this.drag) { this._pt = (this._pt || 0) - dt; if (this._pt <= 0) { this._pt = 0.07; const r = this.calc(); const fresh = this.hist.length && performance.now() - (this._lastMoveAt || 0) < 400; this.preview(r && r.power >= 1.6 && fresh ? r : null); } }
     const w = this.cam.localToWorld(this.local.clone()); this.mesh.position.copy(w);
     this.mesh.quaternion.copy(this.cam.quaternion); this.mesh.rotateX(-1.15); if (!this.drag) this.mesh.rotateY(Math.sin(G.time * 2) * 0.1);
   }
