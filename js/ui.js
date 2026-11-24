@@ -55,6 +55,20 @@ G.ui = (() => {
   ui.init = function () {
     $('#btnSettings').innerHTML = IC.gear;
     $('#btnSettings').onclick = () => ui.settings();
+    // phones: tuck the less-used buttons into a dropdown so the pet cards fit
+    const MORE = ['btnMail', 'btnCam', 'btnStamps', 'btnFull', 'btnSettings'];
+    $('#btnMore').innerHTML = '<svg viewBox="0 0 32 32"><circle cx="8" cy="16" r="3" fill="currentColor"/><circle cx="16" cy="16" r="3" fill="currentColor"/><circle cx="24" cy="16" r="3" fill="currentColor"/></svg><span class="dotb hidden"></span>';
+    $('#btnMore').onclick = (e) => { e.stopPropagation(); G.audio.play('pop'); $('#moreMenu').classList.toggle('hidden'); };
+    $('#moreMenu').addEventListener('click', () => setTimeout(() => $('#moreMenu').classList.add('hidden'), 0));
+    document.addEventListener('pointerdown', (e) => { if (!e.target.closest('#moreMenu') && !e.target.closest('#btnMore')) $('#moreMenu').classList.add('hidden'); }, true);
+    ui.layoutTop = function () {
+      const small = innerWidth <= 600; const bar = $('.topbar'), menu = $('#moreMenu'), more = $('#btnMore');
+      more.style.display = small ? '' : 'none';
+      for (const id of MORE) { const b = $('#' + id); if (small && b.parentNode !== menu) menu.appendChild(b); else if (!small && b.parentNode !== bar) bar.insertBefore(b, more); }
+      if (!small) menu.classList.add('hidden');
+    };
+    ui.layoutTop(); addEventListener('resize', ui.layoutTop);
+    setInterval(() => { const bd = $('#btnMail .badge'); $('#btnMore .dotb').classList.toggle('hidden', !(bd && bd.style.display !== 'none' && +bd.textContent > 0)); }, 800);
     const canFull = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
     const fb = $('#btnFull'); fb.classList.toggle('hidden', !canFull);
     const fsIcon = () => { fb.innerHTML = ui.isFull() ? IC.unfull : IC.full; fb.title = ui.isFull() ? 'Exit full screen (F)' : 'Full screen (F)'; };
@@ -229,9 +243,9 @@ G.ui = (() => {
     const p = G.activePet(); if (!p) return;
     ui.sheet({
       title: p.name + '’s tricks', render(body) {
-        note(body, G.voice && G.voice.supported() ? 'Teach tricks like a real trainer: do the gesture on your pet, and when the listening bubble pops up, say your command word. Three tries and it\u2019s learned \u2014 then just say the word anytime! (The mic switches on by itself; tap it up top to mute.)' : 'Teach tricks by touch: do the gesture on your pet, then tap "Good job!" to praise. Three praises and the trick is learned. (Voice teaching isn\u2019t available in this browser.)');
+        note(body, G.voice && G.voice.supported() ? 'Teach tricks like a real trainer: do the gesture on your pet, and when the listening bubble pops up, say your command word. Three tries and it\u2019s learned. After that, tap the mic up top and say the word \u2014 the mic switches off again once it hears you.' : 'Teach tricks by touch: do the gesture on your pet, then tap "Good job!" to praise. Three praises and the trick is learned. (Voice teaching isn\u2019t available in this browser.)');
         const l = list(body);
-        if (G.voice && G.voice.supported()) { const vb = document.createElement('div'); vb.className = 'list'; vb.style.marginBottom = '10px'; const learnedT = G.TRICKS.filter((t) => (p.d.tricks[t.id] || 0) >= 1); if (learnedT.length) { const h3 = document.createElement('h3'); h3.textContent = 'Voice commands'; body.appendChild(h3); note(body, 'Pick a trick and say your command word twice when the bubble pops up. After that, just say it!'); const g2 = document.createElement('div'); g2.className = 'row'; g2.style.flexWrap = 'wrap'; learnedT.forEach((t) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = (G.voice.store(p.d.id).tricks[t.id] || []).length ? t.name + ' \u2713' : 'Teach \u201c' + t.name + '\u201d'; b.onclick = () => { ui.closeSheet(true); G.voice.need((ok) => { if (ok) G.voiceTeachTrick(p, t.id); else G.ui.toast('The microphone isn\u2019t available here.'); }); }; g2.appendChild(b); }); body.appendChild(g2); const h4 = document.createElement('h3'); h4.textContent = 'All tricks'; body.appendChild(h4); } void vb; }
+        if (G.voice && G.voice.supported()) { const vb = document.createElement('div'); vb.className = 'list'; vb.style.marginBottom = '10px'; const learnedT = G.TRICKS.filter((t) => (p.d.tricks[t.id] || 0) >= 1); if (learnedT.length) { const h3 = document.createElement('h3'); h3.textContent = 'Voice commands'; body.appendChild(h3); note(body, 'Pick a trick and say your command word twice when the bubble pops up. After that, tap the mic and say it!'); const g2 = document.createElement('div'); g2.className = 'row'; g2.style.flexWrap = 'wrap'; learnedT.forEach((t) => { const b = document.createElement('button'); b.className = 'tab'; b.textContent = (G.voice.store(p.d.id).tricks[t.id] || []).length ? t.name + ' \u2713' : 'Teach \u201c' + t.name + '\u201d'; b.onclick = () => { ui.closeSheet(true); G.voice.need((ok) => { if (ok) G.voiceTeachTrick(p, t.id); else G.ui.toast('The microphone isn\u2019t available here.'); }); }; g2.appendChild(b); }); body.appendChild(g2); const h4 = document.createElement('h3'); h4.textContent = 'All tricks'; body.appendChild(h4); } void vb; }
         G.TRICKS.forEach((tr) => {
           if (p.cat && (tr.id === 'beg' || tr.id === 'rollover' || tr.id === 'dead')) return;
           const prog = Math.min(1, p.d.tricks[tr.id] || 0); const learned = prog >= 1;

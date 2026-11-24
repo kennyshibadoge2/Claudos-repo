@@ -37,35 +37,34 @@ G.voice = (() => {
     return V._starting;
   };
   // mic button: mute / unmute the always-on listening
+  // mic button: listen for ONE command, then switch off by itself
   V.toggle = function () {
-    const s = G.state.settings;
-    if (V.on) { s.voiceOn = false; V.stop(); G.ui.toast('Mic muted. Tap again to turn voice back on.'); G.save(); return; }
-    s.voiceOn = true; V.denied = false; V.start(false).then((ok) => { if (ok) G.ui.toast('Listening! Just talk to your pet.'); }); G.save();
+    if (V.on) { V.stop(); V.hideListen(); return; }
+    const p = G.activePet();
+    V.listenFor(p ? 'Say a command, or “' + p.name + '”!' : 'Listening…', 8);
   };
-  // called on user gestures: starts the mic automatically (once allowed)
-  let lastTry = -99;
-  V.ensure = function () {
-    if (V.on || V._starting || V.denied || !V.supported()) return;
-    if (G.state && G.state.settings.voiceOn === false) return;
-    const now = performance.now() / 1000; if (now - lastTry < 5) return; lastTry = now;
-    V.start(true).then((ok) => { if (ok && !G.state.tut.voiceTip) { G.state.tut.voiceTip = 1; G.ui.toast('Voice is on \u2014 just talk to your pet! (tap the mic up top to mute)'); } });
-  };
-  // something needs the mic right now (teaching). cb(true) if listening, cb(false) to fall back
+  V.ensure = function () { /* the mic now only opens when the game needs it */ };
+  // something needs the mic right now (teaching). cb(true) if it can listen, cb(false) to fall back
   V.need = function (cb) {
-    if (!V.supported()) { cb(false); return; }
+    if (!V.supported() || V.denied) { cb(false); return; }
     if (V.on) { cb(true); return; }
-    G.state.settings.voiceOn = true; V.denied = false;
     V.start(false).then((ok) => cb(!!ok));
   };
-  // big "listening" bubble with a live level meter
-  let bubT = null;
-  V.listenFor = function (label, secs = 8) {
-    if (!V.on) return;
-    let el = $('#listenBubble');
-    if (!el) { el = document.createElement('div'); el.id = 'listenBubble'; el.innerHTML = '<div class="lbTxt"></div><div class="lbBars"><i></i><i></i><i></i><i></i><i></i></div>'; document.body.appendChild(el); }
-    el.querySelector('.lbTxt').textContent = label; el.classList.add('show');
-    clearTimeout(bubT); bubT = setTimeout(() => V.hideListen(), secs * 1000);
+  // open the mic + show the "listening" bubble; it closes again after one phrase or the timeout
+  let bubT = null, onTimeout = null;
+  V.listenFor = function (label, secs = 8, timeoutCb, quiet) {
+    if (quiet && (V.denied || !V.supported())) return;
+    V.waiting = true; onTimeout = timeoutCb || null;
+    const show = () => {
+      let el = $('#listenBubble');
+      if (!el) { el = document.createElement('div'); el.id = 'listenBubble'; el.innerHTML = '<div class="lbTxt"></div><div class="lbBars"><i></i><i></i><i></i><i></i><i></i></div>'; document.body.appendChild(el); }
+      el.querySelector('.lbTxt').textContent = label; el.classList.add('show');
+    };
+    clearTimeout(bubT); bubT = setTimeout(() => { const cb = onTimeout; V.done(); if (cb) cb(); }, secs * 1000);
+    if (V.on) show(); else V.start(!!quiet).then((ok) => { if (ok && V.waiting) show(); else if (!ok) V.done(); });
   };
+  // finished listening: hide the bubble and turn the mic off
+  V.done = function () { V.waiting = false; onTimeout = null; V.train = null; V.hideListen(); if (V.on) V.stop(); };
   V.hideListen = function () { const el = $('#listenBubble'); if (el) el.classList.remove('show'); clearTimeout(bubT); };
   function startMatch() {
     return new Promise((res) => {
@@ -151,13 +150,15 @@ G.voice = (() => {
     if (b0.r.feat) { const thr = b0.c.thr || (b0.c.thr = thrOf(b0.c.list)); if (b0.r.d > thr) return null; if (res[1] && res[1].r.feat && b0.r.d > res[1].r.d * 0.88) return null; }
     return { kind: b0.c.kind, id: b0.c.id, weak: b0.c.weak };
   };
-  V.trainStart = function (opts) { V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); V.listenFor(opts.label || 'Listening…', opts.timeout || 9); };
+  V.trainStart = function (opts) { V.listenFor(opts.label || 'Listening…', opts.timeout || 9, opts.onTimeout); V.train = Object.assign({ until: G.time + (opts.timeout || 9) }, opts); };
   /* ---------- dispatch ---------- */
   function emit(utt) {
     if (utt.text !== undefined && !norm(utt.text)) return;
-    G.ui.voiceHeard(utt); V.hideListen();
-    if (V.train && G.time < V.train.until) { const t = V.train; V.train = null; try { t.cb(utt); } catch (e) { console.error(e); } return; }
-    V.train = null;
+    if (!V.waiting) return; // only react while the game is actually listening
+    G.ui.voiceHeard(utt);
+    const t = V.train && G.time < V.train.until ? V.train : null;
+    V.done(); // heard you: mic switches off straight away
+    if (t) { try { t.cb(utt); } catch (e) { console.error(e); } return; }
     const pet = G.activePet(); if (!pet || !pet.root.parent) return;
     const m = V.classify(utt, pet);
     if (!m) { pet.tiltT = 1.2; pet.tiltDir = U.chance(0.5) ? 1 : -1; pet.emote('q', 1); pet.lookCam = 2; return; }
@@ -168,7 +169,7 @@ G.voice = (() => {
   }
   V.emit = emit; V.textSim = textSim; V.dtw = dtw;
   /* ---------- HUD ---------- */
-  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.classList.toggle('muted', !V.on); b.title = V.on ? 'Listening — tap to mute' : 'Voice off — tap to turn on'; }
+  function ui() { const b = $('#btnMic'); if (!b) return; b.classList.toggle('hidden', !V.supported()); b.classList.toggle('listening', V.on); b.classList.toggle('muted', !V.on); b.title = V.on ? 'Listening… (tap to cancel)' : 'Tap, then say a command'; }
   V.ui = ui;
   setInterval(() => { const lb = $('#listenBubble'); if (lb && lb.classList.contains('show')) { const lv = V.engine === 'match' ? V.level : 0.3 + 0.3 * Math.abs(Math.sin(G.time * 5)); lb.querySelectorAll('.lbBars i').forEach((e, i) => (e.style.height = (4 + 22 * U.clamp(lv * (1.4 - Math.abs(i - 2) * 0.25) + Math.random() * 0.12, 0, 1)) + 'px')); } const r = $('#micRing'); if (r) r.style.transform = 'scale(' + (1 + (V.on ? (V.engine === 'match' ? V.level * 0.7 : 0.15 + Math.abs(Math.sin(G.time * 3)) * 0.15) : 0)) + ')'; }, 60);
   return V;
@@ -199,5 +200,4 @@ G.voiceTeachTrick = function (pet, trickId, n = 0) {
     else { G.audio.play('chime'); G.ui.banner(pet.name + ' knows the word', 'for ' + tr.name + '!', 2000); pet.happy(4); G.save(); }
   } });
 };
-for (const ev of ['pointerdown', 'keydown']) document.addEventListener(ev, () => { if (G.state && G.curName && G.curName !== 'title') G.voice.ensure(); }, true);
 G.ui.voiceHeard = function (utt) { const el = $('#voiceHeard'); if (!el) return; el.textContent = utt.text !== undefined ? 'Heard: “' + utt.text.trim().slice(0, 40) + '”' : 'Heard a sound'; el.style.opacity = 1; clearTimeout(G.ui._vh); G.ui._vh = setTimeout(() => (el.style.opacity = 0), 1800); };

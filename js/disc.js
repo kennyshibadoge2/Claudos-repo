@@ -31,14 +31,32 @@ G.discSkill = function (pet) {
   const reach = (pet.m.baseH + pet.m.dims.by + pet.m.headR) * pet.S + 0.05;
   return { sk, spd: (5.6 + sk * 0.036) * pet.S, delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
 };
-G.discPlan = function (pet, path) {
+// o.terrain(x, z) -> speed multiplier (sand traps etc.)
+G.discPlan = function (pet, path, o = {}) {
   const S = G.discSkill(pet);
-  for (let i = 0; i < path.length; i++) {
-    const q = path[i]; if (q.p.y > S.jumpReach || q.ground) continue;
-    const need = U.d2(pet.pos.x, pet.pos.z, q.p.x, q.p.z) / S.spd + S.delay;
-    if (need <= q.t) { const air = q.p.y > S.reach + 0.02; return { i, t: q.t, p: q.p.clone(), kind: !air ? 'ground' : S.canFlip && Math.random() < 0.3 + (S.sk - 60) / 60 ? 'flip' : 'jump', S }; }
+  const slow = (x, z) => { if (!o.terrain) return 1; let m = 0; for (let k = 1; k <= 6; k++) { const f = k / 6; m += o.terrain(pet.pos.x + (x - pet.pos.x) * f, pet.pos.z + (z - pet.pos.z) * f); } return m / 6; };
+  const reachable = (q) => U.d2(pet.pos.x, pet.pos.z, q.p.x, q.p.z) / (S.spd * slow(q.p.x, q.p.z)) + S.delay + 0.05 <= q.t;
+  let first = -1;
+  for (let i = 0; i < path.length; i++) { const q = path[i]; if (q.p.y > S.jumpReach || q.ground) continue; if (reachable(q)) { first = i; break; } }
+  if (first < 0) return null;
+  let i = first, q = path[i], h = q.p.y - S.reach;
+  // the disc is high when the dog gets there: sometimes go for the leap, otherwise wait for it to come down
+  if (h >= 0.12 && S.canJump && Math.random() > Math.min(0.5, 0.15 + S.sk * 0.004)) {
+    for (let j = first + 1; j < path.length; j++) { const qq = path[j]; if (qq.ground) break; if (qq.p.y - S.reach < 0.1 && reachable(qq)) { i = j; q = qq; h = q.p.y - S.reach; break; } }
   }
-  return null;
+  const kind = h < 0.12 || !S.canJump ? 'ground' : S.canFlip && h > 0.5 && Math.random() < Math.min(0.24, 0.1 + (S.sk - 60) / 220) ? 'flip' : 'jump';
+  return { i, t: q.t, p: q.p.clone(), kind, S };
+};
+// launch a leap for a planned catch; returns timing used by discFlip
+G.discLeap = function (pet, plan) {
+  const S = plan.S; pet.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.5 : 0.4)); pet.setPose('leap', 10);
+  const L = { t0: G.time, dur: Math.max(0.45, 2 * pet.jumpV / 9.8 * 0.9), flip: plan.kind === 'flip' }; if (L.flip) pet.flipL = L; return L;
+};
+// smooth backflip timed to the dog's airtime (finishes before landing, never snaps)
+G.discFlip = function (pet, L) {
+  if (!L || !L.flip) return;
+  const k = U.clamp((G.time - L.t0) / L.dur, 0, 1); const e = k * k * (3 - 2 * k);
+  pet.extraPitch = -Math.PI * 2 * e; if (k >= 1) { pet.extraPitch = 0; if (pet.flipL === L) pet.flipL = null; }
 };
 // a disc in flight: follows its precomputed path
 G.DiscFlight = class {
@@ -105,9 +123,9 @@ G.discChase = function* (pet, flight, plan, o = {}) {
     const tgt = plan ? plan.p : flight.pos;
     if (!plan || U.d2(pet.pos.x, pet.pos.z, tgt.x, tgt.z) > 0.3) { pet.moveTarget = new V3(tgt.x, 0, tgt.z); pet.speedMul = S.spd / pet.S; } else { pet.moveTarget = null; pet.lookTarget = flight.pos; }
     if (plan) {
-      if (plan.kind !== 'ground' && !jumped && flight.t >= plan.t - 0.34) { jumped = true; t0 = G.time; pet.jump(Math.sqrt(Math.max(0.5, 2 * 9.8 * (plan.p.y - S.reach))) + (plan.kind === 'flip' ? 1.2 : 0.4)); pet.setPose('leap', 10); }
-      if (plan.kind === 'flip' && jumped && pet.airborne) pet.extraPitch = -Math.PI * 2 * U.clamp((G.time - t0) / 0.8, 0, 1);
-      if (flight.t >= plan.t) { flight.caught = true; break; }
+      if (plan.kind !== 'ground' && !jumped && flight.t >= plan.t - 0.34) { jumped = G.discLeap(pet, plan); }
+      G.discFlip(pet, jumped);
+      if (flight.t >= plan.t) { if (U.d2(pet.pos.x, pet.pos.z, plan.p.x, plan.p.z) < 0.5 * pet.S + 1.0) { flight.caught = true; break; } plan = null; } // too late: chase it down instead
     } else if (flight.onGround) {
       const dd = U.d2(pet.pos.x, pet.pos.z, flight.pos.x, flight.pos.z);
       if (dd < 0.35 * pet.S + 0.1) { flight.caught = true; break; }

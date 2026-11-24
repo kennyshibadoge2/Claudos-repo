@@ -377,12 +377,35 @@ M.acc = function (id) {
       break;
     }
     case 'bandana_red': case 'bandana_plaid': {
-      let mat = m(col, { r: 0.85, side: THREE.DoubleSide });
-      if (it.plaid) mat = M.mat('#ffffff', { r: 0.85, side: THREE.DoubleSide, map: G.canvasTex(64, 64, (c) => { c.fillStyle = '#4a7a5a'; c.fillRect(0, 0, 64, 64); c.fillStyle = 'rgba(226,87,76,.7)'; for (let i = 0; i < 64; i += 16) { c.fillRect(i, 0, 6, 64); c.fillRect(0, i, 64, 6); } c.fillStyle = 'rgba(255,240,200,.5)'; for (let i = 8; i < 64; i += 16) { c.fillRect(i, 0, 2, 64); c.fillRect(0, i, 64, 2); } }) });
-      const band = mesh(new THREE.TorusGeometry(0.128, 0.02, 8, 30), mat, null, g); band.rotation.x = Math.PI / 2;
-      const tri = new THREE.ConeGeometry(0.1, 0.14, 3, 1); tri.rotateX(Math.PI); tri.scale(1, 1, 0.25);
-      const tm = mesh(tri, mat, null, g); tm.position.set(0, -0.055, 0.118); tm.rotation.set(-0.2, Math.PI / 6 * 3, 0);
-      if (!it.plaid) { const dots = M.mat('#fff4e0'); for (let i = 0; i < 5; i++) { const d = mesh(new THREE.SphereGeometry(0.008, 6, 6), dots, null, tm, false); d.position.set(U.rand(-0.04, 0.04), U.rand(-0.04, 0.04), 0.012); } }
+      // soft kerchief: a cloth triangle wrapped around the front of the neck, knotted at the back
+      const tex = G.canvasTex(128, 128, (c) => {
+        if (it.plaid) {
+          c.fillStyle = '#4a7a5a'; c.fillRect(0, 0, 128, 128);
+          c.fillStyle = 'rgba(226,87,76,.55)'; for (let i = 0; i < 128; i += 24) { c.fillRect(i, 0, 9, 128); c.fillRect(0, i, 128, 9); }
+          c.fillStyle = 'rgba(255,240,200,.45)'; for (let i = 14; i < 128; i += 24) { c.fillRect(i, 0, 2, 128); c.fillRect(0, i, 128, 2); }
+          c.fillStyle = 'rgba(20,40,30,.25)'; for (let i = 4; i < 128; i += 24) { c.fillRect(i, 0, 3, 128); c.fillRect(0, i, 128, 3); }
+        } else {
+          c.fillStyle = col; c.fillRect(0, 0, 128, 128);
+          c.fillStyle = '#fff4e0';
+          for (let i = 0; i < 26; i++) { const x = (i * 37) % 128, y = (i * 53) % 118 + 4; c.beginPath(); c.ellipse(x, y, 4.5, 3, (i % 3) * 0.8, 0, 7); c.fill(); c.beginPath(); c.arc(x + 5, y + 4, 1.4, 0, 7); c.fill(); }
+        }
+        c.strokeStyle = it.plaid ? 'rgba(255,240,200,.8)' : '#fff4e0'; c.lineWidth = 5; c.setLineDash([7, 5]);
+        c.beginPath(); c.moveTo(6, 6); c.lineTo(64, 120); c.lineTo(122, 6); c.stroke();
+      });
+      const mat = M.mat('#ffffff', { r: 0.9, side: THREE.DoubleSide, map: tex });
+      const NU = 12, NV = 10, pos = [], uv = [], idx = [];
+      for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+        const u = i / NU * 2 - 1, v = j / NV, w = 1 - v * 0.96;
+        const ang = u * w * 1.2, R = 0.136 + v * 0.012 + Math.abs(u) * w * 0.004, sag = Math.sin(v * Math.PI) * 0.01;
+        // hang along world-down (the neck slot is tilted forward), so it drapes over the chest
+        pos.push(Math.sin(ang) * R, -v * 0.13 + Math.cos(u * 1.4) * 0.004, Math.cos(ang) * R + v * 0.085 + sag); uv.push(u * w * 0.5 + 0.5, 1 - v);
+      }
+      for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a2 = j * (NU + 1) + i, b2 = a2 + 1, c2 = a2 + NU + 1, d2 = c2 + 1; idx.push(a2, c2, b2, b2, c2, d2); }
+      const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); geo.setIndex(idx); geo.computeVertexNormals();
+      mesh(geo, mat, null, g);
+      const band = mesh(new THREE.TorusGeometry(0.134, 0.013, 8, 36), mat, null, g); band.rotation.x = Math.PI / 2; band.scale.z = 0.7;
+      const knot = mesh(new THREE.SphereGeometry(0.022, 12, 10), mat, null, g); knot.position.set(0, -0.004, -0.138); knot.scale.set(1.2, 0.9, 0.8);
+      for (const sx of [-1, 1]) { const tl = new THREE.ConeGeometry(0.018, 0.06, 8); tl.translate(0, -0.03, 0); tl.scale(1, 1, 0.35); const t2 = mesh(tl, mat, null, g); t2.position.set(sx * 0.012, -0.01, -0.145); t2.rotation.set(-0.4, 0, sx * 0.5); }
       break;
     }
     case 'cape': {

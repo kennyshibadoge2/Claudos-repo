@@ -346,8 +346,8 @@ G.scenes.home = (() => {
   H.onVoice = function (kind, id) { if (kind === 'name') H.callName(); else H.command(id); };
   function teachName(p) {
     G.voiceTeachName(p, (v) => { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; p.emote(v >= 1 ? 'heart' : 'bang', 1.2); p.voiceCd = 0; p.voice('happy');
-      if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Say it anytime and they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
-      else { G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Say it again!'); setTimeout(() => { if (G.curName === 'home' && (p.d.nameLearn || 0) < 1 && G.voice.on) teachName(p); }, 900); } });
+      if (v >= 1) { G.audio.play('fanfare'); G.ui.banner(p.name + ' knows their name!', 'Tap the mic and say it \u2014 they\u2019ll come running', 2600); p.happy(8); G.stamp('named'); tutDone('name'); }
+      else { G.ui.toast(p.name + '\u2019s ears perk up! (' + Math.round(v * 100) + '%) Say it again!'); setTimeout(() => { if (G.curName === 'home' && (p.d.nameLearn || 0) < 1 && !G.voice.denied) teachName(p); }, 900); } });
   }
   function tapLearnName(p) {
     const d = p.d;

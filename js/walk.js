@@ -78,8 +78,77 @@ G.scenes.walk = (() => {
     const pal = [['#fde3e3', '#c84a4a'], ['#e3eefd', '#3b5ba8'], ['#fff3d6', '#c8922a'], ['#e9f6e9', '#4a8a5a'], ['#f2e6fa', '#7a5c9a'], ['#fff0e6', '#b35a3a']];
     const styles = ['gable', 'japanese', 'hip', 'saltbox', 'flat', 'gable', 'japanese'], walls = ['siding', 'plaster', 'brick', 'shingle', 'plaster', 'boards', 'plaster'];
     [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
+    // Maple Dog Park entrance: stone pillars, wooden arch with a carved sign, hedges, flowers, map board
+    function parkEntrance(P, n, b) {
+      const g = new THREE.Group(); g.position.copy(P.clone().addScaledVector(n, 3.2)); g.rotation.y = Math.atan2(-n.x, -n.z); st.add(g);
+      const stone = M.mat('#cfc6b8', { r: 0.9 }), stoneD = M.mat('#a99f90', { r: 0.95 }), wood = M.mat('#9a6a40', { r: 0.8 }), woodD = M.mat('#7a5232', { r: 0.85 });
+      const add = (geo, mat, x, y, z, ry = 0) => { const m2 = new THREE.Mesh(geo, mat); m2.position.set(x, y, z); m2.rotation.y = ry; m2.castShadow = true; m2.receiveShadow = true; g.add(m2); return m2; };
+      for (const sx of [-1, 1]) {
+        const x = sx * 2.5;
+        add(new THREE.BoxGeometry(0.85, 0.25, 0.85), stoneD, x, 0.12, 0);
+        add(new THREE.BoxGeometry(0.66, 2.1, 0.66), stone, x, 1.3, 0);
+        for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.68, 0.04, 0.68), stoneD, x, 0.55 + k * 0.5, 0);
+        add(new THREE.BoxGeometry(0.84, 0.18, 0.84), stoneD, x, 2.44, 0);
+        // lantern on top
+        add(new THREE.CylinderGeometry(0.08, 0.12, 0.2, 8), M.mat('#3b3b3b', { r: 0.5, m: 0.4 }), x, 2.62, 0);
+        const lan = add(new THREE.BoxGeometry(0.3, 0.38, 0.3), M.mat('#fff3c4', { r: 0.3, em: '#ffd36a', ei: 0.9 }), x, 2.9, 0); lan.castShadow = false;
+        add(new THREE.ConeGeometry(0.28, 0.22, 4), M.mat('#3b3b3b', { r: 0.5, m: 0.4 }), x, 3.2, 0, Math.PI / 4);
+        // paw plaque
+        const plq = G.canvasTex(64, 64, (c) => { c.fillStyle = '#b8ad9c'; c.fillRect(0, 0, 64, 64); c.fillStyle = '#6b5a45'; c.beginPath(); c.ellipse(32, 40, 13, 11, 0, 0, 7); c.fill(); for (const [px, py] of [[16, 24], [26, 16], [38, 16], [48, 24]]) { c.beginPath(); c.ellipse(px, py, 5, 6.5, 0, 0, 7); c.fill(); } });
+        const pm = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.4), M.mat('#fff', { map: plq, r: 0.9 })); pm.position.set(x, 1.5, 0.335); g.add(pm);
+        // planter + flowers
+        add(new THREE.CylinderGeometry(0.42, 0.34, 0.42, 14), M.mat('#b5653a', { r: 0.9 }), x + sx * 0.9, 0.21, 0.5);
+        const fl = M.flowers(14, 0.32); fl.position.set(x + sx * 0.9, 0.42, 0.5); g.add(fl);
+        // hedges + fence running off to the sides
+        for (let k = 0; k < 4; k++) { const bu = M.bush(k % 2 ? '#5e9e44' : '#6aa94e', 1.25); bu.position.set(sx * (3.4 + k * 1.1), 0, -0.25); g.add(bu); }
+        const fe = M.fence(7, '#c8a07a'); fe.position.set(sx * 6.7, 0, -0.9); g.add(fe);
+        const tr = M.tree(G.season(), 'round'); tr.position.set(sx * U.rand(4.5, 6.5), 0, -3.2); tr.scale.setScalar(1.2); g.add(tr);
+      }
+      // wooden arch
+      const arch = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.13, 10, 40, Math.PI), wood); arch.position.set(0, 2.45, 0); arch.scale.y = 0.42; arch.castShadow = true; g.add(arch);
+      const arch2 = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.07, 8, 40, Math.PI), woodD); arch2.position.set(0, 2.3, 0); arch2.scale.y = 0.36; g.add(arch2);
+      for (let k = -3; k <= 3; k++) { if (k === 0) continue; const xx = k * 0.62; const hh = Math.sqrt(Math.max(0, 1 - (xx / 2.5) ** 2)) * 2.5 * 0.42 - Math.sqrt(Math.max(0, 1 - (xx / 2.5) ** 2)) * 2.5 * 0.36 + 0.12; add(new THREE.BoxGeometry(0.05, hh, 0.05), woodD, xx, 2.3 + Math.sqrt(Math.max(0, 1 - (xx / 2.5) ** 2)) * 2.5 * 0.36 + hh / 2 - 0.06, 0); }
+      // carved hanging sign
+      const signTex = G.canvasTex(512, 160, (c) => {
+        c.fillStyle = '#7ab04f'; c.beginPath(); c.roundRect ? c.roundRect(6, 6, 500, 148, 40) : c.rect(6, 6, 500, 148); c.fill();
+        c.lineWidth = 8; c.strokeStyle = '#4e7d33'; c.stroke(); c.strokeStyle = 'rgba(255,255,255,.55)'; c.lineWidth = 3; c.setLineDash([10, 8]); c.beginPath(); c.roundRect ? c.roundRect(22, 22, 468, 116, 28) : c.rect(22, 22, 468, 116); c.stroke(); c.setLineDash([]);
+        c.fillStyle = '#fff'; c.font = '700 58px Fredoka, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Maple Dog Park', 256, 72);
+        c.font = '600 24px Fredoka, sans-serif'; c.fillStyle = '#eaf7da'; c.fillText('• pond • pier • friends •', 256, 118);
+        const paw = (x, y, s2) => { c.beginPath(); c.ellipse(x, y + 5 * s2, 9 * s2, 7.5 * s2, 0, 0, 7); c.fill(); for (const [dx, dy] of [[-10, -6], [-4, -12], [4, -12], [10, -6]]) { c.beginPath(); c.ellipse(x + dx * s2, y + dy * s2, 3.4 * s2, 4.4 * s2, 0, 0, 7); c.fill(); } };
+        c.fillStyle = '#fff4d6'; paw(52, 70, 1.4); paw(460, 70, 1.4);
+      });
+      const sign = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.9, 0.08), [woodD, woodD, woodD, woodD, M.mat('#fff', { map: signTex, r: 0.8 }), M.mat('#fff', { map: signTex, r: 0.8 })]); sign.position.set(0, 2.85, 0.12); sign.castShadow = true; g.add(sign);
+      for (const sx of [-1, 1]) add(new THREE.CylinderGeometry(0.015, 0.015, 0.4, 4), M.mat('#555'), sx * 1.1, 3.38, 0.12);
+      // bunting under the arch
+      for (let i = 0; i < 11; i++) { const fl2 = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 3), M.mat(['#e2574c', '#f2c24b', '#4aa6e0', '#79b25a', '#f39bb0'][i % 5], { side: THREE.DoubleSide })); fl2.rotation.z = Math.PI; const xx = -2.2 + i * 0.44; fl2.position.set(xx, 2.25 - Math.sin((i / 10) * Math.PI) * 0.18 - 0.1, 0.05); g.add(fl2); }
+      // paw-print path into the park
+      const pawTex = G.canvasTex(64, 64, (c) => { c.fillStyle = 'rgba(122,90,58,.75)'; c.beginPath(); c.ellipse(32, 40, 13, 11, 0, 0, 7); c.fill(); for (const [px, py] of [[16, 24], [26, 16], [38, 16], [48, 24]]) { c.beginPath(); c.ellipse(px, py, 5, 6.5, 0, 0, 7); c.fill(); } });
+      const pawM = M.basic('#fff', { map: pawTex, op: 1, dw: false });
+      for (let i = 0; i < 9; i++) { const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), pawM); pp.rotation.x = -Math.PI / 2; pp.rotation.z = Math.PI + (i % 2 ? 0.15 : -0.15); pp.position.set((i % 2 ? 0.22 : -0.22), 0.02, 1.6 - i * 0.55); g.add(pp); }
+      const path2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 6), M.mat('#d9c29a', { r: 1 })); path2.rotation.x = -Math.PI / 2; path2.position.set(0, 0.012, -0.8); path2.receiveShadow = true; g.add(path2);
+      // map board
+      const mapTex = G.canvasTex(256, 192, (c) => {
+        c.fillStyle = '#f6ecd2'; c.fillRect(0, 0, 256, 192); c.fillStyle = '#9fd27a'; c.fillRect(10, 34, 236, 148);
+        c.fillStyle = '#7cc0e8'; c.beginPath(); c.ellipse(170, 110, 52, 34, 0.2, 0, 7); c.fill(); c.fillStyle = '#b08a5a'; c.fillRect(150, 88, 34, 6);
+        c.fillStyle = '#5e9e44'; for (const [x, y] of [[40, 60], [70, 150], [210, 60], [30, 120]]) { c.beginPath(); c.arc(x, y, 12, 0, 7); c.fill(); }
+        c.strokeStyle = '#d9c29a'; c.lineWidth = 8; c.beginPath(); c.moveTo(128, 182); c.quadraticCurveTo(110, 110, 80, 80); c.stroke();
+        c.fillStyle = '#e2574c'; c.beginPath(); c.arc(128, 172, 6, 0, 7); c.fill(); c.fillStyle = '#3b2a1f'; c.font = '700 22px Fredoka, sans-serif'; c.textAlign = 'center'; c.fillText('PARK MAP', 128, 25); c.font = '600 12px Fredoka, sans-serif'; c.fillText('you are here', 128, 160); c.fillText('POND', 170, 132);
+      });
+      const bd = new THREE.Group(); bd.position.set(-3.6, 0, 1.0); bd.rotation.y = 0.35; g.add(bd);
+      for (const sx of [-1, 1]) { const leg = new THREE.Mesh(new THREE.BoxGeometry(0.08, 1.3, 0.08), woodD); leg.position.set(sx * 0.55, 0.65, 0); leg.castShadow = true; bd.add(leg); }
+      const brd = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.95, 0.06), [wood, wood, wood, wood, M.mat('#fff', { map: mapTex, r: 0.85 }), wood]); brd.position.y = 1.35; brd.castShadow = true; bd.add(brd);
+      const rf = new THREE.Mesh(new THREE.BoxGeometry(1.45, 0.06, 0.3), woodD); rf.position.set(0, 1.86, 0.04); bd.add(rf);
+      // doggy water station
+      const ws = new THREE.Group(); ws.position.set(3.5, 0, 1.1); g.add(ws);
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.14, 0.9, 12), M.mat('#4a7a5a', { r: 0.5, m: 0.3 })); post.position.y = 0.45; post.castShadow = true; ws.add(post);
+      const spout = new THREE.Mesh(new THREE.TorusGeometry(0.08, 0.025, 6, 12, Math.PI), M.mat('#c0c0c0', { r: 0.3, m: 0.8 })); spout.position.set(0, 0.92, 0.06); ws.add(spout);
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.2, 0.1, 18), M.mat('#c0c0c0', { r: 0.3, m: 0.8 })); bowl.position.set(0, 0.05, 0.32); ws.add(bowl);
+      const water = new THREE.Mesh(new THREE.CircleGeometry(0.22, 18), M.mat('#8fd0f0', { r: 0.1 })); water.rotation.x = -Math.PI / 2; water.position.set(0, 0.095, 0.32); ws.add(water);
+      colliders.push({ x: g.position.x + Math.cos(g.rotation.y) * 2.5, z: g.position.z - Math.sin(g.rotation.y) * 2.5, r: 0.5 }, { x: g.position.x - Math.cos(g.rotation.y) * 2.5, z: g.position.z + Math.sin(g.rotation.y) * 2.5, r: 0.5 });
+    }
     for (const b of BLD) {
       const P = curvePt(b.t), n = outward(b.t);
+      if (b.kind === 'park') { parkEntrance(P, n, b); doors.push({ kind: b.kind, name: b.name, p: P.clone().addScaledVector(n, 2.0) }); continue; }
       if (b.kind === 'field' || b.kind === 'park') {
         const gate = new THREE.Group(); const gp = P.clone().addScaledVector(n, 3.2); gate.position.copy(gp); gate.rotation.y = Math.atan2(-n.x, -n.z); st.add(gate);
         const pm = M.mat('#ffffff', { r: 0.6 });

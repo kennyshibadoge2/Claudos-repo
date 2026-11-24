@@ -178,7 +178,7 @@ class Pet {
       const want = Math.atan2(dx, dz); const diff = U.angDiff(this.heading, want);
       const tr = (this.speedMul > 2 ? 7 : 5) * dt;
       this.heading += U.clamp(diff, -tr, tr); turning = Math.abs(diff);
-      target = this.speedMul * this.S * (this.cat ? 0.9 : 1.0) * Math.min(1, dist / (0.35 * this.S) + 0.15) * (turning > 1.4 ? 0.25 : 1);
+      target = this.speedMul * this.S * (this.cat ? 0.9 : 1.0) * (this.terrainMul ?? 1) * Math.min(1, dist / (0.35 * this.S) + 0.15) * (turning > 1.4 ? 0.25 : 1);
     } else if (this.turnTo !== null && this.turnTo !== undefined) {
       const diff = U.angDiff(this.heading, this.turnTo); const tr = 4.5 * dt;
       this.heading += U.clamp(diff, -tr, tr); turning = Math.abs(diff) > 0.05 ? 1 : 0;
@@ -224,6 +224,7 @@ class Pet {
     const petting = this.petT < 0.5;
     this.petLean = U.damp(this.petLean, petting ? 1 : 0, 5, dt);
     m.body.position.y = m.baseH + P.h + bob + this.squash * -0.3 * m.dims.by;
+    if (this.flipL) G.discFlip(this, this.flipL); // flips play out on their own, even after the catch
     m.body.rotation.set(P.pitch + gp + (this.extraPitch || 0), 0, roll + this.petLean * 0.05 * Math.sin(t * 2));
     m.body.scale.set(1 + this.squash * 0.5, 1 + breath - this.squash, 1 + this.squash * 0.3);
     // legs
@@ -404,6 +405,14 @@ class Person {
     if (this.waveT > 0) { this.waveT -= dt; m.arms[1].rotation.z = U.damp(m.arms[1].rotation.z, 2.5 + Math.sin(this.t * 12) * 0.3, 12, dt); m.arms[1].rotation.x = 0; }
     else m.arms[1].rotation.z = U.damp(m.arms[1].rotation.z, 0.18, 8, dt);
     if (this.playing && m.guitar) { m.arms[1].rotation.x = -0.9 + Math.sin(this.t * 12) * 0.25; m.arms[0].rotation.x = -1.1; m.arms[0].rotation.z = -0.6; }
+    if (this.throwT > 0) { // wind back, then fling forward
+      this.throwT -= dt; const k = 1 - this.throwT / 0.55; const a = m.arms[1];
+      a.rotation.x = k < 0.45 ? 1.4 * (k / 0.45) : 1.4 - 3.6 * Math.min(1, (k - 0.45) / 0.3); a.rotation.z = 0.5;
+      m.rig.rotation.y = (k < 0.45 ? -0.5 * k / 0.45 : -0.5 + 0.9 * Math.min(1, (k - 0.45) / 0.3)); if (this.throwT <= 0) m.rig.rotation.y = 0;
+    } else if (this.holding) { m.arms[1].rotation.x = -0.55; m.arms[1].rotation.z = 0.35; }
+    if (this.cheerT > 0) { this.cheerT -= dt; m.arms[0].rotation.z = -2.6 + Math.sin(this.t * 14) * 0.25; m.arms[1].rotation.z = 2.6 - Math.sin(this.t * 14) * 0.25; m.arms[0].rotation.x = m.arms[1].rotation.x = 0; m.rig.position.y = Math.abs(Math.sin(this.t * 9)) * 0.14; }
+    else if (!this.sitting && this.vel < 0.05) m.arms[0].rotation.z = U.damp(m.arms[0].rotation.z, -0.18, 8, dt);
+    if (this.clapT > 0) { this.clapT -= dt; const c = Math.abs(Math.sin(this.t * 16)); m.arms[0].rotation.x = m.arms[1].rotation.x = -1.2; m.arms[0].rotation.z = -0.2 - c * 0.5; m.arms[1].rotation.z = 0.2 + c * 0.5; }
     let yawT = 0;
     if (this.lookAt) { const dx = this.lookAt.x - this.pos.x, dz = this.lookAt.z - this.pos.z; yawT = U.clamp(U.angDiff(this.heading, Math.atan2(dx, dz)), -1.1, 1.1); }
     this.yaw = U.damp(this.yaw, yawT, 5, dt); m.head.rotation.y = this.yaw;

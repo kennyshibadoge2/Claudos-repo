@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="70%"><stop offset="0" stop-color="#ffe7b8"/><stop offset="1" stop-color="#f6b766"/></radialGradient>
+    <linearGradient id="fur" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f5a04a"/><stop offset="1" stop-color="#e2832e"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+  <circle cx="256" cy="286" r="196" fill="#fff4e0" opacity=".55"/>
+  <!-- ears -->
+  <path d="M120 230 L138 92 Q146 70 166 84 L238 160 Z" fill="url(#fur)"/>
+  <path d="M392 230 L374 92 Q366 70 346 84 L274 160 Z" fill="url(#fur)"/>
+  <path d="M146 196 L156 116 L210 168 Z" fill="#fff1dc"/>
+  <path d="M366 196 L356 116 L302 168 Z" fill="#fff1dc"/>
+  <!-- head -->
+  <ellipse cx="256" cy="282" rx="168" ry="146" fill="url(#fur)"/>
+  <!-- white cheeks & muzzle -->
+  <path d="M118 300 Q130 404 256 418 Q382 404 394 300 Q350 330 312 316 Q290 300 256 300 Q222 300 200 316 Q162 330 118 300 Z" fill="#fff6ea"/>
+  <ellipse cx="256" cy="340" rx="74" ry="56" fill="#fff6ea"/>
+  <!-- eyebrow dots -->
+  <ellipse cx="196" cy="214" rx="17" ry="11" fill="#fff6ea"/><ellipse cx="316" cy="214" rx="17" ry="11" fill="#fff6ea"/>
+  <!-- eyes -->
+  <ellipse cx="190" cy="262" rx="22" ry="26" fill="#2a1d18"/><ellipse cx="322" cy="262" rx="22" ry="26" fill="#2a1d18"/>
+  <circle cx="198" cy="252" r="8" fill="#fff"/><circle cx="330" cy="252" r="8" fill="#fff"/>
+  <!-- blush -->
+  <ellipse cx="150" cy="316" rx="24" ry="14" fill="#f39bb0" opacity=".7"/><ellipse cx="362" cy="316" rx="24" ry="14" fill="#f39bb0" opacity=".7"/>
+  <!-- nose & mouth -->
+  <ellipse cx="256" cy="316" rx="22" ry="15" fill="#2a1d18"/>
+  <path d="M256 330 Q256 352 236 356 M256 330 Q256 352 276 356" stroke="#2a1d18" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M244 360 Q256 384 268 360 Z" fill="#f2788a"/>
+  <!-- red collar hint -->
+  <path d="M150 412 Q256 458 362 412 L370 440 Q256 488 142 440 Z" fill="#e2574c"/>
+  <circle cx="256" cy="462" r="14" fill="#f2c24b"/>
+</svg>
