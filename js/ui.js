@@ -91,7 +91,7 @@ G.ui = (() => {
       });
     }
     if (act) {
-      $('#needs').innerHTML = BARS.map(([k, n, c]) => '<span>' + n + '</span><div class="bar"><i style="width:' + Math.round(act[k]) + '%;background:' + (act[k] < 25 ? '#e2574c' : c) + '"></i></div>').join('');
+      $('#needs').innerHTML = BARS.map(([k, n, c]) => '<span>' + n + '</span><div class="bar" data-l="' + n + '"><i style="width:' + Math.round(act[k]) + '%;background:' + (act[k] < 25 ? '#e2574c' : c) + '"></i></div>').join('');
     }
   };
   function moodWord(p) {

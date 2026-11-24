@@ -93,7 +93,7 @@ G.scenes.cafe = (() => {
     from = opts.from || 'home';
     pet = G.activePet(); if (!pet) { setTimeout(() => G.go('home'), 50); return; }
     scene.add(pet.root); pet.stop(); pet.ctl = null; pet.baseY = 0; pet.bounds = null;
-    pet.pos.set(-0.35, 0, 1.75); pet.heading = Math.PI - 0.5;
+    pet.pos.set(-1.15, 0, 1.15); pet.heading = 0.25;
     pet.brain = (p) => (function* () { p.lookCam = 3; p.setPose(U.chance(0.7) ? 'sit' : 'lie'); yield* p.wait(U.rand(2, 5)); if (U.chance(0.25)) { p.tiltT = 1.2; } })();
     for (const o of onTable) table.remove(o); onTable = [];
     cam.position.set(0.3, 2.3, 4.8); lookV.set(0, 0.75, -0.5); focusPos = null; busy = false;
@@ -141,7 +141,7 @@ G.scenes.cafe = (() => {
       pet.lookTarget = matcha.headWorld(); pet.setPose('beg'); pet.voice('happy');
       matcha.stop(); matcha.do((function* () { yield* matcha.face(pet.pos.x, pet.pos.z); matcha.setPose('sit'); yield* matcha.wait(0.6); matcha.setPose('paw'); matcha.voice(); yield* matcha.wait(0.8); matcha.setPose('sit'); matcha.eyeOverride = 'happy'; matcha.voice('purr'); yield* matcha.wait(1.5); matcha.eyeOverride = null; })());
       yield* pet.wait(1.6); pet.emote('heart'); matcha.emote('heart'); pet.happy(5); yield* pet.wait(1.4);
-      pet.lookTarget = null; yield* pet.goto(-0.35, 1.75, { speed: 1.2 }); yield* pet.face(0.3, 4);
+      pet.lookTarget = null; yield* pet.goto(-1.15, 1.15, { speed: 1.2 }); yield* pet.face(0.3, 4.8);
       busy = false; focusPos = null;
     })());
     G.ui.toast(pet.name + ' says hi to Matcha.');
@@ -161,9 +161,9 @@ G.scenes.cafe = (() => {
         pet.lookTarget = table.localToWorld(item.position.clone()); pet.tiltT = 1.2; setTimeout(() => (pet.lookTarget = null), 2500);
         busy = false;
       } else {
-        item.position.set(-0.35, 0, 2.15); scene.add(item);
+        item.position.set(-1.05, 0, 1.55); scene.add(item);
         pet.stop(); pet.do((function* () {
-          yield* pet.face(-0.35, 2.15); pet.setPose('eat'); pet.chewT = 3;
+          yield* pet.face(-1.05, 1.55); pet.setPose('eat'); pet.chewT = 3;
           for (let i = 0; i < 6; i++) { G.audio.play('munch'); yield* pet.wait(0.5); }
           scene.remove(item); pet.setPose('sit');
           pet.d.hunger = U.clamp(pet.d.hunger + it.hunger, 0, 100); pet.happy(it.mood); pet.excite = 1; pet.voice('happy'); pet.lickT = 1.4;

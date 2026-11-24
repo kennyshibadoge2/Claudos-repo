@@ -55,8 +55,8 @@ G.scenes.title = (() => {
     t += dt;
     for (const p of pets) p.update(dt);
     const portrait = G.aspect() < 0.9;
-    const r = portrait ? 7.4 : 5.2, a = Math.sin(t * 0.15) * 0.5;
-    cam.position.set(Math.sin(a) * r, portrait ? 2.6 : 2.0, Math.cos(a) * r); cam.lookAt(0, portrait ? -0.6 : -0.1, 0);
+    const r = portrait ? 10.5 : 5.2, a = Math.sin(t * 0.15) * 0.5;
+    cam.position.set(Math.sin(a) * r, portrait ? 3.4 : 2.0, Math.cos(a) * r); cam.lookAt(0, portrait ? 0.1 : -0.1, 0);
   };
   return T;
 })();
@@ -121,6 +121,7 @@ G.scenes.kennel = (() => {
     G.ui.hint(first ? 'Welcome to Maple Hill! Tap a puppy or kitten to meet them.' : 'Tap a pet to meet them.', 0);
     cam.position.set(0, 3.6, 6.4);
   };
+  K.debugPups = () => pups;
   K.exit = function () { G.ui.hint(null); G.ui.prompts([]); };
   K.dock = () => (first ? [] : [{ label: 'Home', icon: 'home', cls: 'go', fn: () => G.go('home') }]);
   K.onDown = function () { };

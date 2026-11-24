@@ -176,14 +176,22 @@ h3{margin:14px 0 6px;font-size:18px}
 #joy{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,247,234,.35);border:3px solid rgba(255,255,255,.7);pointer-events:none;display:none}
 #joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px;border-radius:50%;background:rgba(255,255,255,.85)}
 @media (max-width:600px){
-  .dock button{width:58px;height:60px;border-radius:18px;font-size:12px}
-  .dock button svg{width:26px;height:26px}
-  .dock{gap:6px}
-  .chip{font-size:13px;padding-right:9px;min-height:36px}
+  .dock button{width:54px;height:58px;border-radius:17px;font-size:11px}
+  .dock button svg{width:25px;height:25px}
+  .dock{gap:5px;flex-wrap:nowrap}
+  #pets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  #pets::-webkit-scrollbar{display:none}
+  .chip{font-size:13px;padding-right:9px;min-height:36px;flex:none}
   .chip .dot{width:28px;height:28px}
   .stat{min-height:36px;padding:5px 10px;font-size:15px}
-  #needs{grid-template-columns:auto 64px;font-size:12px;top:calc(54px + var(--safe-t))}
-  #prompts{bottom:calc(82px + var(--safe-b))}
+  #clock{display:none}
+  #needs{top:calc(52px + var(--safe-t));left:calc(8px + var(--safe-l));right:calc(8px + var(--safe-r));display:flex;gap:6px;padding:6px 8px;font-size:11px}
+  #needs>span{display:none}
+  #needs .bar{flex:1;height:16px;position:relative}
+  #needs .bar::after{content:attr(data-l);position:absolute;left:6px;top:0;line-height:16px;font-size:10px;font-weight:700;color:#3b2a1f}
+  #hint{top:calc(88px + var(--safe-t));font-size:14px}
+  #contestHud{top:calc(126px + var(--safe-t));font-size:14px;gap:10px}
+  #prompts{bottom:calc(80px + var(--safe-b))}
 }
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>

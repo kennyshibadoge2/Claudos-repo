@@ -215,7 +215,8 @@ G.scenes.home = (() => {
   function bounds(p) {
     if (p.ctl && bath && bath.pet === p) return;
     p.pos.x = U.clamp(p.pos.x, BX0, BX1); p.pos.z = U.clamp(p.pos.z, BZ0, BZ1);
-    for (const o of OBST) { const dx = p.pos.x - o.x, dz = p.pos.z - o.z, d = Math.hypot(dx, dz); const r = o.r + 0.12 * p.S; if (d < r && d > 0.0001) { p.pos.x = o.x + dx / d * r; p.pos.z = o.z + dz / d * r; } }
+    const obs = bath ? OBST.concat([{ x: tub.position.x, z: tub.position.z, r: 0.95 }]) : OBST;
+    for (const o of obs) { const dx = p.pos.x - o.x, dz = p.pos.z - o.z, d = Math.hypot(dx, dz); const r = o.r + 0.12 * p.S; if (d < r && d > 0.0001) { p.pos.x = o.x + dx / d * r; p.pos.z = o.z + dz / d * r; } }
   }
   function randPoint() { for (let i = 0; i < 10; i++) { const x = U.rand(BX0 + 0.4, BX1 - 0.4), z = U.rand(BZ0 + 0.4, BZ1 - 0.6); if (OBST.every((o) => U.d2(x, z, o.x, o.z) > o.r + 0.4)) return { x, z }; } return { x: 0, z: 0 }; }
 
@@ -789,7 +790,8 @@ G.scenes.home = (() => {
     if (focus) {
       const fp = focus.pos || focus.position; const portrait = G.aspect() < 0.9;
       const tl = new V3(fp.x * 0.85, (focus === tub ? 0.35 : 0.3), fp.z);
-      pos = tl.clone().add(new V3(fp.x * 0.15, portrait ? 1.6 : 1.15, portrait ? 3.2 : 2.25).multiplyScalar(Math.max(0.75, camZoom)));
+      const tubF = focus === tub;
+      pos = tl.clone().add(new V3(fp.x * 0.15, portrait ? (tubF ? 2.4 : 1.6) : (tubF ? 1.75 : 1.15), portrait ? 3.2 : (tubF ? 2.0 : 2.25)).multiplyScalar(Math.max(0.75, camZoom)));
       look.copy(tl);
     }
     const k = focus ? 2.2 : 1.8;
