@@ -163,10 +163,24 @@ G.ui = (() => {
       w.appendChild(b);
     }
   };
+  // short shouts (3-2-1, GO!, TIME!) pop in the middle; everything else is a queued card that slides in from the top
+  const bq = []; let bShowing = false;
   ui.banner = function (txt, sub, ms = 1600) {
-    const b = $('#banner'); b.innerHTML = '<span>' + U.esc(txt) + (sub ? '<small>' + U.esc(sub) + '</small>' : '') + '</span>'; b.classList.remove('hidden');
-    clearTimeout(ui._bt); if (ms) ui._bt = setTimeout(() => b.classList.add('hidden'), ms);
+    if (!sub && String(txt).length <= 7) {
+      const b = $('#banner'); b.innerHTML = '<b>' + U.esc(txt) + '</b>'; b.classList.remove('hidden');
+      clearTimeout(ui._bt); if (ms) ui._bt = setTimeout(() => b.classList.add('hidden'), ms); return;
+    }
+    bq.push({ txt, sub, ms: Math.max(2200, ms || 0) }); if (!bShowing) nextBanner();
   };
+  function nextBanner() {
+    const n = bq.shift(); const el = $('#bannerCard'); if (!n || !el) { bShowing = false; return; }
+    bShowing = true;
+    const t = (n.txt + ' ' + (n.sub || '')).toLowerCase();
+    const ic = /kennel|adopt|welcome home|puppies|kittens/.test(t) ? '\ud83d\udc3e' : /quest|bonus/.test(t) ? '\u2714' : /won|win|champion|cup|place|trophy|prize/.test(t) ? '\ud83c\udfc6' : /learn|knows|name/.test(t) ? '\u2605' : /stamp/.test(t) ? '\ud83d\udcee' : '\u2728';
+    el.innerHTML = '<i>' + ic + '</i><div><b>' + U.esc(n.txt) + '</b>' + (n.sub ? '<small>' + U.esc(n.sub) + '</small>' : '') + '</div>';
+    void el.offsetWidth; el.classList.add('show');
+    setTimeout(() => { el.classList.remove('show'); setTimeout(nextBanner, 420); }, n.ms);
+  }
   ui.cursor = function (src, x, y) {
     const c = $('#cursor');
     if (src === null) { c.classList.add('hidden'); c.dataset.src = ''; return; }
@@ -296,7 +310,8 @@ G.ui = (() => {
         l.appendChild(li({ icon: 'disc', title: 'Contests: Disc, Agility, Obedience', sub: dog ? 'Three events at the field. Win prizes and trophies!' : 'Dogs only.', lock: !dog, fn: dog ? () => G.ui.trialsSheet('home') : null }));
         l.appendChild(li({ icon: 'bag', title: 'Maple Pets (shop)', sub: 'Food, toys, hats and more. Say hi to Kiwi the parrot!', fn: () => { ui.closeSheet(true); G.go('shop', { from: 'home' }); } }));
         l.appendChild(li({ icon: 'cup', title: 'Paw & Bean Café', sub: 'Treats for you and your pet.', fn: () => { ui.closeSheet(true); G.go('cafe'); } }));
-        l.appendChild(li({ icon: 'kennel', title: 'Kennel', sub: 'Adopt a new puppy or kitten (' + G.state.pets.length + '/4 pets).', fn: () => { ui.closeSheet(true); G.go('kennel'); } }));
+        l.appendChild(li({ icon: 'kennel', title: 'Kennel', sub: 'Adopt a new puppy or kitten (' + G.state.pets.length + '/' + G.HOME_MAX + ' at home, ' + G.hotel.list().length + '/' + G.HOTEL_ROOMS + ' at the hotel).', fn: () => { ui.closeSheet(true); G.go('kennel'); } }));
+        l.appendChild(li({ icon: 'home', title: 'Paw Inn (pet hotel)', sub: G.hotel.list().length ? G.hotel.list().length + ' guest' + (G.hotel.list().length > 1 ? 's' : '') + ' on holiday. Swap who lives at home.' : 'Room for ' + G.HOTEL_ROOMS + ' more pets. Give someone a holiday!', fn: () => { ui.closeSheet(true); G.go('hotel'); } }));
       },
     });
   };

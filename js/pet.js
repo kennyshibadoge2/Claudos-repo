@@ -26,6 +26,8 @@ function makePoses(P) {
     tug: mk({ h: -0.05, pitch: -0.15, fh: -0.35, fk: 0.1, bh: 0.2, bk: 0.6, hp: 0.1, tail: 1.1 }),
     groom: mk({ h: Math.min(-0.06, by * 1.35 - bh0), pitch: -0.55, fh: 0.18, bh: -0.78, bk: 2.75, hp: 0.75, ht: 0.35, lift: 1.25, tail: 0.8 }),
     stretch: mk({ h: -0.1, pitch: 0.35, fh: -1.6, fk: 0.2, bh: -0.25, bk: 0.4, hp: -0.4, tail: 1.2, mouth: 0.8 }),
+    sploot: mk({ h: by * 0.86 - bh0, pitch: 0.04, fh: -1.42, fk: 0.12, bh: 1.45, bk: 0.15, hp: 0.05, tail: 1.1, ear: 1 }),
+    proud: mk({ h: Math.min(-0.04, by * 1.4 - bh0), pitch: -0.62, fh: 0.12, fk: 0, bh: -0.78, bk: 2.75, hp: -0.2, tail: 1, ear: 1 }),
   };
 }
 
@@ -156,6 +158,48 @@ class Pet {
     while (t < laps * 6.28) { t += this.dt * 2.6; a += dir * this.dt * 2.6; this.setPose('stand'); this.moveTarget = new V3(cx + Math.cos(a) * rad, 0, cz + Math.sin(a) * rad); this.speedMul = 3.2; if (U.chance(0.01)) this.voice(); yield; }
     this.moveTarget = null;
   }
+  // little routines that show off each breed's personality
+  *breedIdle() {
+    const b = this.d.breed; const cam = G.cur && G.cur.camera;
+    const faceCam = function* (p) { if (cam) yield* p.face(cam.position.x, cam.position.z, 0.4); };
+    switch (b) {
+      case 'shiba': case 'mame': {
+        if (U.chance(0.6)) { // shiba 360: a quick spin, then a dignified pose
+          this.setPose('stand'); let a = 0; while (a < Math.PI * 2) { const d = this.dt * 9; a += d; this.heading += d; yield; }
+          yield* faceCam(this); this.lookCam = 3; yield* this.act('proud', 2.5); this.emote('note', 1);
+        } else { this.setPose('sit'); this.lookCam = 2; this.mouthOpen = 1; G.audio.play('whine', this.d.breed === 'mame' ? 1.9 : 1.6); this.emote('bang', 0.8); yield* this.wait(0.6); G.audio.play('whine', 1.8); yield* this.act('sit', 1.5); }
+        break;
+      }
+      case 'corgi': yield* faceCam(this); this.excite = 1; yield* this.act('sploot', U.rand(3, 5)); this.emote('heart', 1); break;
+      case 'pug': {
+        this.setPose('sit'); yield* faceCam(this); this.lookCam = 3;
+        for (let i = 0; i < 3; i++) { G.audio.play('snort', U.rand(0.9, 1.1)); this.squash = 0.06; yield* this.wait(0.35); }
+        if (U.chance(0.5)) { G.audio.play('sneeze'); this.shakeT = 0.5; this.emote('sweat', 1); }
+        yield* this.act('sit', 1.5); break;
+      }
+      case 'husky': { // huskies "talk"
+        yield* faceCam(this); this.lookCam = 3;
+        for (let i = 0; i < 3; i++) { this.setPose('howl'); G.audio.play('awoo', U.rand(0.95, 1.15)); yield* this.wait(0.45); this.setPose('sit'); yield* this.wait(0.25); }
+        this.emote('note', 1); this.tiltT = 1; yield* this.act('sit', 1.2); break;
+      }
+      case 'dachshund': this.setPose('crouch'); this.digT = 2.6; yield* this.wait(2.6); yield* this.sniffAround(1); if (U.chance(0.4)) this.emote('q', 1); break;
+      case 'beagle': yield* this.sniffAround(3); this.setPose('howl'); this.voiceCd = 0; G.audio.play('aroo'); this.emote('bang', 1); yield* this.wait(1.4); yield* this.act('sit', 1); break;
+      case 'golden': yield* faceCam(this); this.excite = 1; this.voice('happy'); yield* this.act('roll', 2.6); this.emote('heart', 1.2); yield* this.act('stand', 0.6); break;
+      case 'akita': yield* faceCam(this); this.lookCam = 4; yield* this.act('proud', 3); this.eyeOverride = 'happy'; yield* this.act('lie', U.rand(3, 5)); break;
+      case 'pomeranian': {
+        this.excite = 1; this.voice();
+        for (let i = 0; i < 2; i++) { let a = 0; this.setPose('stand'); while (a < Math.PI * 2) { const d = this.dt * 11; a += d; this.heading += d; yield; } this.jump(1.6); yield* this.waitUntil(() => !this.airborne, 1.5); }
+        yield* faceCam(this); yield* this.act('beg', 1.2); break;
+      }
+      case 'yorkie': {
+        const cx = this.pos.x, cz = this.pos.z; this.setPose('stand');
+        for (let i = 0; i <= 6; i++) { const a = i / 6 * Math.PI * 2; this.moveTarget = new V3(cx + Math.cos(a) * 0.35, 0, cz + Math.sin(a) * 0.35); this.speedMul = 1.1; yield* this.waitUntil(() => U.d2(this.pos.x, this.pos.z, this.moveTarget.x, this.moveTarget.z) < 0.08, 1.2); }
+        this.moveTarget = null; yield* faceCam(this); this.shakeT = 0.45; yield* this.wait(0.5); this.lookCam = 3; yield* this.act('sit', 1.5); this.emote('heart', 1); break;
+      }
+      default: yield* this.wait(1);
+    }
+    this.eyeOverride = null; this.mouthOpen = 0;
+  }
   *idleLook(s) { this.setPose(U.chance(0.5) ? 'sit' : 'stand'); let t = 0; while (t < s) { t += this.dt; if (U.chance(0.004)) this.tiltT = 1.2; yield; } }
   /* ---------------- per-frame ---------------- */
   update(dt) {
@@ -219,6 +263,13 @@ class Pet {
     this.squash = U.damp(this.squash, 0, 10, dt);
     const breath = Math.sin(t * (this.pant > 0.3 ? 16 : 3.2)) * (this.pant > 0.3 ? 0.018 : 0.01);
     let roll = P.roll, shake = 0;
+    const br = this.d.breed;
+    if (moving && !gallop) { // breed gaits
+      if (br === 'corgi') roll += Math.sin(ph) * 0.1 * Math.min(1, spd); // the famous corgi butt wiggle
+      else if (br === 'dachshund' || br === 'pug') roll += Math.sin(ph) * 0.05 * Math.min(1, spd);
+      else if (br === 'pomeranian') bob += Math.abs(Math.sin(ph)) * 0.03; // bouncy puffball
+      else if (br === 'yorkie') bob += Math.abs(Math.sin(ph)) * 0.018;
+    }
     if (this.shakeT > 0) { this.shakeT -= dt; const e = Math.sin(Math.min(1, this.shakeT) * Math.PI); shake = Math.sin(t * 46) * 0.5 * e; roll += shake; if (this.wet > 0 && Math.random() < 0.6) { const p = this.root.position.clone(); p.y = m.baseH * S + 0.05; G.fx.spawn('drop', p, 2); } if (this.shakeT <= 0) this.wet = 0; }
     this.petT += dt;
     const petting = this.petT < 0.5;
@@ -241,6 +292,8 @@ class Pet {
       if (front && L.s < 0 && P.lift > 1.1) { hip -= 0.2; }
       if (!front && L.s > 0 && (this.scratchT > 0 || this.kickT > 0)) { hip += -0.55 + Math.sin(t * 30) * 0.4; knee += 0.4; }
       if (this.airborne && !gallop) { hip += front ? -0.25 : 0.25; }
+      if (br === 'yorkie' && front && moving && !gallop) { knee += lift * A * 0.7; hip -= lift * A * 0.25; } // dainty prance
+      if (br === 'akita' && moving && !gallop) { hip *= 0.92; }
       if (this.digT > 0 && front) { hip += Math.sin(t * 22 + (L.s > 0 ? Math.PI : 0)) * 0.55 - 0.3; knee += 0.5; }
       L.hip.rotation.x = hip; L.knee.rotation.x = knee;
       L.hip.rotation.z = (this.poseName === 'dead' ? 0 : 0) + (P.roll > 1 ? -L.s * 0.25 : 0);

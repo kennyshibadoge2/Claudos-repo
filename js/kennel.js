@@ -86,7 +86,8 @@ G.scenes.kennel = (() => {
     const hills = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), G.M.mat(season === 'winter' ? '#e8f0f6' : '#8fc46a', { r: 1 })); hills.scale.set(1.6, 0.25, 1); hills.position.set(0, -0.5, -26); scene.add(hills);
   };
   // first pet is free; each extra pet costs more (cats a little less)
-  function adoptPrice(cat) { const base = [0, 3000, 5000, 8000][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
+  // your very first Shiba is free; after that every breed has its own price
+  function adoptPrice(breed) { if (!G.state.pets.length && !(G.state.hotel || []).length) return 0; return G.BREED_PRICE[breed] || 5000; }
   function candidates(breed) {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
@@ -94,7 +95,7 @@ G.scenes.kennel = (() => {
     const r = (i) => U.hash(seed, i, 3);
     const coats = G.BREED_COATS[breed] || ['red']; const cat = breed === 'cat';
     const off = Math.floor(r(99) * coats.length);
-    for (let i = 0; i < 3; i++) out.push({ breed, coat: coats[(off + i) % coats.length], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(cat) });
+    for (let i = 0; i < 3; i++) out.push({ breed, coat: coats[(off + i) % coats.length], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(breed) });
     if (cat && G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
     return out;
   }
@@ -103,13 +104,13 @@ G.scenes.kennel = (() => {
     G.checkBreeds(true);
     const firstPet = !G.state.pets.length;
     G.ui.sheet({ title: firstPet ? 'Choose your first Shiba' : 'Choose a breed', render(body) {
-      G.ui.note(body, firstPet ? 'Every Maple Hill story starts with a Shiba! Pick a Shiba Inu or a pocket-sized Mame Shiba. More breeds (and kittens) arrive as you play.' : 'Pick a breed to meet the puppies. New breeds arrive at the kennel as you play — locked ones show how to unlock them. Adoption: ' + (adoptPrice(false) ? adoptPrice(false) + ' coins (kittens ' + adoptPrice(true) + ')' : 'free') + '.');
+      G.ui.note(body, firstPet ? 'Every Maple Hill story starts with a Shiba! Pick a Shiba Inu or a pocket-sized Mame Shiba. More breeds (and kittens) arrive as you play.' : 'Pick a breed to meet the puppies. New breeds arrive as you play \u2014 locked ones show how to unlock them. You have ' + G.state.pets.length + '/' + G.HOME_MAX + ' pets at home' + (G.hotel.list().length ? ' and ' + G.hotel.list().length + ' at the Paw Inn' : '') + '; extra pets stay at the Paw Inn hotel in town.');
       const g = G.ui.grid(body); g.classList.add('breedGrid');
       for (const b of G.BREED_ORDER) {
         const open = G.breedUnlocked(b) && !(firstPet && b === 'cat'); const info = G.BREED_INFO[b];
         const img = G.M.icons.pet({ breed: b, coat: (G.BREED_COATS[b] || ['red'])[0] });
         const name = b === 'cat' ? 'Kittens' : G.BREEDS[b].name;
-        const c = G.ui.card({ img, name, sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
+        const c = G.ui.card({ img, name: name + (open && adoptPrice(b) ? ' \u00b7 ' + adoptPrice(b) + 'c' : ''), sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
         if (!open) c.classList.add('locked'); g.appendChild(c);
       }
     } });
@@ -134,6 +135,7 @@ G.scenes.kennel = (() => {
       else if (r < 0.7) yield* pp.sniffAround(1);
       else if (r < 0.78 && !pp.cat) yield* pp.zoomies(0, 0, 1.3, 1);
       else if (r < 0.85 && pp.cat) yield* pp.groom();
+      else if (r < 0.86 && !pp.cat) yield* pp.breedIdle();
       else if (r < 0.92) { const o = U.pick(pups.filter((x) => x !== pp)); if (o) { yield* pp.goto(o.pos.x + 0.4, o.pos.z, { timeout: 4 }); yield* pp.face(o.pos.x, o.pos.z); pp.setPose(pp.cat ? 'sit' : 'bow'); yield* pp.wait(1); } }
       else yield* pp.scratch();
     })();
@@ -171,12 +173,13 @@ G.scenes.kennel = (() => {
     sel = pet; pet.stop(); pet.emote('heart', 1.2); pet.voice(); pet.excite = 1;
     const c = pet.cand; const B = G.BREEDS[c.breed];
     G.ui.hint((c.nori ? 'Nori the street cat! ' : '') + (c.sex === 'boy' ? 'Boy' : 'Girl') + ' · ' + B.name + ' · ' + G.COATS[c.coat].name + ' · ' + G.PERSONALITIES[c.personality].name + ': ' + G.PERSONALITIES[c.personality].desc, 0);
-    const full = G.state.pets.length >= 4;
-    G.ui.prompts([{ label: full ? 'Your home is full (4/4)' : c.price ? 'Adopt (' + c.price + ' coins)' : 'Adopt me!', cls: 'pink', fn: () => adopt(pet) }]);
+    const full = G.state.pets.length >= G.HOME_MAX && G.hotel.roomsFree() <= 0;
+    G.ui.prompts([{ label: full ? 'Home and hotel are full' : (c.price ? 'Adopt (' + c.price + ' coins)' : 'Adopt me!') + (G.state.pets.length >= G.HOME_MAX ? ' \u2192 Paw Inn' : ''), cls: 'pink', fn: () => adopt(pet) }]);
   }
   async function adopt(pet) {
     const c = pet.cand;
-    if (G.state.pets.length >= 4) { G.ui.toast('You can have up to 4 pets.'); return; }
+    const toHotel = G.state.pets.length >= G.HOME_MAX;
+    if (toHotel && G.hotel.roomsFree() <= 0) { G.ui.toast('Your home (' + G.HOME_MAX + ') and the Paw Inn (' + G.HOTEL_ROOMS + ') are both full!'); return; }
     if (G.state.coins < c.price) { G.ui.toast('Not enough coins. Win Disc Cups or find presents on walks!'); return; }
     const res = await G.ui.nameModal({ title: 'Name your new ' + (c.breed === 'cat' ? 'kitten' : 'puppy'), sub: 'Choose a name and whether they’re a boy or a girl.', value: c.name || U.pick(G.PET_NAMES), sexVal: c.sex, cancel: true });
     if (!res) return;
@@ -185,6 +188,7 @@ G.scenes.kennel = (() => {
     if (c.nori) { G.state.npc.nori.adopted = true; }
     if (c.breed === 'cat' && !G.state.acc.collar_pink) G.state.acc.collar_pink = 1;
     if (!G.state.firstPlay) G.state.firstPlay = Date.now();
+    if (toHotel) { d.hotelSince = Date.now(); G.hotel.list().push(d); G.audio.play('fanfare'); G.ui.banner('Welcome, ' + res.name + '!', 'Your home is full, so ' + res.name + ' is staying at the Paw Inn', 3200); G.save(); setTimeout(() => G.checkBreeds(), 4000); setTimeout(() => G.go('hotel', { from: K.from }), 1800); return; }
     G.state.pets.push(d); G.state.active = d.id;
     G.audio.play('fanfare'); G.ui.banner('Welcome home,', res.name + '!', 2200);
     G.save(); setTimeout(() => G.checkBreeds(), 4000);

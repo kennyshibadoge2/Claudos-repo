@@ -77,6 +77,7 @@ G.BREED_INFO = {
   pomeranian: { trait: 'A walking puffball: brushing makes them extra happy.', hint: 'Finish all daily quests on 2 different days', from: 'Maple Pets' },
   yorkie: { trait: 'Tiny fashionista: loves outfits and brushing.', hint: 'Own 8 accessories and brush a pet until super fluffy', from: 'Daisuke (Maple Pets)' },
 };
+G.BREED_PRICE = { shiba: 4000, mame: 4500, cat: 4000, pug: 5000, corgi: 5500, dachshund: 5000, beagle: 5000, husky: 6500, golden: 6500, akita: 7500, pomeranian: 7000, yorkie: 8000 };
 G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie'];
 G.breedUnlocked = function (b) {
   const s = G.state; if (!s) return false; s.breeds = s.breeds || {};
@@ -85,7 +86,7 @@ G.breedUnlocked = function (b) {
 };
 G.breedCheck = function (b) { // is the requirement met right now?
   const s = G.state, st = s.stats || {}, won = (id, f) => (s.trophies || []).some((t) => t.cls === id && t.place === 1 && (!f || f(t)));
-  const isShiba = (t) => { const d = s.pets.find((p) => p.id === t.pet); return d && (d.breed === 'shiba' || d.breed === 'mame'); };
+  const isShiba = (t) => { const d = s.pets.concat(s.hotel || []).find((p) => p.id === t.pet); return d && (d.breed === 'shiba' || d.breed === 'mame'); };
   switch (b) {
     case 'cat': return s.pets.some((d) => d.breed === 'shiba' || d.breed === 'mame');
     case 'pug': return !!s.pets.length && new Date(s.firstPlay || s.created || Date.now()).toDateString() !== new Date().toDateString();
@@ -93,7 +94,7 @@ G.breedCheck = function (b) { // is the requirement met right now?
     case 'dachshund': return (st.presents || 0) >= 5;
     case 'beagle': return (st.walks || 0) >= 7;
     case 'husky': return won('open');
-    case 'golden': return s.pets.some((d) => (d.bond || 0) >= 100);
+    case 'golden': return s.pets.concat(s.hotel || []).some((d) => (d.bond || 0) >= 100);
     case 'akita': return won('expert', isShiba);
     case 'pomeranian': return (s.questDays || 0) >= 2;
     case 'yorkie': return Object.keys(s.acc || {}).filter((k) => G.ITEMS[k] && G.ITEMS[k].cat === 'acc').length >= 8 && (st.fluffy || 0) >= 1;

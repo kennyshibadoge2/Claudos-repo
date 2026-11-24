@@ -310,6 +310,7 @@ G.scenes.home = (() => {
     if (others.length && U.chance(0.2)) return yield* social(p, U.pick(others));
     const floorToys = toys.filter((t) => !t.held && t.rest && !t.inHand && !t.tugging);
     if (floorToys.length && U.chance(d.personality === 'playful' ? 0.35 : 0.18) && d.energy > 20) return yield* playToy(p, U.pick(floorToys));
+    if (!p.cat && U.chance(0.07)) return yield* p.breedIdle();
     const r = Math.random();
     if (r < 0.26) { const q = randPoint(); yield* p.goto(q.x, q.z, { speed: U.pick([0.7, 1, 1.2]) }); yield* p.idleLook(U.rand(1, 3)); }
     else if (r < 0.4) { p.lookCam = 4; yield* p.face(cam.position.x, cam.position.z); yield* p.act('sit', U.rand(2, 4)); if (U.chance(0.4)) { p.tiltT = 1.2; p.tiltDir = U.chance(0.5) ? 1 : -1; } yield* p.wait(1); }
@@ -322,6 +323,7 @@ G.scenes.home = (() => {
     else if (r < 0.86 && p.cat) yield* p.groom();
     else if (r < 0.9) { yield* p.goto(U.rand(-0.8, 0.8), -2.85); p.lookTarget = new V3(0, 2, -3.6); yield* p.act('sit', 3); p.lookTarget = null; }
     else if (r < 0.94 && !p.cat) { p.lookCam = 2; yield* p.face(cam.position.x, cam.position.z); p.voice(); yield* p.act('bow', 1); }
+    else if (r < 0.985 && !p.cat) yield* p.breedIdle();
     else yield* p.wait(U.rand(1, 2.5));
   }
   function* watchTV(p) {

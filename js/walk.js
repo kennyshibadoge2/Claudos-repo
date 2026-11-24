@@ -77,7 +77,8 @@ G.scenes.walk = (() => {
     ];
     const pal = [['#fde3e3', '#c84a4a'], ['#e3eefd', '#3b5ba8'], ['#fff3d6', '#c8922a'], ['#e9f6e9', '#4a8a5a'], ['#f2e6fa', '#7a5c9a'], ['#fff0e6', '#b35a3a']];
     const styles = ['gable', 'japanese', 'hip', 'saltbox', 'flat', 'gable', 'japanese'], walls = ['siding', 'plaster', 'brick', 'shingle', 'plaster', 'boards', 'plaster'];
-    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
+    BLD.push({ t: 0.59, kind: 'hotel', name: 'Paw Inn', o: { w: 5.2, d: 3.8, h: 2.6, stories: 2, wall: '#e9f1fb', wallKind: 'siding', style: 'hip', roof: '#3b5ba8', sign: 'Paw Inn', signCol: '#3b5ba8', awning: '#6a8fd8', door: '#3b5ba8', porch: true, flowers: true, pots: 2, shutters: '#3b5ba8', fence: false, mailbox: false } });
+    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => t !== 0.59 && BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
     // Maple Dog Park entrance: stone pillars, wooden arch with a carved sign, hedges, flowers, map board
     function parkEntrance(P, n, b) {
       const g = new THREE.Group(); g.position.copy(P.clone().addScaledVector(n, 3.2)); g.rotation.y = Math.atan2(-n.x, -n.z); st.add(g);
@@ -245,7 +246,7 @@ G.scenes.walk = (() => {
     G.walkSession = (G.walkSession || 0) + 1;
     scene.add(pet.root); pet.stop(); pet.ctl = null; pet.busy = false; pet.baseY = 0; pet.carry = null; pet.lookTarget = null;
     pet.brain = walkIdle; pet.bounds = bounds;
-    const startT = { cafe: 0.0, shop: 0.09, field: 0.25, kennel: 0.5, park: 0.37 }[opts.from] ?? 0.75;
+    const startT = { cafe: 0.0, shop: 0.09, field: 0.25, kennel: 0.5, park: 0.37, hotel: 0.59 }[opts.from] ?? 0.75;
     const P = curvePt(startT), n = outward(startT);
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
@@ -810,6 +811,7 @@ G.scenes.walk = (() => {
     else if (d.kind === 'field') G.ui.trialsSheet('walk');
     else if (d.kind === 'kennel') G.go('kennel', { from: 'walk' });
     else if (d.kind === 'park') G.go('park', { from: 'walk' });
+    else if (d.kind === 'hotel') G.go('hotel', { from: 'walk' });
   }
   return W;
 })();

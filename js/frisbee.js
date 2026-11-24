@@ -8,8 +8,8 @@ G.CONTEST_RIVALS = [
   { d: [4, 9], jump: 0, flip: 0, catch: 0.42, wander: 0.28, pace: [1.8, 3.4] },
   { d: [6, 12], jump: 0.25, flip: 0, catch: 0.55, wander: 0.16, pace: [1.2, 2.6] },
   { d: [8, 15], jump: 0.45, flip: 0.05, catch: 0.75, wander: 0.05 },
-  { d: [10, 18], jump: 0.6, flip: 0.18, catch: 0.8, wander: 0.02 },
-  { d: [12, 20], jump: 0.55, flip: 0.38, catch: 0.86, wander: 0 },
+  { d: [10, 18], jump: 0.6, flip: 0.18, catch: 0.9, wander: 0, pace: [0.4, 1.0], aim: 0.6 },
+  { d: [12, 20], jump: 0.55, flip: 0.38, catch: 0.95, wander: 0, pace: [0.3, 0.8], aim: 0.8, pro: true },
 ];
 
 G.scenes.frisbee = (() => {
@@ -119,21 +119,25 @@ G.scenes.frisbee = (() => {
       const dx = U.rand(-1.4, 1.4), z = U.rand(8 + i * 7, 14 + i * 9), r = U.rand(1.1, 1.8);
       for (const lx of laneXs()) { const half = lx === 0 ? 3.4 : 2; const x = U.clamp(lx + dx, lx - half + 0.6, lx + half - 0.6); st.sand.push({ x, z, r }); const m = new THREE.Mesh(new THREE.CircleGeometry(r * 1.15, 28), M.basic('#fff', { map: st1, op: 1, dw: false })); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.015, z); m.scale.set(1, U.rand(0.8, 1.15), 1); m.renderOrder = 2; fieldGrp.add(m); }
     }
-    for (let i = 0; i < nZone; i++) st.zones.push(newZone(i));
+    if (nZone) for (const lx of laneXs()) st.zones.push(newZone(lx));
   }
-  function newZone(i) {
-    const zn = { dx: U.rand(-1.3, 1.3), z: U.rand(9, 30 + (st.cls ? st.cls.tier * 4 : 0)), r: U.rand(1.0, 1.5), life: U.rand(10, 18), t: 0, pts: [0, 10, 15, 20, 25][st.cls ? st.cls.tier : 1], meshes: [] };
-    const tx = zoneTex();
-    const beamTex = G.canvasTex(8, 64, (c) => { const g = c.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(255,200,60,0)'); g.addColorStop(0.7, 'rgba(255,200,60,.25)'); g.addColorStop(1, 'rgba(255,190,40,.7)'); c.fillStyle = g; c.fillRect(0, 0, 8, 64); });
-    const lab = G.textTex('+' + zn.pts, { font: '800 60px Fredoka, sans-serif', color: '#ffcf33', stroke: '#fff', strokeW: 10, pad: 10 });
-    for (const lx of laneXs()) {
-      const half = lx === 0 ? 3.4 : 2; const x = U.clamp(lx + zn.dx, lx - half + 0.7, lx + half - 0.7);
-      const m = new THREE.Mesh(new THREE.CircleGeometry(zn.r, 32), new THREE.MeshBasicMaterial({ map: tx, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: '#ffe680' })); m.rotation.x = -Math.PI / 2; m.position.set(x, 0.04, zn.z); m.renderOrder = 3; m.userData.lx = lx; fieldGrp.add(m); zn.meshes.push(m);
-      const bm = new THREE.Mesh(new THREE.CylinderGeometry(zn.r * 0.95, zn.r * 0.95, 1.4, 32, 1, true), new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); bm.position.set(x, 0.7, zn.z); bm.userData.beam = true; fieldGrp.add(bm); zn.fx = zn.fx || []; zn.fx.push(bm);
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: lab, transparent: true, opacity: 0, depthTest: false })); sp.scale.set(0.5 * lab.userData.w / lab.userData.h, 0.5, 1); sp.position.set(x, 1.7, zn.z); sp.renderOrder = 12; fieldGrp.add(sp); zn.fx.push(sp);
+  // one zone per lane at a time, always inside the lane and at a distance dogs can reach
+  let zoneTx = null, beamTx = null;
+  function newZone(lx) {
+    const tier = st.cls ? st.cls.tier : 1; const mine = lx === 0;
+    const half = mine ? 3.4 : 2; const zMax = [0, 18, 22, 26, 30][tier];
+    const zn = { lx, x: U.clamp(lx + U.rand(-1, 1) * (half - 1.2), lx - half + 1.1, lx + half - 1.1), z: U.rand(7, zMax), r: U.rand(1.05, 1.4), life: U.rand(10, 16), t: 0, pts: [0, 10, 15, 20, 25][tier], meshes: [], fx: [], mine };
+    if (!zoneTx) zoneTx = zoneTex();
+    if (!beamTx) beamTx = G.canvasTex(8, 64, (c) => { const g = c.createLinearGradient(0, 0, 0, 64); g.addColorStop(0, 'rgba(255,200,60,0)'); g.addColorStop(0.7, 'rgba(255,200,60,.25)'); g.addColorStop(1, 'rgba(255,190,40,.7)'); c.fillStyle = g; c.fillRect(0, 0, 8, 64); });
+    const m = new THREE.Mesh(new THREE.CircleGeometry(zn.r, 32), new THREE.MeshBasicMaterial({ map: zoneTx, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, color: mine ? '#ffe680' : '#ffd36a' })); m.rotation.x = -Math.PI / 2; m.position.set(zn.x, 0.04, zn.z); m.renderOrder = 3; fieldGrp.add(m); zn.meshes.push(m);
+    if (mine) {
+      const bm = new THREE.Mesh(new THREE.CylinderGeometry(zn.r * 0.95, zn.r * 0.95, 1.4, 32, 1, true), new THREE.MeshBasicMaterial({ map: beamTx, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })); bm.position.set(zn.x, 0.7, zn.z); fieldGrp.add(bm); zn.fx.push(bm);
+      const lab = G.textTex('+' + zn.pts, { font: '800 60px Fredoka, sans-serif', color: '#ffcf33', stroke: '#fff', strokeW: 10, pad: 10 });
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: lab, transparent: true, opacity: 0, depthTest: false })); sp.scale.set(0.5 * lab.userData.w / lab.userData.h, 0.5, 1); sp.position.set(zn.x, 1.7, zn.z); sp.renderOrder = 12; fieldGrp.add(sp); zn.fx.push(sp);
     }
     return zn;
   }
+  function zoneFor(lx) { return st && st.zones ? st.zones.find((z) => z.lx === lx) : null; }
   /* ---------- little touches ---------- */
   let shadowTex = null, signs = [];
   function shadowMesh() { if (!shadowTex) shadowTex = G.canvasTex(64, 64, (c) => { const g = c.createRadialGradient(32, 32, 2, 32, 32, 32); g.addColorStop(0, 'rgba(30,40,20,.55)'); g.addColorStop(1, 'rgba(30,40,20,0)'); c.fillStyle = g; c.fillRect(0, 0, 64, 64); }); const m = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.55), new THREE.MeshBasicMaterial({ map: shadowTex, transparent: true, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.renderOrder = 4; scene.add(m); return m; }
@@ -161,14 +165,14 @@ G.scenes.frisbee = (() => {
   function clearSigns() { for (const m of signs) { scene.remove(m); m.material.map.dispose(); m.material.dispose(); m.geometry.dispose(); } signs = []; }
   function clearField() { if (fieldGrp) { scene.remove(fieldGrp); fieldGrp.traverse((o) => { if (o.material) { if (o.material.map) o.material.map.dispose(); o.material.dispose(); } if (o.geometry) o.geometry.dispose(); }); fieldGrp = null; } }
   function terrainAt(x, z) { if (!st || !st.sand) return 1; for (const s of st.sand) if ((x - s.x) ** 2 + (z - s.z) ** 2 < s.r * s.r) return 0.42; return 1; }
-  function zoneBonus(p) { if (!st || !st.zones) return 0; for (const zn of st.zones) { if (zn.t > zn.life - 0.6) continue; for (const m of zn.meshes) if ((p.x - m.position.x) ** 2 + (p.z - m.position.z) ** 2 < zn.r * zn.r) return zn.pts; } return 0; }
+  function zoneBonus(p) { if (!st || !st.zones) return 0; for (const zn of st.zones) { if (zn.t > zn.life - 0.6) continue; if ((p.x - zn.x) ** 2 + (p.z - zn.z) ** 2 < (zn.r + 0.25) ** 2) return zn.pts; } return 0; }
   function updateField(dt) {
     if (!st || !st.zones) return;
     st.zones.forEach((zn, i) => {
       zn.t += dt; const fade = Math.min(1, zn.t * 1.5, (zn.life - zn.t) * 1.5); const pulse = 0.75 + Math.sin(G.time * 4 + i) * 0.25;
-      for (const m of zn.meshes) { m.material.opacity = Math.max(0, fade) * pulse; m.scale.setScalar(1 + Math.sin(G.time * 3 + i) * 0.04); }
+      for (const m of zn.meshes) { m.material.opacity = Math.max(0, fade) * pulse * (zn.mine ? 1 : 0.55); m.scale.setScalar(1 + Math.sin(G.time * 3 + i) * 0.04); }
       for (const f of zn.fx || []) { f.material.opacity = Math.max(0, fade) * (f.isSprite ? 1 : 0.2 * pulse); if (f.isSprite) f.position.y = 1.7 + Math.sin(G.time * 2.5 + i) * 0.12; else f.rotation.y += dt * 0.5; }
-      if (zn.t >= zn.life) { for (const m of zn.meshes.concat(zn.fx || [])) { fieldGrp.remove(m); if (m.material.map && !m.isSprite) m.material.map.dispose(); m.material.dispose(); m.geometry && !m.isSprite && m.geometry.dispose(); } st.zones[i] = newZone(i); if (Math.random() < 0.5) commentary('The bonus zone moved!'); }
+      if (zn.t >= zn.life) { for (const m of zn.meshes.concat(zn.fx || [])) { fieldGrp.remove(m); if (m.isSprite) m.material.map.dispose(); m.material.dispose(); m.geometry && !m.isSprite && m.geometry.dispose(); } st.zones[i] = newZone(zn.lx); if (zn.mine && Math.random() < 0.5) commentary('The bonus zone moved!'); }
     });
     const dusty = (p) => {
       p.terrainMul = terrainAt(p.pos.x, p.pos.z);
@@ -179,7 +183,7 @@ G.scenes.frisbee = (() => {
     dusty(pet); for (const r of rivals) dusty(r.pet);
   }
   function clearRivals() { for (const r of rivals) { scene.remove(r.pet.root); scene.remove(r.person.root); scene.remove(r.disc); scene.remove(r.tag); if (r.shadow) scene.remove(r.shadow); } rivals = []; }
-  const RIVAL_SKILL = [4, 20, 46, 68, 88], RIVAL_F = [[3.5, 7.5], [4.5, 9.5], [7, 12.5], [9, 15], [10, 17]];
+  const RIVAL_SKILL = [4, 20, 46, 82, 97], RIVAL_F = [[3.5, 7.5], [4.5, 9.5], [7, 12.5], [10, 16], [11, 18]];
   function makeRivals(cls) {
     clearRivals();
     const pool = G.RIVALS.slice().sort(() => Math.random() - 0.5).slice(0, 3);
@@ -205,8 +209,14 @@ G.scenes.frisbee = (() => {
       if (running && r.t <= 0) {
         r.winding = false; r.person.holding = false;
         const fr = RIVAL_F[r.tier]; const f = U.rand(fr[0], fr[1]);
-        const pos = r.disc.position.clone(); const vel = new V3(U.rand(-0.4, 0.4), U.rand(1.8, 2.8) + f * 0.1, f);
-        const path = G.discSim(pos, vel, { wind: st ? st.wind * 0.7 : 0, bounds: { x0: r.x - 2, x1: r.x + 2, z0: 0.2, z1: 70 } });
+        const pos = r.disc.position.clone(); const simO = { wind: st ? st.wind * 0.7 : 0, pro: !!r.skill.pro, bounds: { x0: r.x - 2, x1: r.x + 2, z0: 0.2, z1: 70 } };
+        let vel = new V3(U.rand(-0.4, 0.4), U.rand(1.8, 2.8) + f * 0.1, f), path = G.discSim(pos, vel, simO);
+        const zn = zoneFor(r.x);
+        if (zn && r.skill.aim && Math.random() < r.skill.aim && zn.t < zn.life - 3) { // pro handlers aim for their bonus zone
+          let best = null;
+          for (let k = 0; k < 7; k++) { const ff = U.lerp(fr[0] * 0.7, fr[1], k / 6); const v2 = new V3((zn.x - pos.x) * 0.35 + U.rand(-0.15, 0.15), U.rand(1.9, 2.6) + ff * 0.1, ff); const p2 = G.discSim(pos, v2, simO); const end = p2[Math.max(0, p2.length - 3)].p; const d = U.d2(end.x, end.z, zn.x, zn.z); if (!best || d < best.d) best = { d, v: v2, p: p2 }; }
+          if (best) { vel = best.v; path = best.p; }
+        }
         let plan = null;
         if (Math.random() < r.skill.catch) {
           plan = G.discPlan(p, path, { terrain: terrainAt });
