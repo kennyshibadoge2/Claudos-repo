@@ -254,7 +254,7 @@ G.ui = (() => {
         const dog = p && !p.cat;
         l.appendChild(li({ icon: 'paw', title: 'Walk around Maple Hill', sub: dog ? 'Take ' + p.name + ' on a walk. Meet neighbors, find presents, visit the café.' : 'Cats prefer to stay home. Pick a dog from the top bar to walk.', lock: !dog, fn: dog ? () => { ui.closeSheet(true); G.go('walk'); } : null }));
         l.appendChild(li({ icon: 'disc', title: 'Contests: Disc, Agility, Obedience', sub: dog ? 'Three events at the field. Win prizes and trophies!' : 'Dogs only.', lock: !dog, fn: dog ? () => G.ui.trialsSheet('home') : null }));
-        l.appendChild(li({ icon: 'bag', title: 'Pet Shop', sub: 'Food, toys, hats and more.', fn: () => ui.shop() }));
+        l.appendChild(li({ icon: 'bag', title: 'Maple Pets (shop)', sub: 'Food, toys, hats and more. Say hi to Kiwi the parrot!', fn: () => { ui.closeSheet(true); G.go('shop', { from: 'home' }); } }));
         l.appendChild(li({ icon: 'cup', title: 'Paw & Bean Café', sub: 'Treats for you and your pet.', fn: () => { ui.closeSheet(true); G.go('cafe'); } }));
         l.appendChild(li({ icon: 'kennel', title: 'Kennel', sub: 'Adopt a new puppy or kitten (' + G.state.pets.length + '/4 pets).', fn: () => { ui.closeSheet(true); G.go('kennel'); } }));
       },

@@ -51,6 +51,8 @@ class Pet {
     this.emoteSprite = null; this.emoteT = 0; this.voiceCd = 0;
     this.sizeH = (this.m.baseH + this.m.dims.by + this.m.headR * 2.4) * this.S;
     this.applyAcc();
+    const sh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: G.tex.shadow, transparent: true, depthWrite: false, opacity: 0.55 }));
+    sh.rotation.x = -Math.PI / 2; sh.position.y = 0.012; sh.renderOrder = 1; sh.scale.set(this.m.dims.bx * 3.2 * this.S, this.m.dims.bz * 3.6 * this.S, 1); this.root.add(sh); this.blob = sh;
   }
   get pos() { return this.root.position; }
   get name() { return this.d.name; }
@@ -199,6 +201,7 @@ class Pet {
       if (this.jumpY <= 0) { this.jumpY = 0; this.jumpV = 0; if (this.airborne) { this.squash = 0.12; this.airborne = false; G.fx.spawn('puff', this.pos.clone().setY(0.05), 2); } }
     }
     this.root.position.y = this.jumpY + (this.baseY || 0);
+    if (this.blob) { this.blob.position.y = 0.012 - this.root.position.y; const k = 1 / (1 + this.jumpY * 2.5); this.blob.material.opacity = 0.55 * k; this.blob.visible = this.poseName !== 'roll' || true; }
   }
   animate(dt) {
     const m = this.m, P = this.pose, T = this.poses[this.poseName] || this.poses.stand;

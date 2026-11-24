@@ -39,13 +39,17 @@ G.scenes.walk = (() => {
     const path = new THREE.Mesh(pg, M.mat('#ffffff', { map: pathTex, r: 1, side: THREE.DoubleSide })); path.receiveShadow = true; scene.add(path);
     // pond
     pondPos = new V3(-7, 0, 3);
-    const pond = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), M.mat('#5fb4e6', { r: 0.08, m: 0.1 })); pond.rotation.x = -Math.PI / 2; pond.position.set(pondPos.x, 0.04, pondPos.z); scene.add(pond);
+    W.waterTex = G.canvasTex(256, 256, (g) => { g.fillStyle = '#5fb4e6'; g.fillRect(0, 0, 256, 256); for (let i = 0; i < 70; i++) { g.strokeStyle = 'rgba(255,255,255,' + U.rand(0.08, 0.3) + ')'; g.lineWidth = U.rand(1, 3); const x = Math.random() * 256, y = Math.random() * 256, l = U.rand(10, 40); g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + l / 2, y - 4, x + l, y); g.stroke(); } g.fillStyle = 'rgba(30,90,140,.18)'; for (let i = 0; i < 30; i++) { g.beginPath(); g.arc(Math.random() * 256, Math.random() * 256, U.rand(6, 20), 0, 7); g.fill(); } }, { repeat: [3, 3] });
+    const pond = new THREE.Mesh(new THREE.CircleGeometry(4.2, 48), new THREE.MeshStandardMaterial({ map: W.waterTex, roughness: 0.05, metalness: 0.15 })); pond.rotation.x = -Math.PI / 2; pond.position.set(pondPos.x, 0.04, pondPos.z); scene.add(pond);
     const pondEdge = new THREE.Mesh(new THREE.RingGeometry(4.15, 4.6, 48), M.mat('#c9b48a', { r: 1 })); pondEdge.rotation.x = -Math.PI / 2; pondEdge.position.set(pondPos.x, 0.035, pondPos.z); pondEdge.receiveShadow = true; scene.add(pondEdge);
     for (let i = 0; i < 46; i++) { const a = i / 46 * Math.PI * 2; const s = new THREE.Mesh(new THREE.IcosahedronGeometry(U.rand(0.18, 0.32), 0), M.mat(U.pick(['#9a948a', '#b5ada0', '#857f76']), { r: 0.9, flat: true })); s.position.set(pondPos.x + Math.cos(a) * 4.5, 0.08, pondPos.z + Math.sin(a) * 4.5); s.rotation.set(Math.random() * 3, Math.random() * 3, 0); s.castShadow = true; st.add(s); }
     for (let i = 0; i < 7; i++) { const lp = new THREE.Mesh(new THREE.CircleGeometry(U.rand(0.25, 0.4), 16, 0.3, Math.PI * 1.8), M.mat('#5e9e44', { r: 0.8 })); lp.rotation.x = -Math.PI / 2; const a = Math.random() * 6.28, d = U.rand(1, 3.4); lp.position.set(pondPos.x + Math.cos(a) * d, 0.05, pondPos.z + Math.sin(a) * d); scene.add(lp); }
     W.ducks = [];
     for (let i = 0; i < 2; i++) { const d = M.item('duck'); d.scale.setScalar(2.2); scene.add(d); W.ducks.push({ m: d, a: Math.random() * 6, r: U.rand(1.5, 2.8), s: U.rand(0.15, 0.3) }); }
     colliders.push({ x: pondPos.x, z: pondPos.z, r: 4.7 });
+    // clouds
+    W.clouds = [];
+    for (let i = 0; i < 9; i++) { const c = new THREE.Group(); const cm = new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true, opacity: 0.92, fog: false }); for (let k = 0; k < 5; k++) { const s2 = new THREE.Mesh(new THREE.SphereGeometry(U.rand(2.5, 4.5), 10, 8), cm); s2.position.set(k * 3 - 6 + U.rand(-1, 1), U.rand(-0.8, 0.8), U.rand(-1.5, 1.5)); s2.scale.y = 0.55; c.add(s2); } const a = Math.random() * 6.28; c.position.set(Math.cos(a) * U.rand(40, 90), U.rand(32, 46), Math.sin(a) * U.rand(40, 90)); scene.add(c); W.clouds.push(c); }
     // fountain
     fountainPos = new V3(8, 0, -3);
     const stone = M.mat('#d8d0c4', { r: 0.8 });
@@ -64,14 +68,15 @@ G.scenes.walk = (() => {
     // buildings
     const rnd = mulberry(42);
     const BLD = [
-      { t: 0.0, kind: 'cafe', name: 'Paw & Bean Café', o: { w: 5.2, d: 4, h: 3, wall: '#fff2dc', roof: '#7a4a24', sign: 'Paw & Bean', signCol: '#7a4a24', awning: '#7a4a24', door: '#7a4a24' } },
-      { t: 0.09, kind: 'shop', name: 'Maple Pets', o: { w: 5, d: 4, h: 3, wall: '#eef7e4', roof: '#4a8a3a', sign: 'Maple Pets', signCol: '#3f7a32', awning: '#79b25a' } },
+      { t: 0.0, kind: 'cafe', name: 'Paw & Bean Caf\u00e9', o: { w: 5.2, d: 4, h: 3, wall: '#f3e2c4', wallKind: 'boards', style: 'gable', roof: '#7a4a24', sign: 'Paw & Bean', signCol: '#7a4a24', awning: '#7a4a24', door: '#7a4a24', porch: false, fence: false, mailbox: false, pots: 2, chimney: true, shutters: '#7a4a24', flowers: true } },
+      { t: 0.09, kind: 'shop', name: 'Maple Pets', o: { w: 5, d: 4, h: 3, wall: '#eef7e4', wallKind: 'siding', style: 'hip', roof: '#4a8a3a', sign: 'Maple Pets', signCol: '#3f7a32', awning: '#79b25a', porch: false, fence: false, mailbox: false, pots: 2, flowers: true } },
       { t: 0.25, kind: 'field', name: 'Disc Cup Field' },
-      { t: 0.5, kind: 'kennel', name: 'Maple Kennel', o: { w: 3.6, d: 2.8, h: 2.2, wall: '#fff2dc', roof: '#e2574c', sign: 'Maple Kennel', signCol: '#e2574c', windows: [[-1.1, 1.3]] } },
-      { t: 0.75, kind: 'home', name: 'Home', o: { w: 4.6, d: 3.8, h: 2.7, wall: '#fff7ea', roof: '#ee8a3c', door: '#c8622a', sign: 'Home', signCol: '#c8622a' } },
+      { t: 0.5, kind: 'kennel', name: 'Maple Kennel', o: { w: 3.6, d: 2.8, h: 2.2, wall: '#fff2dc', wallKind: 'boards', style: 'gable', roof: '#e2574c', sign: 'Maple Kennel', signCol: '#e2574c', windows: [[-1.1, 1.3]], fence: true, mailbox: true, porch: false } },
+      { t: 0.75, kind: 'home', name: 'Home', o: { w: 4.8, d: 3.8, h: 2.5, stories: 2, wall: '#fff7ea', wallKind: 'siding', style: 'gable', roof: '#ee8a3c', door: '#c8622a', porch: true, chimney: true, mailbox: true, fence: true, pots: 2, shutters: '#c8622a', flowers: true, number: 7 } },
     ];
     const pal = [['#fde3e3', '#c84a4a'], ['#e3eefd', '#3b5ba8'], ['#fff3d6', '#c8922a'], ['#e9f6e9', '#4a8a5a'], ['#f2e6fa', '#7a5c9a'], ['#fff0e6', '#b35a3a']];
-    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => BLD.push({ t, kind: 'house', o: { w: U.lerp(3.6, 4.6, rnd()), d: 3.4, h: U.lerp(2.4, 3.1, rnd()), wall: pal[i % pal.length][0], roof: pal[i % pal.length][1] } }));
+    const styles = ['gable', 'japanese', 'hip', 'saltbox', 'flat', 'gable', 'japanese'], walls = ['siding', 'plaster', 'brick', 'shingle', 'plaster', 'boards', 'plaster'];
+    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
     for (const b of BLD) {
       const P = curvePt(b.t), n = outward(b.t);
       if (b.kind === 'field') {
@@ -106,17 +111,31 @@ G.scenes.walk = (() => {
     // stone walls for the street cat
     noriSpots = [0.46, 0.555, 0.38].map((t) => { const P = curvePt(t), n = outward(t); const p = P.clone().addScaledVector(n, 1.65); const wall = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.45), M.mat('#b5ada0', { r: 0.95 })); wall.position.copy(p).setY(0.275); wall.rotation.y = Math.atan2(n.x, n.z); wall.castShadow = true; wall.receiveShadow = true; st.add(wall); colliders.push({ x: p.x, z: p.z, r: 0.5 }); return p; });
     buildDetail(st);
+    // instanced grass tufts swaying in the wind
+    { const blade = new THREE.ConeGeometry(0.035, 0.32, 3, 1); blade.translate(0, 0.16, 0);
+      const parts = []; for (let k = 0; k < 4; k++) { const b = blade.clone(); b.rotateZ(U.rand(-0.35, 0.35)); b.rotateY(k * 1.6); b.translate(U.rand(-0.06, 0.06), 0, U.rand(-0.06, 0.06)); parts.push(b.toNonIndexed()); }
+      const tuft = new THREE.BufferGeometry(); const arr = []; for (const pp of parts) arr.push(...pp.attributes.position.array); tuft.setAttribute('position', new THREE.Float32BufferAttribute(arr, 3)); tuft.computeVertexNormals();
+      const gm = new THREE.MeshLambertMaterial({ color: '#ffffff' }); W.grassU = { value: 0 };
+      gm.onBeforeCompile = (sh) => { sh.uniforms.uTime = W.grassU; sh.vertexShader = 'uniform float uTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n vec4 wp = instanceMatrix * vec4(0.0,0.0,0.0,1.0); float sway = sin(uTime*1.8 + wp.x*0.35 + wp.z*0.27) * 0.09 * position.y * 3.0; transformed.x += sway; transformed.z += sway*0.5;'); };
+      const N = G.mobile ? 2200 : 4200; const im = new THREE.InstancedMesh(tuft, gm, N); const m4 = new THREE.Matrix4(); const q = new THREE.Quaternion(); const col = new THREE.Color(); let n = 0, tries = 0;
+      const base = { spring: '#7cbf5a', summer: '#5e9e44', autumn: '#9aa84a', winter: '#cfd9cf' }[season];
+      while (n < N && tries < N * 6) { tries++; const r = Math.sqrt(Math.random()) * 46, a = Math.random() * 6.28; const x = Math.cos(a) * r, z = Math.sin(a) * r * 0.9; if (distToPathFast(x, z) < 1.7) continue; if (!colliders.every((c) => U.d2(x, z, c.x, c.z) > c.r + 0.2)) continue; if (U.d2(x, z, pondPos.x, pondPos.z) < 4.8) continue; const sc = U.rand(0.7, 1.4); m4.compose(new V3(x, 0, z), q.setFromAxisAngle(new V3(0, 1, 0), Math.random() * 6.28), new V3(sc, sc * U.rand(0.8, 1.3), sc)); im.setMatrixAt(n, m4); im.setColorAt(n, col.set(base).offsetHSL(U.rand(-0.03, 0.03), U.rand(-0.1, 0.05), U.rand(-0.08, 0.08))); n++; }
+      im.count = n; im.instanceMatrix.needsUpdate = true; scene.add(im); }
     scene.add(M.bake(st));
     // NPCs
-    addNPC('hana', new V3(5.5, 0, -7.2));
-    addNPC('ogawa', new V3(-7, 0, -2.2), { sit: true, heading: Math.atan2(pondPos.x + 7, pondPos.z + 2.2) });
-    const kids = addNPC('kids', new V3(1.6, 0, -6.8));
+    addNPC('hana', new V3(5.5, 0, -7.2), { hours: [[9, 20]] });
+    addNPC('ogawa', new V3(-7, 0, -2.2), { hours: [[6, 18]], sit: true, heading: Math.atan2(pondPos.x + 7, pondPos.z + 2.2) });
+    const kids = addNPC('kids', new V3(1.6, 0, -6.8), { hours: [0, 6].includes(new Date().getDay()) ? [[10, 19]] : [[14, 19]] });
     const aki = new G.Person('aki'); aki.pos.set(2.3, 0, -6.6); scene.add(aki.root); kids.extra = aki;
-    addNPC('rina', curvePt(0.3), { mode: 'loop', s: 0.3, speed: 2.3 });
-    { const P = curvePt(0.035), n = outward(0.035); addNPC('kenji', P.clone().addScaledVector(n, 1.2), { playing: true, heading: Math.atan2(-n.x, -n.z) }); }
-    addNPC('pip', curvePt(0.62), { mode: 'loop', s: 0.62, speed: -1.0 });
-    addNPC('sora', new V3(-11.8, 0, 3.2), { heading: Math.atan2(pondPos.x + 11.8, pondPos.z - 3.2) });
-    addNPC('kato', curvePt(0.85), { mode: 'loop', s: 0.85, speed: 0.55 });
+    addNPC('rina', curvePt(0.3), { mode: 'loop', s: 0.3, speed: 2.3, hours: [[5, 10], [16, 21]] });
+    { const P = curvePt(0.035), n = outward(0.035); addNPC('kenji', P.clone().addScaledVector(n, 1.2), { hours: [[11, 23]], playing: true, heading: Math.atan2(-n.x, -n.z) }); }
+    addNPC('pip', curvePt(0.62), { mode: 'loop', s: 0.62, speed: -1.0, hours: [[8, 17]] });
+    addNPC('sora', new V3(-11.8, 0, 3.2), { hours: [[6, 11], [15, 20]], heading: Math.atan2(pondPos.x + 11.8, pondPos.z - 3.2) });
+    addNPC('kato', curvePt(0.85), { mode: 'loop', s: 0.85, speed: 0.55, hours: [[7, 11], [16, 20]] });
+    const lunaN = addNPC('luna', new V3(-3.6, 0, -13.2), { hours: [[19, 24], [0, 5]], heading: 2.6 });
+    { const ts = new THREE.Group(); ts.position.set(-2.9, 0, -13.6); scene.add(ts); lunaN.prop = ts; const lm = G.M.mat('#3b2a1f'); for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.015, 1.2, 5), lm); leg.position.set(Math.cos(a) * 0.18, 0.55, Math.sin(a) * 0.18); leg.rotation.set(Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3); ts.add(leg); } const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 0.9, 14), G.M.mat('#f2f2f2', { m: 0.3, r: 0.4 })); tube.position.set(0, 1.25, 0); tube.rotation.set(-0.9, 0.6, 0); ts.add(tube); const lens = new THREE.Mesh(new THREE.CircleGeometry(0.075, 14), G.M.mat('#7cc8f0', { r: 0.05 })); lens.position.set(0, 0.46, 0); lens.rotation.x = -Math.PI / 2; tube.add(lens); colliders.push({ x: -2.9, z: -13.6, r: 0.4 }); }
+    W.sparrows = [];
+    for (let i = 0; i < 5; i++) { const b = new THREE.Group(); const body = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), G.M.mat('#8a6a4a')); body.scale.set(1, 0.85, 1.3); b.add(body); const hd = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), G.M.mat('#6a4a3a')); hd.position.set(0, 0.05, 0.07); b.add(hd); const bk = new THREE.Mesh(new THREE.ConeGeometry(0.012, 0.03, 5), G.M.mat('#f2c24b')); bk.rotation.x = Math.PI / 2; bk.position.set(0, 0.045, 0.115); b.add(bk); const tl = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.01, 0.06), G.M.mat('#6a4a3a')); tl.position.set(0, 0.02, -0.09); tl.rotation.x = 0.4; b.add(tl); scene.add(b); W.sparrows.push({ m: b, home: new V3(-7 + U.rand(-1.4, 1.4), 0, -1.2 + U.rand(-0.2, 1.2)), ph: Math.random() * 6, fly: 0 }); }
     // Sora's easel
     const es = new THREE.Group(); es.position.set(-11.0, 0, 3.6); es.rotation.y = 1.2; scene.add(es);
     for (const s of [-1, 1]) { const l = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.5, 6), M.mat('#8a5a3a')); l.position.set(s * 0.25, 0.72, 0); l.rotation.z = s * 0.12; es.add(l); }
@@ -131,11 +150,13 @@ G.scenes.walk = (() => {
     for (let i = 0; i < 70; i++) { const m = new THREE.SpriteMaterial({ map: atex, transparent: true, depthWrite: false, opacity: 0.9 }); if (season === 'autumn') m.color.set(U.pick(['#e8823a', '#d9592f', '#f2b04b', '#c94a2a'])); if (season === 'summer') m.color.set('#fff4a0'); const s = new THREE.Sprite(m); s.scale.setScalar(season === 'winter' ? 0.12 : 0.16); s.userData = { ph: Math.random() * 6, sp: U.rand(0.4, 1) }; scene.add(s); ambient.push(s); }
   }
   function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  let pathPts = null;
+  function distToPathFast(x, z) { if (!pathPts) { pathPts = []; for (let i = 0; i < 200; i++) pathPts.push(curvePt(i / 200)); } let b = 1e9; for (const p of pathPts) { const d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z); if (d < b) b = d; } return Math.sqrt(b); }
   function distToPath(x, z) { let best = 1e9; for (let i = 0; i < 80; i++) { const p = curvePt(i / 80); best = Math.min(best, U.d2(x, z, p.x, p.z)); } return best; }
   function addNPC(key, pos, o = {}) {
     const look = G.NPCS[key].look || key;
     const person = new G.Person(look, Object.assign({ key }, o)); person.pos.copy(pos); scene.add(person.root);
-    const N = { key, person, home: pos.clone(), mode: o.mode || 'idle', s: o.s || 0, speed: o.speed || 0, dogs: [], waved: false };
+    const N = { key, person, home: pos.clone(), mode: o.mode || 'idle', s: o.s || 0, speed: o.speed || 0, dogs: [], waved: false, hours: o.hours || [[0, 24]], present: true };
     [G.NPCS[key].dog, G.NPCS[key].dog2].filter(Boolean).forEach((dg, i) => {
       const p = new G.Pet({ name: dg.name, breed: dg.breed, coat: dg.coat, acc: { collar: ['collar_blue', 'collar_pink', 'collar_gold'][i % 3] }, mood: 85, old: dg.old }, { npc: true });
       p.pos.copy(pos).add(new V3(0.9 + i * 0.5, 0, 0.6)); p.brain = G.npcDogBrain(person, 1.7, i); p.bounds = bounds; scene.add(p.root); N.dogs.push(p); npcDogs.push(p); p.owner = N;
@@ -159,7 +180,7 @@ G.scenes.walk = (() => {
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
     walkT = 0; greeted = new Set(); race = null; talkBusy = false; steer = null; promptKey = '';
-    spawnPresents(); if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
+    refreshPresence(); spawnPresents(); if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
     weatherSetup(); G.audio.loop(G.weather() === 'rain'); howled = false; poopT = U.rand(60, 120);
     if (poop) { scene.remove(poop.m); poop = null; } if (ufo) { scene.remove(ufo.m); ufo = null; }
     ufoT = G.daylight() < 0.3 && Math.random() < 0.35 ? U.rand(25, 80) : -1;
@@ -169,6 +190,14 @@ G.scenes.walk = (() => {
     else setTimeout(() => G.ui.hint(G.timeWord() === 'night' ? 'A quiet night walk...' : 'Lovely ' + G.season() + ' ' + G.timeWord() + ' for a walk!', 2500), 600);
   };
   W.debugProps = () => props;
+  function refreshPresence() {
+    const h = new Date().getHours() + (G.hourOffset || 0);
+    for (const N of npcs) {
+      const hh = ((h % 24) + 24) % 24; const on = N.hours.some(([a, b]) => hh >= a && hh < b);
+      N.present = on; N.person.root.visible = on; if (N.extra) N.extra.root.visible = on; if (N.prop) N.prop.visible = on;
+      for (const d of N.dogs) d.root.visible = on;
+    }
+  }
   W.exit = function () {
     G.audio.loop(false); G.audio.busk(null, 0);
     if (!pet) return;
@@ -266,7 +295,7 @@ G.scenes.walk = (() => {
   }
 
   /* ---------------- talking ---------------- */
-  function npcMeshes() { const a = []; for (const N of npcs) { N.person.root.traverse((o) => { if (o.isMesh) a.push(o); }); if (N.extra) N.extra.root.traverse((o) => { if (o.isMesh) a.push(o); }); } return a; }
+  function npcMeshes() { const a = []; for (const N of npcs) { if (!N.present) continue; N.person.root.traverse((o) => { if (o.isMesh) a.push(o); }); if (N.extra) N.extra.root.traverse((o) => { if (o.isMesh) a.push(o); }); } return a; }
   function npcOf(obj) { const per = obj.userData.person; return npcs.find((N) => N.person === per || N.extra === per); }
   function approach(N) {
     const tp = N.person.pos;
@@ -623,6 +652,7 @@ G.scenes.walk = (() => {
     // NPCs
     for (const N of npcs) {
       const per = N.person;
+      if (!N.present) continue;
       if (!N.paused) {
         if (N.mode === 'loop') { N.s += N.speed * dt / curveLen; const P = curvePt(N.s); const n = outward(N.s); per.target = P.addScaledVector(n, N.speed > 0 ? 0.7 : -0.7); per.speed = Math.abs(N.speed); }
         const near = U.d2(per.pos.x, per.pos.z, pet.pos.x, pet.pos.z) < 6;
@@ -684,7 +714,7 @@ G.scenes.walk = (() => {
     if (promptT < 0 && !talkBusy) {
       promptT = 0.25;
       const list = []; let key = '';
-      let best = null, bd = 3.2; for (const N of npcs) { const d = U.d2(N.person.pos.x, N.person.pos.z, pet.pos.x, pet.pos.z); if (d < bd) { bd = d; best = N; } }
+      let best = null, bd = 3.2; for (const N of npcs) { if (!N.present) continue; const d = U.d2(N.person.pos.x, N.person.pos.z, pet.pos.x, pet.pos.z); if (d < bd) { bd = d; best = N; } }
       if (best) { list.push({ label: 'Talk to ' + G.NPCS[best.key].name, fn: () => talkTo(best) }); key += best.key; }
       if (nori && nori.root.visible && U.d2(nori.pos.x, nori.pos.z, pet.pos.x, pet.pos.z) < 4.2) { list.push({ label: 'Approach the cat', cls: 'pink', fn: talkNori }); key += 'nori'; }
       for (const pr of props) { const at = pr.at || pr.obj.position; if (U.d2(at.x, at.z, pet.pos.x, pet.pos.z) < 2.6) { list.push({ label: { vending: 'Vending machine', capsule: 'Capsule toys (30c)', shrine: 'Visit the shrine', fountain: 'Make a wish' }[pr.kind], cls: 'pink', fn: pr.fn }); key += pr.kind; } }
@@ -693,6 +723,10 @@ G.scenes.walk = (() => {
       if (key !== promptKey) { promptKey = key; G.ui.prompts(list); }
     }
     updateDetail(dt);
+    if (W.grassU) W.grassU.value = G.time; if (W.waterTex) { W.waterTex.offset.x += dt * 0.015; W.waterTex.offset.y += dt * 0.008; } for (const c of W.clouds) { c.position.x += dt * 0.6; if (c.position.x > 100) c.position.x = -100; }
+    W.presT = (W.presT || 0) - dt; if (W.presT < 0) { W.presT = 20; if (!talkBusy && !race) refreshPresence(); }
+    const og = npcs.find((N) => N.key === 'ogawa');
+    for (const b of W.sparrows) { b.m.visible = og.present; if (!og.present) continue; b.ph += dt; const scared = U.d2(b.home.x, b.home.z, pet.pos.x, pet.pos.z) < 3; b.fly = U.damp(b.fly, scared ? 1 : 0, scared ? 3 : 0.6, dt); const hop = Math.max(0, Math.sin(b.ph * 7)) * 0.04; b.m.position.set(b.home.x + Math.sin(b.ph * 0.5) * 0.3 + b.fly * 2, hop + b.fly * 3.5, b.home.z + Math.cos(b.ph * 0.4) * 0.3); b.m.rotation.y = Math.sin(b.ph * 0.5) * 2; if (Math.random() < dt * 0.4 && !scared) b.m.rotation.x = 0.5; else b.m.rotation.x *= 0.9; }
     { const K = npcs.find((N) => N.key === 'kenji'); if (K && K.person.root.visible !== false) { const d = U.d2(K.person.pos.x, K.person.pos.z, pet.pos.x, pet.pos.z); G.audio.busk(W.kenjiSong || 'sakura', U.clamp(1 - (d - 2.5) / 13, 0, 1)); } else G.audio.busk(null, 0); }
     lightT -= dt; if (lightT < 0) { lightT = 30; applyLighting(); }
   };
@@ -700,7 +734,7 @@ G.scenes.walk = (() => {
     G.audio.play('door');
     if (d.kind === 'home') G.go('home');
     else if (d.kind === 'cafe') G.go('cafe', { from: 'walk' });
-    else if (d.kind === 'shop') G.ui.shop();
+    else if (d.kind === 'shop') G.go('shop', { from: 'walk' });
     else if (d.kind === 'field') G.ui.trialsSheet('walk');
     else if (d.kind === 'kennel') G.go('kennel', { from: 'walk' });
   }

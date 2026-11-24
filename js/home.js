@@ -115,6 +115,34 @@ G.scenes.home = (() => {
     const bookCols = ['#4aa6e0', '#e2574c', '#f2c24b', '#79b25a', '#7a5cff', '#fff7ea', '#ee8a3c'];
     for (let r = 0; r < 2; r++) for (let i = 0; i < 9; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.28 + Math.random() * 0.08, 0.28), M.mat(U.pick(bookCols))); b.position.set(-0.55 + i * 0.13, 0.2 + r * 0.42 + b.geometry.parameters.height / 2 - 0.13, 0.08); bs.add(b); }
     bs.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    // sunbeams through the window + dust motes
+    { const grad = G.canvasTex(4, 128, (g) => { const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, 'rgba(255,240,200,0.9)'); gr.addColorStop(1, 'rgba(255,240,200,0)'); g.fillStyle = gr; g.fillRect(0, 0, 4, 128); });
+      const bm = new THREE.MeshBasicMaterial({ map: grad, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
+      const quad = (a, b, c, d) => { const g2 = new THREE.BufferGeometry(); g2.setAttribute('position', new THREE.Float32BufferAttribute([...a, ...b, ...c, ...d], 3)); g2.setAttribute('uv', new THREE.Float32BufferAttribute([0, 1, 1, 1, 1, 0, 0, 0], 2)); g2.setIndex([0, 1, 2, 0, 2, 3]); return g2; };
+      H.beams = new THREE.Group(); scene.add(H.beams);
+      H.beams.add(new THREE.Mesh(quad([-1.1, 2.85, -3.55], [1.1, 2.85, -3.55], [1.5, 0.01, -0.6], [-0.7, 0.01, -0.6]), bm));
+      H.beams.add(new THREE.Mesh(quad([-1.1, 1.25, -3.55], [1.1, 1.25, -3.55], [1.5, 0.01, -2.3], [-0.7, 0.01, -2.3]), bm));
+      const patch = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 1.9), new THREE.MeshBasicMaterial({ map: G.tex.shadow, color: '#fff0c0', transparent: true, opacity: 0.0, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })); patch.rotation.x = -Math.PI / 2; patch.position.set(0.4, 0.015, -1.45); H.beams.add(patch); H.sunPatch = patch;
+      H.motes = []; for (let i = 0; i < 26; i++) { const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: G.tex.snow, transparent: true, opacity: 0.6, depthWrite: false, blending: THREE.AdditiveBlending })); sp.scale.setScalar(0.025); sp.position.set(U.rand(-0.8, 1.3), U.rand(0.3, 2.6), U.rand(-3.2, -1)); sp.userData.ph = Math.random() * 6; H.beams.add(sp); H.motes.push(sp); } }
+    // wall calendar with today's date
+    { const d = new Date(); const months = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+      const ct = G.canvasTex(256, 320, (g) => { g.fillStyle = '#fffdf6'; g.fillRect(0, 0, 256, 320); g.fillStyle = '#e2574c'; g.fillRect(0, 0, 256, 60); g.fillStyle = '#fff'; g.font = '700 30px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText(months[d.getMonth()], 128, 42);
+        const first = new Date(d.getFullYear(), d.getMonth(), 1).getDay(), days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); g.font = '600 18px Fredoka, sans-serif';
+        for (let i = 0; i < days; i++) { const k = i + first, cx = 22 + (k % 7) * 35, cy = 140 + Math.floor(k / 7) * 34; if (i + 1 === d.getDate()) { g.strokeStyle = '#e2574c'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy - 6, 15, 0, 7); g.stroke(); } g.fillStyle = k % 7 === 0 ? '#e2574c' : '#3b2a1f'; g.fillText(String(i + 1), cx, cy); }
+        g.fillStyle = '#7a5c46'; g.font = '500 14px Fredoka, sans-serif'; ['S', 'M', 'T', 'W', 'T', 'F', 'S'].forEach((w, i) => g.fillText(w, 22 + i * 35, 100));
+        g.fillStyle = '#ee8a3c'; g.beginPath(); g.ellipse(200, 300, 8, 6, 0, 0, 7); g.fill(); [[188, 290], [196, 286], [205, 286], [212, 291]].forEach(([x, y]) => { g.beginPath(); g.arc(x, y, 3, 0, 7); g.fill(); }); });
+      const cal = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.75), M.mat('#fff', { map: ct, r: 0.9 })); cal.rotation.y = -Math.PI / 2; cal.position.set(4.66, 1.85, -1.2); scene.add(cal); cal.userData.click = 'calendar'; clickables.push(cal);
+      const pin = new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), M.mat('#e2574c')); pin.position.set(4.64, 2.2, -1.2); scene.add(pin); }
+    // photo wall
+    [['#bfe4ff', 'mtn'], ['#ffe7c2', 'heart'], ['#e3f2d8', 'paw']].forEach(([bg, kind], i) => {
+      const t = G.canvasTex(96, 96, (g) => { g.fillStyle = bg; g.fillRect(0, 0, 96, 96); if (kind === 'mtn') { g.fillStyle = '#7cbf5a'; g.beginPath(); g.moveTo(0, 80); g.lineTo(40, 40); g.lineTo(96, 80); g.lineTo(96, 96); g.lineTo(0, 96); g.fill(); g.fillStyle = '#f2c24b'; g.beginPath(); g.arc(72, 24, 10, 0, 7); g.fill(); } else if (kind === 'heart') G.drawHeart(g, 48, 56, 28, '#f39bb0'); else { g.fillStyle = '#ee8a3c'; g.beginPath(); g.ellipse(48, 60, 16, 13, 0, 0, 7); g.fill(); [[28, 40], [40, 30], [56, 30], [68, 40]].forEach(([x, y]) => { g.beginPath(); g.ellipse(x, y, 7, 9, 0, 0, 7); g.fill(); }); } });
+      const fr = new THREE.Group(); fr.position.set(-4.66, 1.55 + (i % 2) * 0.45, 1.3 + i * 0.5); fr.rotation.y = Math.PI / 2; fr.rotation.z = (i - 1) * 0.05; scene.add(fr);
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.42, 0.04), M.mat(['#a8683a', '#fff7ea', '#3b2a1f'][i])); fr.add(b); const p = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.34), M.mat('#fff', { map: t })); p.position.z = 0.025; fr.add(p);
+    });
+    // slippers, kibble bag, leash hook
+    for (const sx of [-1, 1]) { const sl = new THREE.Mesh(new THREE.CapsuleGeometry(0.07, 0.16, 4, 8), M.mat('#f39bb0', { r: 0.95 })); sl.rotation.x = Math.PI / 2; sl.scale.y = 0.45; sl.position.set(3.55 + sx * 0.1, 0.03, 2.55 + sx * 0.04); sl.rotation.z = sx * 0.15; sl.castShadow = true; scene.add(sl); }
+    { const bag = M.item('kibble'); bag.scale.setScalar(2.2); bag.position.set(2.75, 0, 1.55); bag.rotation.y = -0.6; scene.add(bag); }
+    { const hook = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.12, 0.3), M.mat('#a8683a')); hook.position.set(4.66, 1.6, 1.9); scene.add(hook); const lc = new THREE.CatmullRomCurve3([new V3(4.6, 1.62, 1.82), new V3(4.6, 1.1, 1.75), new V3(4.6, 0.85, 1.95), new V3(4.6, 1.15, 2.05), new V3(4.6, 1.6, 1.98)]); const lsh = new THREE.Mesh(new THREE.TubeGeometry(lc, 30, 0.015, 6), M.mat('#e2574c')); scene.add(lsh); }
     // retro TV on a low stand
     H.tv = new G.TV();
     const tvg = new THREE.Group(); tvg.position.copy(TVP); scene.add(tvg);
@@ -733,6 +761,7 @@ G.scenes.home = (() => {
       case 'window': if (G.daylight() < 0.4) { moonTaps = (G.time - moonT < -4 ? 0 : moonTaps) + 1; if (moonTaps >= 5) { moonTaps = 0; moonT = 3; drawWindow(); G.audio.play('sparkle'); G.ui.toast('...did the moon just wink at you?'); G.stamp('moonwink'); break; } } G.ui.toast(G.timeWord() === 'night' ? 'A quiet ' + G.season() + ' night. The stars are out.' : 'A lovely ' + G.season() + ' ' + G.timeWord() + ' in Maple Hill.'); break;
       case 'frame': G.ui.toast(G.state.portrait ? 'A portrait by Sora. Masterpiece!' : 'An empty frame... Sora by the pond paints pet portraits.'); break;
       case 'shelf': G.ui.toast(G.state.trophies.length ? G.state.trophies.length + ' troph' + (G.state.trophies.length > 1 ? 'ies' : 'y') + ' won!' : 'Win Disc Cups to fill this shelf!'); break;
+      case 'calendar': { const d = new Date(); G.ui.toast('Today is ' + d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) + '. Day ' + G.state.day + ' in Maple Hill.'); break; }
       case 'clock': clockTaps = (G.time - clockTapT > 3 ? 0 : clockTaps) + 1; clockTapT = G.time; if (clockTaps >= 7) { clockTaps = 0; G.partyMode(); break; } G.ui.toast('It’s ' + U.fmtTime(new Date()) + '.'); break;
       default: break;
     }
@@ -861,6 +890,7 @@ G.scenes.home = (() => {
   H.update = function (dt) {
     for (const p of pets) p.update(dt);
     H.tv.update(dt);
+    if (H.beams) { const dl = G.daylight(); const sunny = G.weather() === 'sunny' ? 1 : G.weather() === 'cloudy' ? 0.45 : 0.15; const vis = dl * sunny; H.beams.visible = vis > 0.05; H.beams.children.forEach((c) => { if (c.material && c !== H.sunPatch && !c.isSprite) c.material.opacity = 0.16 * vis; }); H.sunPatch.material.opacity = 0.3 * vis; for (const m of H.motes) { m.userData.ph += dt * 0.3; m.position.y += Math.sin(m.userData.ph) * dt * 0.05; m.position.x += Math.cos(m.userData.ph * 0.7) * dt * 0.04; m.material.opacity = (0.3 + 0.4 * Math.abs(Math.sin(m.userData.ph * 2))) * vis; } }
     if (moonT > 0) { moonT -= dt; if (moonT <= 0) drawWindow(); }
     if (H.wishT > 0) { H.wishT -= dt; }
     winAnimT -= dt; const wx = G.weather(); if (winAnimT < 0 && (wx === 'rain' || wx === 'snow' || wx === 'cloudy' || H.wishT > 0 || G.season() === 'winter')) { winAnimT = 0.12; drawWindow(); }

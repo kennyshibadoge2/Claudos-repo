@@ -143,6 +143,7 @@ G.LOOKS = {
   daisuke: { skin: '#e8bf9c', hair: '#1f1a1a', style: 'short', top: '#79b25a', bottom: '#3a3a3a', h: 1.03, extra: ['apron'] },
   pepper: { skin: '#d9a07a', hair: '#e2574c', style: 'messy', top: '#f2c24b', bottom: '#2c2c3a', h: 1.0, extra: ['band'] },
   fuji: { skin: '#f3d0b5', hair: '#6b3a1e', style: 'bun', top: '#79b25a', bottom: '#5a4a3a', h: 0.97, extra: ['apron'] },
+  luna: { skin: '#f3d0b5', hair: '#2a3a6a', style: 'pony', top: '#33415c', bottom: '#2c2c3a', h: 0.97, extra: ['glasses'] },
   you: { skin: '#f0c7a6', hair: '#3b2420', style: 'short', top: '#ee8a3c', bottom: '#3b4a6a', h: 1 },
 };
 
@@ -334,6 +335,18 @@ G.NPCS = {
       G.audio.play('meow', 1.1);
       if (n.fed >= 3) { await D.say('Nori munches the treat and purrs loudly. She follows you a few steps... She trusts you now! Visit the kennel to adopt her.'); G.ui.toast('Nori can now be adopted at the kennel!', 'gold'); }
       else await D.say('Nori nibbles the treat. She’s warming up to you. (' + n.fed + '/3)');
+    },
+  },
+  luna: {
+    name: 'Luna', look: 'luna',
+    async talk(D) {
+      const ph = G.moonPhase(); const phase = ph < 0.03 || ph > 0.97 ? 'a new moon' : ph < 0.22 ? 'a waxing crescent' : ph < 0.28 ? 'a first quarter moon' : ph < 0.47 ? 'a waxing gibbous' : ph < 0.53 ? 'a FULL moon' : ph < 0.72 ? 'a waning gibbous' : ph < 0.78 ? 'a last quarter moon' : 'a waning crescent';
+      if (!D.flag('met')) { D.setFlag('met'); await D.say('Oh! Hi. Sorry, I\u2019m Luna. I come out here every clear night with my telescope. The park is the darkest spot in town.'); D.friend(1); }
+      const c = await D.ask('Want to take a look?', ['Look at the moon', 'Tell me about the stars', 'Seen anything... strange?']);
+      if (c === 0) { await D.say('Tonight it\u2019s ' + phase + '. Here, look through the eyepiece.'); await D.say(ph > 0.45 && ph < 0.55 ? 'You can see every crater! ' + D.name + ' is howling a little. Fair.' : ph < 0.05 || ph > 0.95 ? 'Hmm, the moon\u2019s hiding tonight. But that means the stars are extra bright!' : 'See the line between light and shadow? That\u2019s where the craters look sharpest.'); D.once('moon', () => D.friend(1)); }
+      else if (c === 1) { await D.say(U.pick(['See that bright one low in the sky? Sirius, the "Dog Star". It\u2019s in the constellation Canis Major, the Great Dog.', 'There\u2019s a little constellation called Canis Minor too. The Lesser Dog. Like a mame shiba of the sky.', 'Every July, on Tanabata, two star lovers meet across the Milky Way. People write wishes on paper strips.', 'The "Dog Days" of summer are named after Sirius rising with the sun. Hot days, sleepy dogs.'])); D.once('star', () => D.friend(1)); }
+      else { await D.say(U.pick(['Strange? Well... sometimes there\u2019s a light over the hills that moves wrong. Not a plane. Not a star. If you see it, tap it. For science.', 'Pip says it\u2019s a kite. Kites don\u2019t hum.', 'I logged an unidentified object last Tuesday. Mr. Ogawa says it was a disc thrown by a very strong golden retriever.'])); }
+      if (D.f >= 3 && !D.flag('gift')) { D.setFlag('gift'); await D.say('Here, take this. I found it under the oak one night. It glints like a star.'); D.coins(50, 'Luna gave you 50 coins she found!'); }
     },
   },
   yuki: { name: 'Yuki', look: 'yuki' },
