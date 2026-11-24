@@ -51,6 +51,7 @@ button:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
 .stat svg{width:22px;height:22px}
 .iconbtn{width:44px;height:44px;border-radius:50%;background:var(--cream);box-shadow:var(--shadow);display:grid;place-items:center}
 .iconbtn svg{width:24px;height:24px}
+.iconbtn .badge{position:absolute;top:-4px;right:-4px;background:#e2574c;color:#fff;border-radius:999px;font-size:12px;font-weight:700;min-width:20px;height:20px;line-height:20px;text-align:center;padding:0 5px}
 #needs{position:absolute;top:calc(60px + var(--safe-t));left:calc(8px + var(--safe-l));background:rgba(255,247,234,.92);
   border-radius:16px;padding:8px 10px;box-shadow:var(--shadow);display:grid;grid-template-columns:auto 84px;gap:3px 8px;
   font-size:13px;font-weight:600;align-items:center;transition:opacity .3s}
@@ -176,7 +177,9 @@ h3{margin:14px 0 6px;font-size:18px}
 #joy{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(255,247,234,.35);border:3px solid rgba(255,255,255,.7);pointer-events:none;display:none}
 #joy i{position:absolute;left:50%;top:50%;width:50px;height:50px;margin:-25px;border-radius:50%;background:rgba(255,255,255,.85)}
 @media (max-width:600px){
-  .dock button{width:54px;height:58px;border-radius:17px;font-size:11px}
+  .dock button{width:48px;height:56px;border-radius:15px;font-size:10.5px}
+  .iconbtn{width:38px;height:38px}.iconbtn svg{width:21px;height:21px}
+  .topbar{gap:5px}
   .dock button svg{width:25px;height:25px}
   .dock{gap:5px;flex-wrap:nowrap}
   #pets{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
@@ -204,6 +207,8 @@ h3{margin:14px 0 6px;font-size:18px}
     <div id="pets"></div>
     <div class="stat" id="coins" title="Coins"></div>
     <div class="stat" id="clock"></div>
+    <button class="iconbtn" id="btnMail" aria-label="Mail" style="position:relative"></button>
+    <button class="iconbtn" id="btnStamps" aria-label="Stamp book"></button>
     <button class="iconbtn" id="btnSettings" aria-label="Settings"></button>
   </div>
   <div id="needs"></div>
@@ -251,11 +256,13 @@ h3{margin:14px 0 6px;font-size:18px}
 <script src="js/models.js"></script>
 <script src="js/pet.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/extras.js"></script>
 <script src="js/home.js"></script>
 <script src="js/walk.js"></script>
 <script src="js/cafe.js"></script>
 <script src="js/frisbee.js"></script>
 <script src="js/kennel.js"></script>
+<script src="js/trials.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

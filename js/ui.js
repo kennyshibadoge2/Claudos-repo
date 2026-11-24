@@ -26,6 +26,10 @@ const IC = {
   kennel: '<svg viewBox="0 0 32 32"><path d="M4 15L16 6l12 9v12H4z" fill="#c8622a"/><path d="M11 27v-7a5 5 0 0110 0v7z" fill="#3b2a1f"/></svg>',
   map: '<svg viewBox="0 0 32 32"><path d="M4 8l7-3 10 3 7-3v19l-7 3-10-3-7 3z" fill="#fff7ea" stroke="#79b25a" stroke-width="2" stroke-linejoin="round"/><path d="M11 5v19M21 8v19" stroke="#79b25a" stroke-width="2"/></svg>',
   hand: '<svg viewBox="0 0 64 64"><path d="M22 34V14a4 4 0 018 0v14-18a4 4 0 018 0v18-14a4 4 0 018 0v16-8a4 4 0 018 0v16c0 12-8 20-20 20-8 0-12-3-16-9l-8-12a4 4 0 016-5z" fill="#fff4e8" stroke="#7a5c46" stroke-width="3" stroke-linejoin="round"/></svg>',
+  whistle: '<svg viewBox="0 0 32 32"><path d="M4 13h14a7 7 0 110 8H9a5 5 0 01-5-5z" fill="#f2c24b" stroke="#c8922a" stroke-width="1.6"/><circle cx="19" cy="17" r="3" fill="#c8922a"/><path d="M24 6l2-3M28 9l3-2M21 5l0-3" stroke="#ee8a3c" stroke-width="2" stroke-linecap="round"/></svg>',
+  mail: '<svg viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="17" rx="3" fill="#fff" stroke="#e2574c" stroke-width="2"/><path d="M5 10l11 8 11-8" stroke="#e2574c" stroke-width="2" fill="none"/></svg>',
+  book: '<svg viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#e2574c" stroke="#fff" stroke-width="2" stroke-dasharray="3 2"/><path d="M16 8.5l2.4 5 5.4.7-4 3.7 1.1 5.4L16 20.6l-4.9 2.7 1.1-5.4-4-3.7 5.4-.7z" fill="#fff"/></svg>',
+  q: '<svg viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="17" rx="3" fill="#3b2a1f"/><text x="16" y="22" font-size="14" text-anchor="middle" fill="#f2c24b" font-family="sans-serif" font-weight="700">?</text></svg>',
   treat: '<svg viewBox="0 0 32 32"><g fill="#d9a35a"><rect x="9" y="13.5" width="14" height="5" rx="2"/><circle cx="8" cy="12.5" r="3.3"/><circle cx="8" cy="19.5" r="3.3"/><circle cx="24" cy="12.5" r="3.3"/><circle cx="24" cy="19.5" r="3.3"/></g></svg>',
 };
 G.IC = IC;
@@ -47,6 +51,8 @@ G.ui = (() => {
   ui.init = function () {
     $('#btnSettings').innerHTML = IC.gear;
     $('#btnSettings').onclick = () => ui.settings();
+    $('#btnMail').innerHTML = IC.mail + '<span class="badge" id="mailBadge"></span>'; $('#btnMail').onclick = () => { G.audio.play('pop'); G.ui.mailSheet(); };
+    $('#btnStamps').innerHTML = IC.book; $('#btnStamps').onclick = () => { G.audio.play('pop'); G.ui.stampSheet(); };
     $('#shClose').onclick = () => ui.closeSheet();
     $('#sheetWrap').addEventListener('pointerdown', (e) => { if (e.target.id === 'sheetWrap') ui.closeSheet(); });
     $('#dialog').addEventListener('click', () => { if (typing) typing.skip(); });
@@ -77,6 +83,7 @@ G.ui = (() => {
     const s = G.state;
     $('#coins').innerHTML = IC.coin + '<span>' + s.coins + '</span>';
     $('#clock').textContent = U.fmtTime(new Date());
+    const unread = (s.mail || []).filter((m) => !m.read).length; const mb = $('#mailBadge'); if (mb) { mb.textContent = unread; mb.style.display = unread ? '' : 'none'; }
     const act = G.petById(s.active);
     const chipsKey = s.pets.map((p) => p.id + p.name + p.coat + JSON.stringify(p.acc) + Math.round(p.mood / 20)).join() + s.active;
     if (chipsKey !== lastChips || force) {
@@ -246,7 +253,7 @@ G.ui = (() => {
         const l = list(body);
         const dog = p && !p.cat;
         l.appendChild(li({ icon: 'paw', title: 'Walk around Maple Hill', sub: dog ? 'Take ' + p.name + ' on a walk. Meet neighbors, find presents, visit the café.' : 'Cats prefer to stay home. Pick a dog from the top bar to walk.', lock: !dog, fn: dog ? () => { ui.closeSheet(true); G.go('walk'); } : null }));
-        l.appendChild(li({ icon: 'disc', title: 'Disc Cup', sub: dog ? 'Flying disc contests. Win prizes and trophies!' : 'Dogs only.', lock: !dog, fn: dog ? () => { ui.closeSheet(true); G.go('frisbee'); } : null }));
+        l.appendChild(li({ icon: 'disc', title: 'Contests: Disc, Agility, Obedience', sub: dog ? 'Three events at the field. Win prizes and trophies!' : 'Dogs only.', lock: !dog, fn: dog ? () => G.ui.trialsSheet('home') : null }));
         l.appendChild(li({ icon: 'bag', title: 'Pet Shop', sub: 'Food, toys, hats and more.', fn: () => ui.shop() }));
         l.appendChild(li({ icon: 'cup', title: 'Paw & Bean Café', sub: 'Treats for you and your pet.', fn: () => { ui.closeSheet(true); G.go('cafe'); } }));
         l.appendChild(li({ icon: 'kennel', title: 'Kennel', sub: 'Adopt a new puppy or kitten (' + G.state.pets.length + '/4 pets).', fn: () => { ui.closeSheet(true); G.go('kennel'); } }));
@@ -382,8 +389,8 @@ G.ui = (() => {
       name: pet ? pet.name : 'your pup', pet, today: G.today(), timeWord: G.timeWord(), season: G.season(),
       play: ctx.play || noop, petBy: ctx.petBy || noop, race: ctx.race || noop, paint: ctx.paint || noop, music: ctx.music || noop, howl: ctx.howl || noop,
     };
-    G.blockInput = true;
-    try { await N.talk(D); } catch (e) { console.error(e); }
+    G.blockInput = true; st.talked = 1;
+    try { if (Math.random() < 0.45 && st.flags.met) { const l = G.smallTalk(key, pet); if (l) await D.say(l); } await N.talk(D); } catch (e) { console.error(e); }
     ui.endDialog(); G.save(); ui.refresh();
     for (const k in st.flags) if (k.startsWith('once_') && !k.endsWith('_' + (G.walkSession || 0))) delete st.flags[k];
   };

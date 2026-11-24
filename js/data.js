@@ -188,6 +188,9 @@ G.NPCS = {
         async () => { const n = G.state.trophies.length; await D.say(n ? 'You’ve got ' + n + ' troph' + (n > 1 ? 'ies' : 'y') + ' already? You and ' + D.name + ' are a real team.' : 'Haven’t entered a Disc Cup yet? The Puppy Cup is friendly. Nobody bites. Except Biscuit, at toes.'); },
         async () => { await D.say('Practising helps! Every catch makes your pup a little faster and bouncier.'); },
         async () => { await D.say('I swear Biscuit understands the word "cheese" from three rooms away.'); D.friend(1); },
+        async () => { await D.say('Have you seen the Gazette comic? "Biscuit & the Socks"? Pip draws it. It’s... basically a documentary.'); },
+        async () => { await D.say('Agility tip: aim your pup at each obstacle head-on. Smooth lines win trials!'); },
+        async () => { await D.say('Biscuit has a nemesis. It’s the duck on the pond. The duck has no idea.'); },
       ];
       await U.pick(topics)();
       D.once('chat', () => D.friend(1));
@@ -202,6 +205,15 @@ G.NPCS = {
         await D.say('This old fellow is Kuri. Sesame coat, fourteen years. Still the boss of this bench.');
         await D.say('I come here every day to feed the sparrows. If you ever want shiba stories, I’ve got plenty.');
         D.friend(1); return;
+      }
+      const st = G.state.npc.ogawa; st.talks = (st.talks || 0) + 1;
+      if (st.talks >= 7 && !D.flag('chestnut')) {
+        D.setFlag('chestnut');
+        await D.say('You keep coming back to this old bench. Alright. I’ll tell you a secret.');
+        await D.say('Thirty years ago, Kuri’s grandmother won the very first Maple Hill Disc Cup.');
+        await D.say('They called her "The Flying Chestnut". She caught a disc so high a pigeon filed a complaint.');
+        await D.say('Kuri has her eyebrows. Maybe ' + D.name + ' has her spirit. Here. This was hers.');
+        D.give('collar_gold', 1); G.stamp('chestnut'); return;
       }
       const c = await D.ask('Hm? What brings you by?', ['Tell me a shiba story', 'How is Kuri?', 'Just saying hi!']);
       if (c === 0) { await D.say(U.pick(G.FACTS)); D.once('fact', () => D.friend(1)); }
@@ -265,6 +277,10 @@ G.NPCS = {
         'The Champions Cup is wild. Dogs flying like birds! I almost dropped my letters.',
         'Teach tricks by touch! Stroke your pup the right way and they’ll try a pose. Then praise them!',
         'If you see something sparkly on your walk, let your pup sniff it out. Could be a present!',
+        'Rumor says there are golden bones hidden around town. Behind things. Under things. Beside things.',
+        'I deliver the Gazette every morning. And I draw the comic! Biscuit is a natural model.',
+        'Strange lights over the hills at night? Probably a kite. Probably.',
+        'The vending machine by the café sometimes gives you two. Do not kick it. I learned that the hard way.',
       ]));
       D.once('chat', () => D.friend(1));
     },
@@ -293,6 +309,9 @@ G.NPCS = {
         'They say Yuki at the café can draw a shiba face in latte foam. Ask her!',
         'At my age, a slow walk with good company is the best part of the day.',
         'Dango snores louder than my husband. And my husband snores like a ship’s horn.',
+        'Have you tried the capsule machine by the pet shop? I’m one Golden Shiba away from a full set. It’s been three years.',
+        'The shrine fortunes are suspiciously accurate. Mine said "beware of noodles". Udon ate my sandwich that day.',
+        'If you see Pip, tell him the comic about my slipper was NOT funny. (It was a little funny.)',
       ]));
       D.once('chat', () => D.friend(1));
     },

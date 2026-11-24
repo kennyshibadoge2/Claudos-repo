@@ -427,6 +427,12 @@ G.audio = (() => {
     gift() { [784, 988, 1175, 1568].forEach((f, i) => tone('triangle', f, f, 0.18, 0.12, i * 0.07)); },
     yawn(p = 1) { const t = now(), c = A.ctx; const o = c.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(700 * p, t); o.frequency.linearRampToValueAtTime(950 * p, t + 0.3); o.frequency.linearRampToValueAtTime(500 * p, t + 0.9); const g = c.createGain(); env(g, t, 0.15, 0.12, 0.8); o.connect(g); g.connect(sfx); o.start(t); o.stop(t + 1); },
   };
+  A.S = S; A.tone = (...a) => tone(...a); A.noise = (...a) => noise(...a); A.now = () => now(); A.sfx = () => sfx;
+  A.loop = function (on) { // gentle rain ambience
+    if (!A.ctx) return;
+    if (on && !A._rain) { const s = A.ctx.createBufferSource(); s.buffer = noiseBuf; s.loop = true; const f = A.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400; const g = A.ctx.createGain(); g.gain.value = 0.06; s.connect(f); f.connect(g); g.connect(sfx); s.start(); A._rain = { s, g }; }
+    if (!on && A._rain) { try { A._rain.s.stop(); } catch (e) { } A._rain = null; }
+  };
   A.play = function (name, ...args) { if (!A.ctx || !G.state || G.state.settings.sfx <= 0) return; try { S[name](...args); } catch (e) { /* ignore */ } };
 
   /* ---- generative music ---- */

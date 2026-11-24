@@ -41,7 +41,7 @@
     try { if (G.cur && G.cur.update) G.cur.update(dt); } catch (e) { console.error(e); }
     G.fx.update(dt);
     if (G.cur) G.renderer.render(G.cur.scene, G.cur.camera);
-    saveT += dt; if (saveT > 15) { saveT = 0; G.save(); }
+    saveT += dt; if (saveT > 15) { saveT = 0; G.save(); G.checkStamps(); }
     // adaptive quality: drop pixel ratio if the device struggles
     fpsAcc += dt; frames++;
     if (fpsAcc > 4) { const fps = frames / fpsAcc; fpsAcc = 0; frames = 0; if (fps < 32 && !lowered) { lowered = true; G.renderer.setPixelRatio(Math.max(1, G.renderer.getPixelRatio() * 0.7)); G.onResize(); } }

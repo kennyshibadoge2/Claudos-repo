@@ -118,6 +118,14 @@ G.scenes.kennel = (() => {
       p.bounds = (pp) => { pp.pos.x = U.clamp(pp.pos.x, -2.7, 2.7); pp.pos.z = U.clamp(pp.pos.z, -1.9, 2.0); };
       scene.add(p.root); pups.push(p);
     });
+    if (K.ghost) { scene.remove(K.ghost.root); K.ghost = null; }
+    const hr = new Date().getHours();
+    if (hr < 3 && !first) {
+      const gh = new G.Pet({ name: 'ghost', breed: 'shiba', coat: 'cream', mood: 90, acc: {} }, { npc: true });
+      gh.root.traverse((o) => { if (o.isMesh) { o.material = new THREE.MeshBasicMaterial({ color: '#dff3ff', transparent: true, opacity: 0.45, depthWrite: false }); } });
+      gh.pos.set(2.3, 0, -1.6); gh.baseY = 0.15; gh.heading = -0.6; scene.add(gh.root); K.ghost = gh;
+      gh.brain = (pp) => (function* () { pp.lookCam = 3; pp.excite = 1; yield* pp.act(U.pick(['sit', 'bow', 'stand']), 2.5); })();
+    }
     G.ui.hint(first ? 'Welcome to Maple Hill! Tap a puppy or kitten to meet them.' : 'Tap a pet to meet them.', 0);
     cam.position.set(0, 3.6, 6.4);
   };
@@ -127,6 +135,7 @@ G.scenes.kennel = (() => {
   K.onDown = function () { };
   K.onUp = function (p) {
     if (!p.tap) return;
+    if (K.ghost) { const gh = G.pick(p, K.ghost.m.meshes, false)[0]; if (gh) { const g = K.ghost; g.emote('heart', 1.5); G.audio.play('whine', 1.6); G.stamp('ghost'); G.ui.toast('The little ghost pup wags happily... and fades into the moonlight.'); let o = 0.45; const iv = setInterval(() => { o -= 0.03; g.root.traverse((m) => { if (m.isMesh) m.material.opacity = Math.max(0, o); }); if (o <= 0) { clearInterval(iv); scene.remove(g.root); K.ghost = null; } }, 60); return; } }
     const hit = G.pick(p, pups.flatMap((x) => x.m.meshes), false)[0];
     if (!hit) { sel = null; G.ui.prompts([]); return; }
     const pet = hit.object.userData.pet; select(pet);
@@ -155,6 +164,7 @@ G.scenes.kennel = (() => {
   }
   K.update = function (dt) {
     for (const p of pups) p.update(dt);
+    if (K.ghost) { K.ghost.update(dt); K.ghost.baseY = 0.15 + Math.sin(G.time * 2) * 0.05; }
     const portrait = G.aspect() < 0.9;
     let pos = portrait ? new V3(0, 5.2, 9.5) : new V3(0, 3.6, 6.6), look = new V3(0, 0.2, 0);
     if (sel) { look = sel.pos.clone().setY(0.3); pos = look.clone().add(portrait ? new V3(0, 1.5, 3.4) : new V3(0, 1.1, 2.4)); }

@@ -186,7 +186,7 @@ G.scenes.frisbee = (() => {
     const dist = Math.max(0, plan.p.z - 1.0); const mult = plan.flying ? 1.5 : 1; const sc = Math.round(dist * mult * 10) / 10;
     G.state.stats.catches++; pet.d.catches = (pet.d.catches || 0) + 1;
     pet.d.disc = Math.min(100, (pet.d.disc || 0) + (plan.flying ? 2 : 1) * (st.practice ? 0.6 : 1));
-    if (plan.flying) { G.audio.play('cheer'); G.audio.play('sparkle'); G.fx.spawn('confetti', plan.p.clone(), 30); G.fx.spawn('star', plan.p.clone(), 8); crowdJump(1.2); }
+    if (plan.flying) { G.stamp('flying'); G.audio.play('cheer'); G.audio.play('sparkle'); G.fx.spawn('confetti', plan.p.clone(), 30); G.fx.spawn('star', plan.p.clone(), 8); crowdJump(1.2); }
     else { G.audio.play('cheer'); crowdJump(0.6); }
     G.vibrate(30);
     if (!st.practice) { st.total += sc; st.scores.push(sc); }

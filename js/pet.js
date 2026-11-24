@@ -221,7 +221,7 @@ class Pet {
     const petting = this.petT < 0.5;
     this.petLean = U.damp(this.petLean, petting ? 1 : 0, 5, dt);
     m.body.position.y = m.baseH + P.h + bob + this.squash * -0.3 * m.dims.by;
-    m.body.rotation.set(P.pitch + gp, 0, roll + this.petLean * 0.05 * Math.sin(t * 2));
+    m.body.rotation.set(P.pitch + gp + (this.extraPitch || 0), 0, roll + this.petLean * 0.05 * Math.sin(t * 2));
     m.body.scale.set(1 + this.squash * 0.5, 1 + breath - this.squash, 1 + this.squash * 0.3);
     // legs
     for (let i = 0; i < 4; i++) {
@@ -353,7 +353,7 @@ G.newPetData = function (o) {
   return Object.assign({
     id, name: 'Mochi', breed: 'shiba', coat: 'red', sex: 'boy', personality: 'playful',
     hunger: 80, thirst: 80, energy: 90, clean: 90, mood: 75, bond: 5, tricks: {}, disc: 5, walks: 0, born: Date.now(),
-    acc: { collar: 'collar_red' }, trophies: 0, catches: 0,
+    acc: { collar: 'collar_red' }, trophies: 0, catches: 0, nameLearn: 0,
   }, o);
 };
 G.offlineDecay = function () {

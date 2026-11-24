@@ -148,7 +148,7 @@ G.scenes.cafe = (() => {
   }
   function order(it, pr) {
     if (G.state.coins < pr || busy) return;
-    busy = true; G.state.coins -= pr; G.ui.refresh(); G.audio.play('coin');
+    busy = true; G.state.coins -= pr; G.ui.refresh(); G.audio.play('coin'); G.state.stats.cafe = (G.state.stats.cafe || 0) + 1; G.checkStamps();
     const item = G.M.item(it.id);
     yuki.target = new V3(0.4, 0, 0.35); yuki.speed = 1.3;
     const startT = G.time;
