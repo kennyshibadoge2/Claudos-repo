@@ -115,6 +115,7 @@ function coat(out, C, part, nx, ny, nz, wx, wy, wz, ex = {}) {
     }
     out.lerp(K.under, u);
   }
+  if (C.tanHead && (part === 'head' || part === 'cheek' || part === 'muzzle' || part === 'jaw' || part === 'ear' || part === 'chest' || part === 'paw' || (part === 'leg' && (ex.t || 0) > 0.25))) out.copy(K.tan).lerp(K.under, u * 0.5);
   if (C.points && ex.point) out.lerp(K.points, ex.point);
   if (C.mask && (part === 'muzzle' || part === 'jaw' || part === 'ear')) out.copy(K.mask);
   return out;
@@ -352,6 +353,38 @@ M.pet = function (spec) {
   } else { // stub
     const g = paintSphere(new THREE.SphereGeometry(1, 16, 12), C, 'rump', 1, 1, 1); g.scale(0.05 * ts, 0.045 * ts, 0.04 * ts);
     addM(mesh(g, fur, 'tail', tail)).position.set(0, -0.01, -0.02);
+  }
+  // ---- breed extras ----
+  if (B.hair === 'long') { // Yorkie: silky coat parted down the back + top-knot with a bow
+    const K = coatCols(C);
+    for (const sd of [-1, 1]) {
+      const NU = 14, NV = 8, pos = [], col = [], idx = [];
+      const drop = (L1 + L2) * 0.82 + by * 0.5;
+      for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+        const u = i / NU, v = j / NV; const z = (u * 2 - 1) * bz * 0.98;
+        const env = Math.sqrt(Math.max(0.05, 1 - Math.pow(u * 2 - 1, 2)));
+        const x = sd * (0.004 + Math.sin(Math.min(1, v * 2.2) * Math.PI / 2) * bx * 1.04 * (0.75 + 0.25 * env) + v * bx * 0.12);
+        const y = by * 0.98 * env - v * (by * 0.98 * env + drop * (0.55 + 0.45 * env)) + Math.sin(u * 37 + sd) * 0.004 * v;
+        pos.push(x, y, z); const c = K.top.clone().lerp(K.tan, U.smooth(0.55, 1, v) * 0.85); col.push(c.r, c.g, c.b);
+      }
+      for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + 1, c2 = a + NU + 1, d = c2 + 1; idx.push(a, c2, b, b, c2, d); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+      const hm = addM(mesh(g, M.mat('#ffffff', { vc: true, r: 0.55, side: THREE.DoubleSide }), 'torso', body)); hm.castShadow = true;
+    }
+    const tk = new THREE.Group(); tk.position.set(0, ry * 0.92, -hr * 0.05); hc.add(tk);
+    const tuft = paintSphere(new THREE.SphereGeometry(1, 14, 10), C, 'head', 1, 1, 1); tuft.scale(hr * 0.32, hr * 0.42, hr * 0.3); addM(mesh(tuft, fur, 'head', tk)).position.y = hr * 0.18;
+    const bowM = M.mat('#e2574c', { r: 0.5 });
+    for (const sd of [-1, 1]) { const lo = mesh(new THREE.ConeGeometry(hr * 0.2, hr * 0.36, 14), bowM, null, tk); lo.rotation.z = sd * Math.PI / 2; lo.position.set(sd * hr * 0.19, hr * 0.42, hr * 0.12); lo.scale.set(1, 1, 0.5); }
+    mesh(new THREE.SphereGeometry(hr * 0.09, 12, 10), bowM, null, tk).position.set(0, hr * 0.42, hr * 0.14);
+    // little moustache
+    for (const sd of [-1, 1]) { const ms = paintSphere(new THREE.SphereGeometry(1, 10, 8), C, 'muzzle', 1, 1, 1); ms.scale(hr * 0.16, hr * 0.22, hr * 0.12); addM(mesh(ms, fur, 'head', hc)).position.set(sd * hr * 0.16, -hr * 0.32, rz * 0.88); }
+  }
+  if (B.fluff) { // Pomeranian: big fluffy ruff + puffy coat
+    const bumpy = (g, amt) => { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const v = new V3(p.getX(i), p.getY(i), p.getZ(i)); const n = 1 + (U.noise3(v.x * 6, v.y * 6, v.z * 6) - 0.5) * amt; p.setXYZ(i, v.x * n, v.y * n, v.z * n); } g.computeVertexNormals(); return g; };
+    const coatG = paintSphere(bumpy(new THREE.SphereGeometry(1, 40, 28), 0.22), C, 'torso', bx, by, bz); coatG.scale(bx * 1.32, by * 1.38, bz * 1.12);
+    addM(mesh(coatG, fur, 'torso', body)).position.set(0, by * 0.12, 0);
+    const ruffG = paintSphere(bumpy(new THREE.SphereGeometry(1, 36, 26), 0.3), C, 'chest', bx, by, bx); ruffG.scale(bx * 1.25, by * 1.3, bx * 1.0);
+    addM(mesh(ruffG, fur, 'torso', body)).position.set(0, by * 0.42, bz * 0.62);
   }
   P.headR = hr;
   root.traverse((o) => { if (o.isMesh) o.userData.root = root; });

@@ -103,7 +103,7 @@ G.scenes.frisbee = (() => {
   }
 
   /* ---------------- rivals ---------------- */
-  const COATS = { shiba: ['red', 'sesame', 'cream', 'blacktan'], mame: ['red', 'cream'], corgi: ['corgi'], husky: ['husky'], golden: ['golden'], dachshund: ['dachs'], pug: ['pug'] };
+  const COATS = G.BREED_COATS;
   function randLook() { return { skin: U.pick(['#f6d2b8', '#e6b894', '#c99a76', '#8a5a3a', '#f3d0b5']), hair: U.pick(['#2a1d18', '#5a3a26', '#c4622a', '#e8d2a8', '#3b2420', '#7a5cff']), style: U.pick(['short', 'bob', 'pony', 'bun', 'messy']), top: U.pick(['#e2574c', '#4aa6e0', '#79b25a', '#f2c24b', '#7a5cff', '#f39bb0', '#33415c']), bottom: U.pick(['#3b4a6a', '#3a3a3a', '#5a4a3a', '#2c2c3a']), h: U.rand(0.92, 1.05), extra: U.chance(0.3) ? ['cap'] : U.chance(0.2) ? ['band'] : [] }; }
   /* ---------- field features: sand traps (slow you down) and glowing bonus zones ---------- */
   let fieldGrp = null;

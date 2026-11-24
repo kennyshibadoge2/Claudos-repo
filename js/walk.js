@@ -250,7 +250,7 @@ G.scenes.walk = (() => {
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
     walkT = 0; greeted = new Set(); race = null; talkBusy = false; steer = null; promptKey = '';
-    refreshPresence(); spawnPresents(); if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
+    refreshPresence(); spawnPresents(); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
     weatherSetup(); G.audio.loop(G.weather() === 'rain'); howled = false; poopT = U.rand(60, 120);
     if (poop) { scene.remove(poop.m); poop = null; } if (ufo) { scene.remove(ufo.m); ufo = null; }
     ufoT = G.daylight() < 0.3 && Math.random() < 0.35 ? U.rand(25, 80) : -1;
@@ -273,7 +273,7 @@ G.scenes.walk = (() => {
   W.exit = function () {
     G.audio.loop(false); G.audio.busk(null, 0);
     if (!pet) return;
-    if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + 2); pet.happy(6, false); }
+    if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + (pet.d.breed === 'golden' ? 3 : 2)); pet.happy(6, false); }
     scene.remove(pet.root); pet.stop();
     if (leashMesh) { scene.remove(leashMesh); leashMesh.geometry.dispose(); leashMesh = null; }
     for (const pr of presents) { if (pr.box) scene.remove(pr.box); }
@@ -610,7 +610,7 @@ G.scenes.walk = (() => {
   function pickPoop() { if (!poop) return; G.audio.play('poof'); G.fx.spawn('sparkle', poop.m.position.clone().setY(0.2), 4); scene.remove(poop.m); poop = null; G.state.stats.poop = (G.state.stats.poop || 0) + 1; pet.d.bond = Math.min(100, pet.d.bond + 1); G.ui.toast(U.pick(['Good citizen! Maple Hill thanks you.', 'Bagged and binned. Nice.', 'The park stays lovely thanks to you.'])); G.checkStamps(); promptKey = ''; }
   function updateDetail(dt) {
     // bones
-    for (let i = bones.length - 1; i >= 0; i--) { const b = bones[i]; b.m.rotation.y += dt; b.sp -= dt; if (b.sp < 0) { b.sp = U.rand(1.5, 4); if (b.m.position.distanceTo(pet.pos) < 22) G.fx.spawn('sparkle', b.m.position.clone().setY(0.2), 1, { color: '#ffd84a' }); }
+    for (let i = bones.length - 1; i >= 0; i--) { const b = bones[i]; b.m.rotation.y += dt; b.sp -= dt; if (b.sp < 0) { b.sp = U.rand(1.5, 4); if (b.m.position.distanceTo(pet.pos) < (pet.d.breed === 'beagle' ? 45 : 22)) G.fx.spawn('sparkle', b.m.position.clone().setY(0.2), 1, { color: '#ffd84a' }); }
       if (U.d2(b.m.position.x, b.m.position.z, pet.pos.x, pet.pos.z) < 0.7 * pet.S + 0.3) { scene.remove(b.m); bones.splice(i, 1); G.state.bones[b.i] = 1; const n = Object.keys(G.state.bones).length; G.audio.play('fanfare'); G.fx.spawn('star', pet.pos.clone().setY(0.5), 10); G.ui.banner('Golden bone!', n + ' of 8 found', 2000); pet.excite = 1; if (n >= 8 && !G.state.acc.collar_gold) G.addItem('collar_gold'); G.checkStamps(); } }
     // poop
     poopT -= dt * (pet.vel > 0.3 ? 1 : 0.2);

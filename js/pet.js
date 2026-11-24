@@ -92,7 +92,7 @@ class Pet {
     const sleeping = this.poseName === 'sleep';
     d.hunger = U.clamp(d.hunger - r * (active ? 1.8 : 1.0), 0, 100);
     d.thirst = U.clamp(d.thirst - r * (active ? 2.6 : 1.3), 0, 100);
-    d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0))), 0, 100);
+    d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0)) * (d.breed === 'pug' ? 0.6 : 1)), 0, 100);
     d.clean = U.clamp(d.clean - r * (G.curName === 'walk' ? 1.4 : 0.3), 0, 100);
     const base = Math.min(d.hunger, d.thirst, d.clean + 30, d.energy + 25) * 0.55 + 45;
     d.mood = U.clamp(d.mood + (Math.min(base, 100) - d.mood) * r * 0.08, 0, 100);

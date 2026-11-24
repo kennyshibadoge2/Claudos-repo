@@ -87,40 +87,64 @@ G.scenes.kennel = (() => {
   };
   // first pet is free; each extra pet costs more (cats a little less)
   function adoptPrice(cat) { const base = [0, 3000, 5000, 8000][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
-  function candidates() {
+  function candidates(breed) {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
-    const seed = G.state.day * 7 + G.state.pets.length * 13;
+    const seed = G.state.day * 7 + G.state.pets.length * 13 + G.BREED_ORDER.indexOf(breed) * 31;
     const r = (i) => U.hash(seed, i, 3);
-    const coats = G.PET_COATS.dog.slice();
-    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(false) });
-    const cc = G.PET_COATS.cat;
-    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: adoptPrice(true) });
-    if (G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
+    const coats = G.BREED_COATS[breed] || ['red']; const cat = breed === 'cat';
+    const off = Math.floor(r(99) * coats.length);
+    for (let i = 0; i < 3; i++) out.push({ breed, coat: coats[(off + i) % coats.length], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(cat) });
+    if (cat && G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
     return out;
+  }
+  // step 1: pick a breed (locked ones show how to unlock them)
+  function breedSheet() {
+    G.checkBreeds(true);
+    const firstPet = !G.state.pets.length;
+    G.ui.sheet({ title: firstPet ? 'Choose your first Shiba' : 'Choose a breed', render(body) {
+      G.ui.note(body, firstPet ? 'Every Maple Hill story starts with a Shiba! Pick a Shiba Inu or a pocket-sized Mame Shiba. More breeds (and kittens) arrive as you play.' : 'Pick a breed to meet the puppies. New breeds arrive at the kennel as you play — locked ones show how to unlock them. Adoption: ' + (adoptPrice(false) ? adoptPrice(false) + ' coins (kittens ' + adoptPrice(true) + ')' : 'free') + '.');
+      const g = G.ui.grid(body); g.classList.add('breedGrid');
+      for (const b of G.BREED_ORDER) {
+        const open = G.breedUnlocked(b) && !(firstPet && b === 'cat'); const info = G.BREED_INFO[b];
+        const img = G.M.icons.pet({ breed: b, coat: (G.BREED_COATS[b] || ['red'])[0] });
+        const name = b === 'cat' ? 'Kittens' : G.BREEDS[b].name;
+        const c = G.ui.card({ img, name, sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
+        if (!open) c.classList.add('locked'); g.appendChild(c);
+      }
+    } });
+  }
+  K.breedSheet = breedSheet;
+  // step 2: meet the puppies of that breed
+  function showBreed(breed) {
+    K.breed = breed;
+    for (const p of pups) scene.remove(p.root); pups = []; sel = null; G.ui.prompts([]);
+    candidates(breed).forEach((c, i) => spawnPup(c, i));
+    G.ui.hint(breed === 'cat' ? 'Tap a kitten to meet them.' : 'Tap a puppy to meet them. (Breeds button to see other breeds)', 0);
+  }
+  function spawnPup(c) {
+    const p = new G.Pet(Object.assign({ name: c.name || '', mood: 85, acc: {} }, c), { npc: true }); p.cand = c;
+    p.pos.set(U.rand(-2.2, 2.2), 0, U.rand(-1.4, 1.4)); p.heading = Math.random() * 6;
+    p.brain = (pp) => (function* () {
+      if (pp === sel) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act(pp.cat ? 'sit' : U.pick(['sit', 'bow', 'sit']), 2); if (!pp.cat && U.chance(0.4)) { pp.voice(); pp.excite = 1; } return; }
+      const r = Math.random();
+      if (r < 0.35) { yield* pp.goto(U.rand(-2.4, 2.4), U.rand(-1.6, 1.6), { speed: U.pick([0.8, 1.2, 2]) }); }
+      else if (r < 0.5) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act('sit', 2); }
+      else if (r < 0.6) yield* pp.act('lie', 3);
+      else if (r < 0.7) yield* pp.sniffAround(1);
+      else if (r < 0.78 && !pp.cat) yield* pp.zoomies(0, 0, 1.3, 1);
+      else if (r < 0.85 && pp.cat) yield* pp.groom();
+      else if (r < 0.92) { const o = U.pick(pups.filter((x) => x !== pp)); if (o) { yield* pp.goto(o.pos.x + 0.4, o.pos.z, { timeout: 4 }); yield* pp.face(o.pos.x, o.pos.z); pp.setPose(pp.cat ? 'sit' : 'bow'); yield* pp.wait(1); } }
+      else yield* pp.scratch();
+    })();
+    p.bounds = (pp) => { pp.pos.x = U.clamp(pp.pos.x, -2.7, 2.7); pp.pos.z = U.clamp(pp.pos.z, -1.9, 2.0); };
+    scene.add(p.root); pups.push(p);
   }
   K.enter = function (opts) {
     K.from = opts.from || 'home';
     first = !!opts.first || !G.state.pets.length;
     for (const p of pups) scene.remove(p.root); pups = []; sel = null;
-    candidates().forEach((c, i) => {
-      const p = new G.Pet(Object.assign({ name: c.name || '', mood: 85, acc: {} }, c), { npc: true }); p.cand = c;
-      p.pos.set(U.rand(-2.2, 2.2), 0, U.rand(-1.4, 1.4)); p.heading = Math.random() * 6;
-      p.brain = (pp) => (function* () {
-        if (pp === sel) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act(pp.cat ? 'sit' : U.pick(['sit', 'bow', 'sit']), 2); if (!pp.cat && U.chance(0.4)) { pp.voice(); pp.excite = 1; } return; }
-        const r = Math.random();
-        if (r < 0.35) { yield* pp.goto(U.rand(-2.4, 2.4), U.rand(-1.6, 1.6), { speed: U.pick([0.8, 1.2, 2]) }); }
-        else if (r < 0.5) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act('sit', 2); }
-        else if (r < 0.6) yield* pp.act('lie', 3);
-        else if (r < 0.7) yield* pp.sniffAround(1);
-        else if (r < 0.78 && !pp.cat) yield* pp.zoomies(0, 0, 1.3, 1);
-        else if (r < 0.85 && pp.cat) yield* pp.groom();
-        else if (r < 0.92) { const o = U.pick(pups.filter((x) => x !== pp)); if (o) { yield* pp.goto(o.pos.x + 0.4, o.pos.z, { timeout: 4 }); yield* pp.face(o.pos.x, o.pos.z); pp.setPose(pp.cat ? 'sit' : 'bow'); yield* pp.wait(1); } }
-        else yield* pp.scratch();
-      })();
-      p.bounds = (pp) => { pp.pos.x = U.clamp(pp.pos.x, -2.7, 2.7); pp.pos.z = U.clamp(pp.pos.z, -1.9, 2.0); };
-      scene.add(p.root); pups.push(p);
-    });
+    // pups appear after choosing a breed
     if (K.ghost) { scene.remove(K.ghost.root); K.ghost = null; }
     const hr = new Date().getHours();
     if (hr < 3 && !first) {
@@ -129,12 +153,12 @@ G.scenes.kennel = (() => {
       gh.pos.set(2.3, 0, -1.6); gh.baseY = 0.15; gh.heading = -0.6; scene.add(gh.root); K.ghost = gh;
       gh.brain = (pp) => (function* () { pp.lookCam = 3; pp.excite = 1; yield* pp.act(U.pick(['sit', 'bow', 'stand']), 2.5); })();
     }
-    G.ui.hint(first ? 'Welcome to Maple Hill! Tap a puppy or kitten to meet them.' : 'Tap a pet to meet them.', 0);
+    K.breed = null; G.ui.hint(first ? 'Welcome to Maple Hill! Choose your first Shiba.' : 'Choose a breed to meet the puppies.', 0); setTimeout(breedSheet, 500);
     cam.position.set(0, 3.6, 6.4);
   };
   K.debugPups = () => pups;
   K.exit = function () { G.ui.hint(null); G.ui.prompts([]); };
-  K.dock = () => (first ? [] : [{ label: K.from === 'walk' ? 'Leave' : 'Home', icon: K.from === 'walk' ? 'door' : 'home', cls: 'go', fn: () => G.go(K.from === 'walk' ? 'walk' : 'home', { from: 'kennel' }) }]);
+  K.dock = () => [{ label: 'Breeds', icon: 'paw', fn: () => breedSheet() }].concat(first ? [] : [{ label: K.from === 'walk' ? 'Leave' : 'Home', icon: K.from === 'walk' ? 'door' : 'home', cls: 'go', fn: () => G.go(K.from === 'walk' ? 'walk' : 'home', { from: 'kennel' }) }]);
   K.onDown = function () { };
   K.onUp = function (p) {
     if (!p.tap) return;
@@ -160,9 +184,10 @@ G.scenes.kennel = (() => {
     const d = G.newPetData({ name: res.name, breed: c.breed, coat: c.coat, sex: res.sex, personality: c.personality, acc: c.breed === 'cat' ? { collar: 'collar_pink' } : { collar: 'collar_red' } });
     if (c.nori) { G.state.npc.nori.adopted = true; }
     if (c.breed === 'cat' && !G.state.acc.collar_pink) G.state.acc.collar_pink = 1;
+    if (!G.state.firstPlay) G.state.firstPlay = Date.now();
     G.state.pets.push(d); G.state.active = d.id;
     G.audio.play('fanfare'); G.ui.banner('Welcome home,', res.name + '!', 2200);
-    G.save();
+    G.save(); setTimeout(() => G.checkBreeds(), 4000);
     setTimeout(() => G.go('home'), 1600);
   }
   K.update = function (dt) {

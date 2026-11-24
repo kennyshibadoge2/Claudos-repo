@@ -692,7 +692,7 @@ G.scenes.home = (() => {
     }
     while (T.accum > 85) {
       T.accum -= 85;
-      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
+      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(pet.d.breed === 'pomeranian' || pet.d.breed === 'yorkie' ? 1.6 : 0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; G.state.stats.fluffy = (G.state.stats.fluffy || 0) + 1; G.checkBreeds(); pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
       else { pet.happy(1.1, false); G.fx.spawn('heart', hit.point.clone().add(new V3(0, 0.05, 0)), 1); }
       G.state.stats.pets++; tutDone('pet');
       if (praise && praise.pet === pet && !praise.voice) doPraise();
@@ -786,7 +786,7 @@ G.scenes.home = (() => {
   function doPraise() {
     if (!praise) return; const { pet, id } = praise; praise = null; G.ui.prompts([]);
     const tr = G.TRICKS.find((t) => t.id === id);
-    pet.d.tricks[id] = Math.min(1, (pet.d.tricks[id] || 0) + 0.34);
+    pet.d.tricks[id] = Math.min(1, (pet.d.tricks[id] || 0) + (pet.d.breed === 'corgi' ? 0.5 : 0.34));
     pet.happy(5); pet.fx('heart', 4); G.audio.play('chime'); pet.excite = 1; pet.voice('happy');
     tutDone('trick');
     if (pet.d.tricks[id] >= 1) { setTimeout(() => G.audio.play('fanfare'), 300); G.ui.banner(pet.name + ' learned', tr.name + '!', 2400); pet.fx('star', 10); }

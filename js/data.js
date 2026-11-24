@@ -10,6 +10,10 @@ G.BREEDS = {
   dachshund: { species: 'dog', name: 'Dachshund', legL: 0.055, legW: 0.042, body: [0.13, 0.13, 0.35], headR: 0.14, earH: 0.12, earR: 0.06, ear: 'flop', snout: 1.5, tail: 'straight', voice: 1.3, cheek: 0.95 },
   pug: { species: 'dog', name: 'Pug', legL: 0.09, legW: 0.05, body: [0.17, 0.16, 0.24], headR: 0.17, earH: 0.07, earR: 0.05, ear: 'fold', snout: 0.45, tail: 'curl', voice: 1.15, cheek: 1.1 },
   golden: { species: 'dog', name: 'Golden Retriever', legL: 0.16, legW: 0.052, body: [0.18, 0.18, 0.32], headR: 0.165, earH: 0.13, earR: 0.07, ear: 'flop', snout: 1.25, tail: 'plume', voice: 0.85, scale: 1.3, cheek: 1 },
+  beagle: { species: 'dog', name: 'Beagle', legL: 0.12, legW: 0.048, body: [0.165, 0.16, 0.29], headR: 0.158, earH: 0.17, earR: 0.08, ear: 'flop', snout: 1.2, tail: 'plume', voice: 1.0, scale: 1.05, cheek: 1.0 },
+  akita: { species: 'dog', name: 'Akita', legL: 0.15, legW: 0.058, body: [0.2, 0.19, 0.32], headR: 0.18, earH: 0.12, earR: 0.072, ear: 'prick', snout: 1.05, tail: 'curl', voice: 0.82, scale: 1.35, cheek: 1.18 },
+  pomeranian: { species: 'dog', name: 'Pomeranian', legL: 0.075, legW: 0.04, body: [0.15, 0.15, 0.2], headR: 0.15, earH: 0.075, earR: 0.045, ear: 'prick', snout: 0.6, tail: 'plume', voice: 1.7, scale: 0.72, cheek: 1.15, fluff: true },
+  yorkie: { species: 'dog', name: 'Yorkshire Terrier', legL: 0.085, legW: 0.036, body: [0.13, 0.13, 0.22], headR: 0.14, earH: 0.09, earR: 0.045, ear: 'prick', snout: 0.85, tail: 'straight', voice: 1.75, scale: 0.7, cheek: 1.02, hair: 'long' },
   cat: { species: 'cat', name: 'Cat', legL: 0.115, legW: 0.034, body: [0.13, 0.135, 0.25], headR: 0.15, earH: 0.11, earR: 0.058, ear: 'cat', snout: 0.5, tail: 'cat', voice: 1, cheek: 1.08 },
 };
 
@@ -25,6 +29,25 @@ G.COATS = {
   dachs: { name: 'Dachshund', top: '#6b3a1e', mid: '#7e4626', under: '#9a5a34', dots: '#c27a3e' },
   pug: { name: 'Pug', top: '#d8b98a', mid: '#e2c597', under: '#ecd4ad', mask: '#2a2321', dots: '#d8b98a' },
   golden: { name: 'Golden', top: '#d99a45', mid: '#e8b35e', under: '#f3cf8a', dots: '#e8b35e' },
+  corgi_tri: { name: 'Tricolor', top: '#2a2220', mid: '#3a2f2b', under: '#fff7ec', tan: '#c98a4b', dots: '#c98a4b' },
+  corgi_sable: { name: 'Sable', top: '#7a4a24', mid: '#c98a4b', under: '#fff7ec', dots: '#c98a4b', sesame: true },
+  husky_black: { name: 'Black & White', top: '#1f2226', mid: '#3a3f46', under: '#f5f7f9', dots: '#f5f7f9', eye: '#4aa6e0' },
+  husky_red: { name: 'Copper', top: '#9a5428', mid: '#c27a46', under: '#fbf3ea', dots: '#fbf3ea', eye: '#c98a4b' },
+  dachs_bt: { name: 'Black & Tan', top: '#231c1a', mid: '#2e2522', under: '#c98a4b', tan: '#b8783e', dots: '#c98a4b', sock: 0.6 },
+  dachs_choc: { name: 'Chocolate', top: '#4a2a1a', mid: '#5a3422', under: '#7a4a2e', dots: '#9a6a44', sock: 0 },
+  pug_black: { name: 'Black', top: '#1d1a1b', mid: '#242022', under: '#2e292b', mask: '#151213', dots: '#242022', sock: 0 },
+  golden_cream: { name: 'Light Golden', top: '#e8c88e', mid: '#f0d6a6', under: '#f8e6c4', dots: '#f0d6a6', sock: 0 },
+  golden_red: { name: 'Dark Golden', top: '#b8682a', mid: '#cc8240', under: '#dea05e', dots: '#cc8240', sock: 0 },
+  beagle_tri: { name: 'Tricolor', top: '#211b19', mid: '#3a2f2b', under: '#fffaf2', tan: '#c47a3a', dots: '#c47a3a' },
+  beagle_lemon: { name: 'Lemon', top: '#e3b46a', mid: '#ecc78a', under: '#fffaf2', dots: '#ecc78a' },
+  akita_red: { name: 'Red', top: '#b8561e', mid: '#d9793a', under: '#fdf1e0', dots: '#fdf1e0' },
+  akita_brindle: { name: 'Brindle', top: '#3a2a22', mid: '#8a6040', under: '#f1e3cf', dots: '#f1e3cf', sesame: true },
+  akita_white: { name: 'White', top: '#f4ece0', mid: '#f8f2e8', under: '#fffdf8', dots: '#fffdf8' },
+  pom_orange: { name: 'Orange', top: '#d97a2a', mid: '#eb9a48', under: '#f6c27e', dots: '#f6c27e', sock: 0.3 },
+  pom_cream: { name: 'Cream', top: '#ecd3a8', mid: '#f3e0bf', under: '#fbf0dc', dots: '#fbf0dc', sock: 0.3 },
+  pom_black: { name: 'Black', top: '#1f1b1c', mid: '#2a2526', under: '#3a3335', dots: '#3a3335', sock: 0 },
+  yorkie: { name: 'Blue & Tan', top: '#55657a', mid: '#6c7c90', under: '#d9a56a', tan: '#c98f55', tanHead: true, dots: '#c98f55', sock: 0.9 },
+  yorkie_gold: { name: 'Blue & Gold', top: '#3e4c5e', mid: '#56667a', under: '#e6b878', tan: '#d9a660', tanHead: true, dots: '#d9a660', sock: 0.9 },
   // cats
   tabby: { name: 'Orange Tabby', top: '#d9782e', mid: '#ef9b4e', under: '#fff1dc', stripes: '#b65a1c', eye: '#9ccc4a', nose: '#e88a8a' },
   grey: { name: 'Blue Grey', top: '#7d8590', mid: '#9aa2ac', under: '#d9dde2', eye: '#f2c24b', nose: '#b58a8a' },
@@ -34,6 +57,62 @@ G.COATS = {
   siamese: { name: 'Siamese', top: '#efe2cc', mid: '#f3e8d6', under: '#fbf5ea', points: '#4a3326', eye: '#4aa6e0', nose: '#5a3f33' },
 };
 G.PET_COATS = { dog: ['red', 'sesame', 'blacktan', 'cream'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'] };
+G.BREED_COATS = {
+  shiba: ['red', 'sesame', 'blacktan', 'cream'], mame: ['red', 'cream', 'sesame', 'blacktan'], corgi: ['corgi', 'corgi_tri', 'corgi_sable'], husky: ['husky', 'husky_black', 'husky_red'],
+  dachshund: ['dachs', 'dachs_bt', 'dachs_choc'], pug: ['pug', 'pug_black'], golden: ['golden', 'golden_cream', 'golden_red'], beagle: ['beagle_tri', 'beagle_lemon'],
+  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
+};
+// adoption: Shibas from day one, everyone else unlocks (checked for old saves too)
+G.BREED_INFO = {
+  shiba: { trait: 'Proud, loyal and a little stubborn. The star of Maple Hill.', hint: '' },
+  mame: { trait: 'A pocket-sized Shiba with a big personality.', hint: '' },
+  cat: { trait: 'Independent and cuddly on their own terms. Can\u2019t enter contests.', hint: 'Adopt your first Shiba', from: 'Maple Kennel' },
+  pug: { trait: 'Low energy, maximum cuddles. Gets tired slowly.', hint: 'Come back on a different day', from: 'Maple Kennel' },
+  corgi: { trait: 'Short legs, big brain: learns tricks faster.', hint: 'Win the Maple Cup', from: 'MC Pepper' },
+  dachshund: { trait: 'Champion sniffer: finds presents more often on walks.', hint: 'Find 5 presents on walks', from: 'Mrs. Kato' },
+  beagle: { trait: 'Nose to the ground: spots golden bones from afar.', hint: 'Go on 7 walks', from: 'Hana' },
+  husky: { trait: 'Born to run: the fastest dog on the disc field.', hint: 'Win the Open Cup', from: 'MC Pepper' },
+  golden: { trait: 'Gentle and devoted: bonds with you faster.', hint: 'Reach max bond with any pet', from: 'Maple Kennel' },
+  akita: { trait: 'The Shiba\u2019s big cousin: strong, calm and fearless.', hint: 'Win the Expert Cup with a Shiba', from: 'Maple Kennel' },
+  pomeranian: { trait: 'A walking puffball: brushing makes them extra happy.', hint: 'Finish all daily quests on 2 different days', from: 'Maple Pets' },
+  yorkie: { trait: 'Tiny fashionista: loves outfits and brushing.', hint: 'Own 8 accessories and brush a pet until super fluffy', from: 'Daisuke (Maple Pets)' },
+};
+G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie'];
+G.breedUnlocked = function (b) {
+  const s = G.state; if (!s) return false; s.breeds = s.breeds || {};
+  if (b === 'shiba' || b === 'mame') return true;
+  return !!s.breeds[b];
+};
+G.breedCheck = function (b) { // is the requirement met right now?
+  const s = G.state, st = s.stats || {}, won = (id, f) => (s.trophies || []).some((t) => t.cls === id && t.place === 1 && (!f || f(t)));
+  const isShiba = (t) => { const d = s.pets.find((p) => p.id === t.pet); return d && (d.breed === 'shiba' || d.breed === 'mame'); };
+  switch (b) {
+    case 'cat': return s.pets.some((d) => d.breed === 'shiba' || d.breed === 'mame');
+    case 'pug': return !!s.pets.length && new Date(s.firstPlay || s.created || Date.now()).toDateString() !== new Date().toDateString();
+    case 'corgi': return won('novice');
+    case 'dachshund': return (st.presents || 0) >= 5;
+    case 'beagle': return (st.walks || 0) >= 7;
+    case 'husky': return won('open');
+    case 'golden': return s.pets.some((d) => (d.bond || 0) >= 100);
+    case 'akita': return won('expert', isShiba);
+    case 'pomeranian': return (s.questDays || 0) >= 2;
+    case 'yorkie': return Object.keys(s.acc || {}).filter((k) => G.ITEMS[k] && G.ITEMS[k].cat === 'acc').length >= 8 && (st.fluffy || 0) >= 1;
+    default: return true;
+  }
+};
+// call often: unlocks newly earned breeds and mails a letter about each
+G.checkBreeds = function (quiet) {
+  const s = G.state; if (!s || !s.pets) return []; s.breeds = s.breeds || {}; const got = [];
+  for (const b of G.BREED_ORDER) {
+    if (G.breedUnlocked(b) || !G.breedCheck(b)) continue;
+    s.breeds[b] = Date.now(); got.push(b);
+    const nm = b === 'cat' ? 'Kittens' : G.BREEDS[b].name + ' puppies'; const info = G.BREED_INFO[b];
+    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
+    if (!quiet) setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('New at the kennel!', nm + ' can now be adopted', 2800); }, 400 + got.length * 3000);
+  }
+  if (got.length) { G.ui.refresh && G.ui.refresh(); G.save(); }
+  return got;
+};
 G.PERSONALITIES = {
   playful: { name: 'Playful', desc: 'Loves toys and zoomies.' },
   gentle: { name: 'Gentle', desc: 'Calm, cuddly and sweet.' },
@@ -134,6 +213,7 @@ G.CONTESTS = [
 G.RIVALS = [
   ['Mika', 'Pocky', 'corgi'], ['Joji', 'Taro', 'shiba'], ['Emi', 'Snowpea', 'husky'], ['Haru', 'Natto', 'shiba'], ['Lena', 'Waffle', 'golden'],
   ['Kaito', 'Udon Jr.', 'dachshund'], ['Saki', 'Momo', 'mame'], ['Ken', 'Tofu', 'pug'], ['Nao', 'Rocket', 'husky'], ['Aya', 'Kinako', 'shiba'],
+  ['Rin', 'Biscuit', 'beagle'], ['Sho', 'Hachi', 'akita'], ['Yui', 'Puff', 'pomeranian'], ['Lulu', 'Pixie', 'yorkie'],
 ];
 
 /* ---------------- People looks ---------------- */

@@ -41,7 +41,7 @@ G.quests = (() => {
       if (e.done) continue; const { q, n } = Q.progress(e);
       if (n >= q.n) { e.done = true; changed = true; G.state.coins += q.reward; G.audio.play('chime'); G.ui.banner('Daily quest complete!', q.text + '  +' + q.reward + ' coins', 2600); }
     }
-    if (!t.bonus && t.list.every((e) => e.done)) { t.bonus = true; G.state.coins += 100; setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('All quests done!', 'Bonus +100 coins. See you tomorrow!', 3000); G.stamp && G.stamp('quests'); }, 2800); changed = true; }
+    if (!t.bonus && t.list.every((e) => e.done)) { t.bonus = true; G.state.questDays = (G.state.questDays || 0) + 1; setTimeout(() => G.checkBreeds(), 6000); G.state.coins += 100; setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('All quests done!', 'Bonus +100 coins. See you tomorrow!', 3000); G.stamp && G.stamp('quests'); }, 2800); changed = true; }
     if (changed) { G.ui.refresh && G.ui.refresh(); G.save(); }
   };
   Q.tab = function (body) {

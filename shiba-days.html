@@ -251,6 +251,7 @@ body.contest.dlg #contestHud{opacity:.35}
   body.contest #hint{font-size:13px;padding:7px 12px}
 }
 @media (max-height:460px){body.contest #board{font-size:11px;padding:4px 8px}body.contest #contestHud{font-size:13px;padding:5px 12px}}
+.breedGrid .card.locked{filter:grayscale(.85);opacity:.6}.breedGrid .card.locked img{filter:brightness(.55)}.breedGrid .card .sub{font-size:11.5px;line-height:1.2}
 </style>
 </head>
 <body>
@@ -853,6 +854,10 @@ G.BREEDS = {
   dachshund: { species: 'dog', name: 'Dachshund', legL: 0.055, legW: 0.042, body: [0.13, 0.13, 0.35], headR: 0.14, earH: 0.12, earR: 0.06, ear: 'flop', snout: 1.5, tail: 'straight', voice: 1.3, cheek: 0.95 },
   pug: { species: 'dog', name: 'Pug', legL: 0.09, legW: 0.05, body: [0.17, 0.16, 0.24], headR: 0.17, earH: 0.07, earR: 0.05, ear: 'fold', snout: 0.45, tail: 'curl', voice: 1.15, cheek: 1.1 },
   golden: { species: 'dog', name: 'Golden Retriever', legL: 0.16, legW: 0.052, body: [0.18, 0.18, 0.32], headR: 0.165, earH: 0.13, earR: 0.07, ear: 'flop', snout: 1.25, tail: 'plume', voice: 0.85, scale: 1.3, cheek: 1 },
+  beagle: { species: 'dog', name: 'Beagle', legL: 0.12, legW: 0.048, body: [0.165, 0.16, 0.29], headR: 0.158, earH: 0.17, earR: 0.08, ear: 'flop', snout: 1.2, tail: 'plume', voice: 1.0, scale: 1.05, cheek: 1.0 },
+  akita: { species: 'dog', name: 'Akita', legL: 0.15, legW: 0.058, body: [0.2, 0.19, 0.32], headR: 0.18, earH: 0.12, earR: 0.072, ear: 'prick', snout: 1.05, tail: 'curl', voice: 0.82, scale: 1.35, cheek: 1.18 },
+  pomeranian: { species: 'dog', name: 'Pomeranian', legL: 0.075, legW: 0.04, body: [0.15, 0.15, 0.2], headR: 0.15, earH: 0.075, earR: 0.045, ear: 'prick', snout: 0.6, tail: 'plume', voice: 1.7, scale: 0.72, cheek: 1.15, fluff: true },
+  yorkie: { species: 'dog', name: 'Yorkshire Terrier', legL: 0.085, legW: 0.036, body: [0.13, 0.13, 0.22], headR: 0.14, earH: 0.09, earR: 0.045, ear: 'prick', snout: 0.85, tail: 'straight', voice: 1.75, scale: 0.7, cheek: 1.02, hair: 'long' },
   cat: { species: 'cat', name: 'Cat', legL: 0.115, legW: 0.034, body: [0.13, 0.135, 0.25], headR: 0.15, earH: 0.11, earR: 0.058, ear: 'cat', snout: 0.5, tail: 'cat', voice: 1, cheek: 1.08 },
 };
 
@@ -868,6 +873,25 @@ G.COATS = {
   dachs: { name: 'Dachshund', top: '#6b3a1e', mid: '#7e4626', under: '#9a5a34', dots: '#c27a3e' },
   pug: { name: 'Pug', top: '#d8b98a', mid: '#e2c597', under: '#ecd4ad', mask: '#2a2321', dots: '#d8b98a' },
   golden: { name: 'Golden', top: '#d99a45', mid: '#e8b35e', under: '#f3cf8a', dots: '#e8b35e' },
+  corgi_tri: { name: 'Tricolor', top: '#2a2220', mid: '#3a2f2b', under: '#fff7ec', tan: '#c98a4b', dots: '#c98a4b' },
+  corgi_sable: { name: 'Sable', top: '#7a4a24', mid: '#c98a4b', under: '#fff7ec', dots: '#c98a4b', sesame: true },
+  husky_black: { name: 'Black & White', top: '#1f2226', mid: '#3a3f46', under: '#f5f7f9', dots: '#f5f7f9', eye: '#4aa6e0' },
+  husky_red: { name: 'Copper', top: '#9a5428', mid: '#c27a46', under: '#fbf3ea', dots: '#fbf3ea', eye: '#c98a4b' },
+  dachs_bt: { name: 'Black & Tan', top: '#231c1a', mid: '#2e2522', under: '#c98a4b', tan: '#b8783e', dots: '#c98a4b', sock: 0.6 },
+  dachs_choc: { name: 'Chocolate', top: '#4a2a1a', mid: '#5a3422', under: '#7a4a2e', dots: '#9a6a44', sock: 0 },
+  pug_black: { name: 'Black', top: '#1d1a1b', mid: '#242022', under: '#2e292b', mask: '#151213', dots: '#242022', sock: 0 },
+  golden_cream: { name: 'Light Golden', top: '#e8c88e', mid: '#f0d6a6', under: '#f8e6c4', dots: '#f0d6a6', sock: 0 },
+  golden_red: { name: 'Dark Golden', top: '#b8682a', mid: '#cc8240', under: '#dea05e', dots: '#cc8240', sock: 0 },
+  beagle_tri: { name: 'Tricolor', top: '#211b19', mid: '#3a2f2b', under: '#fffaf2', tan: '#c47a3a', dots: '#c47a3a' },
+  beagle_lemon: { name: 'Lemon', top: '#e3b46a', mid: '#ecc78a', under: '#fffaf2', dots: '#ecc78a' },
+  akita_red: { name: 'Red', top: '#b8561e', mid: '#d9793a', under: '#fdf1e0', dots: '#fdf1e0' },
+  akita_brindle: { name: 'Brindle', top: '#3a2a22', mid: '#8a6040', under: '#f1e3cf', dots: '#f1e3cf', sesame: true },
+  akita_white: { name: 'White', top: '#f4ece0', mid: '#f8f2e8', under: '#fffdf8', dots: '#fffdf8' },
+  pom_orange: { name: 'Orange', top: '#d97a2a', mid: '#eb9a48', under: '#f6c27e', dots: '#f6c27e', sock: 0.3 },
+  pom_cream: { name: 'Cream', top: '#ecd3a8', mid: '#f3e0bf', under: '#fbf0dc', dots: '#fbf0dc', sock: 0.3 },
+  pom_black: { name: 'Black', top: '#1f1b1c', mid: '#2a2526', under: '#3a3335', dots: '#3a3335', sock: 0 },
+  yorkie: { name: 'Blue & Tan', top: '#55657a', mid: '#6c7c90', under: '#d9a56a', tan: '#c98f55', tanHead: true, dots: '#c98f55', sock: 0.9 },
+  yorkie_gold: { name: 'Blue & Gold', top: '#3e4c5e', mid: '#56667a', under: '#e6b878', tan: '#d9a660', tanHead: true, dots: '#d9a660', sock: 0.9 },
   // cats
   tabby: { name: 'Orange Tabby', top: '#d9782e', mid: '#ef9b4e', under: '#fff1dc', stripes: '#b65a1c', eye: '#9ccc4a', nose: '#e88a8a' },
   grey: { name: 'Blue Grey', top: '#7d8590', mid: '#9aa2ac', under: '#d9dde2', eye: '#f2c24b', nose: '#b58a8a' },
@@ -877,6 +901,62 @@ G.COATS = {
   siamese: { name: 'Siamese', top: '#efe2cc', mid: '#f3e8d6', under: '#fbf5ea', points: '#4a3326', eye: '#4aa6e0', nose: '#5a3f33' },
 };
 G.PET_COATS = { dog: ['red', 'sesame', 'blacktan', 'cream'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'] };
+G.BREED_COATS = {
+  shiba: ['red', 'sesame', 'blacktan', 'cream'], mame: ['red', 'cream', 'sesame', 'blacktan'], corgi: ['corgi', 'corgi_tri', 'corgi_sable'], husky: ['husky', 'husky_black', 'husky_red'],
+  dachshund: ['dachs', 'dachs_bt', 'dachs_choc'], pug: ['pug', 'pug_black'], golden: ['golden', 'golden_cream', 'golden_red'], beagle: ['beagle_tri', 'beagle_lemon'],
+  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
+};
+// adoption: Shibas from day one, everyone else unlocks (checked for old saves too)
+G.BREED_INFO = {
+  shiba: { trait: 'Proud, loyal and a little stubborn. The star of Maple Hill.', hint: '' },
+  mame: { trait: 'A pocket-sized Shiba with a big personality.', hint: '' },
+  cat: { trait: 'Independent and cuddly on their own terms. Can\u2019t enter contests.', hint: 'Adopt your first Shiba', from: 'Maple Kennel' },
+  pug: { trait: 'Low energy, maximum cuddles. Gets tired slowly.', hint: 'Come back on a different day', from: 'Maple Kennel' },
+  corgi: { trait: 'Short legs, big brain: learns tricks faster.', hint: 'Win the Maple Cup', from: 'MC Pepper' },
+  dachshund: { trait: 'Champion sniffer: finds presents more often on walks.', hint: 'Find 5 presents on walks', from: 'Mrs. Kato' },
+  beagle: { trait: 'Nose to the ground: spots golden bones from afar.', hint: 'Go on 7 walks', from: 'Hana' },
+  husky: { trait: 'Born to run: the fastest dog on the disc field.', hint: 'Win the Open Cup', from: 'MC Pepper' },
+  golden: { trait: 'Gentle and devoted: bonds with you faster.', hint: 'Reach max bond with any pet', from: 'Maple Kennel' },
+  akita: { trait: 'The Shiba\u2019s big cousin: strong, calm and fearless.', hint: 'Win the Expert Cup with a Shiba', from: 'Maple Kennel' },
+  pomeranian: { trait: 'A walking puffball: brushing makes them extra happy.', hint: 'Finish all daily quests on 2 different days', from: 'Maple Pets' },
+  yorkie: { trait: 'Tiny fashionista: loves outfits and brushing.', hint: 'Own 8 accessories and brush a pet until super fluffy', from: 'Daisuke (Maple Pets)' },
+};
+G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie'];
+G.breedUnlocked = function (b) {
+  const s = G.state; if (!s) return false; s.breeds = s.breeds || {};
+  if (b === 'shiba' || b === 'mame') return true;
+  return !!s.breeds[b];
+};
+G.breedCheck = function (b) { // is the requirement met right now?
+  const s = G.state, st = s.stats || {}, won = (id, f) => (s.trophies || []).some((t) => t.cls === id && t.place === 1 && (!f || f(t)));
+  const isShiba = (t) => { const d = s.pets.find((p) => p.id === t.pet); return d && (d.breed === 'shiba' || d.breed === 'mame'); };
+  switch (b) {
+    case 'cat': return s.pets.some((d) => d.breed === 'shiba' || d.breed === 'mame');
+    case 'pug': return !!s.pets.length && new Date(s.firstPlay || s.created || Date.now()).toDateString() !== new Date().toDateString();
+    case 'corgi': return won('novice');
+    case 'dachshund': return (st.presents || 0) >= 5;
+    case 'beagle': return (st.walks || 0) >= 7;
+    case 'husky': return won('open');
+    case 'golden': return s.pets.some((d) => (d.bond || 0) >= 100);
+    case 'akita': return won('expert', isShiba);
+    case 'pomeranian': return (s.questDays || 0) >= 2;
+    case 'yorkie': return Object.keys(s.acc || {}).filter((k) => G.ITEMS[k] && G.ITEMS[k].cat === 'acc').length >= 8 && (st.fluffy || 0) >= 1;
+    default: return true;
+  }
+};
+// call often: unlocks newly earned breeds and mails a letter about each
+G.checkBreeds = function (quiet) {
+  const s = G.state; if (!s || !s.pets) return []; s.breeds = s.breeds || {}; const got = [];
+  for (const b of G.BREED_ORDER) {
+    if (G.breedUnlocked(b) || !G.breedCheck(b)) continue;
+    s.breeds[b] = Date.now(); got.push(b);
+    const nm = b === 'cat' ? 'Kittens' : G.BREEDS[b].name + ' puppies'; const info = G.BREED_INFO[b];
+    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
+    if (!quiet) setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('New at the kennel!', nm + ' can now be adopted', 2800); }, 400 + got.length * 3000);
+  }
+  if (got.length) { G.ui.refresh && G.ui.refresh(); G.save(); }
+  return got;
+};
 G.PERSONALITIES = {
   playful: { name: 'Playful', desc: 'Loves toys and zoomies.' },
   gentle: { name: 'Gentle', desc: 'Calm, cuddly and sweet.' },
@@ -977,6 +1057,7 @@ G.CONTESTS = [
 G.RIVALS = [
   ['Mika', 'Pocky', 'corgi'], ['Joji', 'Taro', 'shiba'], ['Emi', 'Snowpea', 'husky'], ['Haru', 'Natto', 'shiba'], ['Lena', 'Waffle', 'golden'],
   ['Kaito', 'Udon Jr.', 'dachshund'], ['Saki', 'Momo', 'mame'], ['Ken', 'Tofu', 'pug'], ['Nao', 'Rocket', 'husky'], ['Aya', 'Kinako', 'shiba'],
+  ['Rin', 'Biscuit', 'beagle'], ['Sho', 'Hachi', 'akita'], ['Yui', 'Puff', 'pomeranian'], ['Lulu', 'Pixie', 'yorkie'],
 ];
 
 /* ---------------- People looks ---------------- */
@@ -1329,6 +1410,7 @@ function coat(out, C, part, nx, ny, nz, wx, wy, wz, ex = {}) {
     }
     out.lerp(K.under, u);
   }
+  if (C.tanHead && (part === 'head' || part === 'cheek' || part === 'muzzle' || part === 'jaw' || part === 'ear' || part === 'chest' || part === 'paw' || (part === 'leg' && (ex.t || 0) > 0.25))) out.copy(K.tan).lerp(K.under, u * 0.5);
   if (C.points && ex.point) out.lerp(K.points, ex.point);
   if (C.mask && (part === 'muzzle' || part === 'jaw' || part === 'ear')) out.copy(K.mask);
   return out;
@@ -1566,6 +1648,38 @@ M.pet = function (spec) {
   } else { // stub
     const g = paintSphere(new THREE.SphereGeometry(1, 16, 12), C, 'rump', 1, 1, 1); g.scale(0.05 * ts, 0.045 * ts, 0.04 * ts);
     addM(mesh(g, fur, 'tail', tail)).position.set(0, -0.01, -0.02);
+  }
+  // ---- breed extras ----
+  if (B.hair === 'long') { // Yorkie: silky coat parted down the back + top-knot with a bow
+    const K = coatCols(C);
+    for (const sd of [-1, 1]) {
+      const NU = 14, NV = 8, pos = [], col = [], idx = [];
+      const drop = (L1 + L2) * 0.82 + by * 0.5;
+      for (let j = 0; j <= NV; j++) for (let i = 0; i <= NU; i++) {
+        const u = i / NU, v = j / NV; const z = (u * 2 - 1) * bz * 0.98;
+        const env = Math.sqrt(Math.max(0.05, 1 - Math.pow(u * 2 - 1, 2)));
+        const x = sd * (0.004 + Math.sin(Math.min(1, v * 2.2) * Math.PI / 2) * bx * 1.04 * (0.75 + 0.25 * env) + v * bx * 0.12);
+        const y = by * 0.98 * env - v * (by * 0.98 * env + drop * (0.55 + 0.45 * env)) + Math.sin(u * 37 + sd) * 0.004 * v;
+        pos.push(x, y, z); const c = K.top.clone().lerp(K.tan, U.smooth(0.55, 1, v) * 0.85); col.push(c.r, c.g, c.b);
+      }
+      for (let j = 0; j < NV; j++) for (let i = 0; i < NU; i++) { const a = j * (NU + 1) + i, b = a + 1, c2 = a + NU + 1, d = c2 + 1; idx.push(a, c2, b, b, c2, d); }
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3)); g.setIndex(idx); g.computeVertexNormals();
+      const hm = addM(mesh(g, M.mat('#ffffff', { vc: true, r: 0.55, side: THREE.DoubleSide }), 'torso', body)); hm.castShadow = true;
+    }
+    const tk = new THREE.Group(); tk.position.set(0, ry * 0.92, -hr * 0.05); hc.add(tk);
+    const tuft = paintSphere(new THREE.SphereGeometry(1, 14, 10), C, 'head', 1, 1, 1); tuft.scale(hr * 0.32, hr * 0.42, hr * 0.3); addM(mesh(tuft, fur, 'head', tk)).position.y = hr * 0.18;
+    const bowM = M.mat('#e2574c', { r: 0.5 });
+    for (const sd of [-1, 1]) { const lo = mesh(new THREE.ConeGeometry(hr * 0.2, hr * 0.36, 14), bowM, null, tk); lo.rotation.z = sd * Math.PI / 2; lo.position.set(sd * hr * 0.19, hr * 0.42, hr * 0.12); lo.scale.set(1, 1, 0.5); }
+    mesh(new THREE.SphereGeometry(hr * 0.09, 12, 10), bowM, null, tk).position.set(0, hr * 0.42, hr * 0.14);
+    // little moustache
+    for (const sd of [-1, 1]) { const ms = paintSphere(new THREE.SphereGeometry(1, 10, 8), C, 'muzzle', 1, 1, 1); ms.scale(hr * 0.16, hr * 0.22, hr * 0.12); addM(mesh(ms, fur, 'head', hc)).position.set(sd * hr * 0.16, -hr * 0.32, rz * 0.88); }
+  }
+  if (B.fluff) { // Pomeranian: big fluffy ruff + puffy coat
+    const bumpy = (g, amt) => { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const v = new V3(p.getX(i), p.getY(i), p.getZ(i)); const n = 1 + (U.noise3(v.x * 6, v.y * 6, v.z * 6) - 0.5) * amt; p.setXYZ(i, v.x * n, v.y * n, v.z * n); } g.computeVertexNormals(); return g; };
+    const coatG = paintSphere(bumpy(new THREE.SphereGeometry(1, 40, 28), 0.22), C, 'torso', bx, by, bz); coatG.scale(bx * 1.32, by * 1.38, bz * 1.12);
+    addM(mesh(coatG, fur, 'torso', body)).position.set(0, by * 0.12, 0);
+    const ruffG = paintSphere(bumpy(new THREE.SphereGeometry(1, 36, 26), 0.3), C, 'chest', bx, by, bx); ruffG.scale(bx * 1.25, by * 1.3, bx * 1.0);
+    addM(mesh(ruffG, fur, 'torso', body)).position.set(0, by * 0.42, bz * 0.62);
   }
   P.headR = hr;
   root.traverse((o) => { if (o.isMesh) o.userData.root = root; });
@@ -2395,7 +2509,7 @@ class Pet {
     const sleeping = this.poseName === 'sleep';
     d.hunger = U.clamp(d.hunger - r * (active ? 1.8 : 1.0), 0, 100);
     d.thirst = U.clamp(d.thirst - r * (active ? 2.6 : 1.3), 0, 100);
-    d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0))), 0, 100);
+    d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0)) * (d.breed === 'pug' ? 0.6 : 1)), 0, 100);
     d.clean = U.clamp(d.clean - r * (G.curName === 'walk' ? 1.4 : 0.3), 0, 100);
     const base = Math.min(d.hunger, d.thirst, d.clean + 30, d.energy + 25) * 0.55 + 45;
     d.mood = U.clamp(d.mood + (Math.min(base, 100) - d.mood) * r * 0.08, 0, 100);
@@ -2774,7 +2888,7 @@ G.discSim = function (pos, vel, o = {}) {
 G.discSkill = function (pet) {
   const sk = pet.d.disc || 0;
   const reach = (pet.m.baseH + pet.m.dims.by + pet.m.headR) * pet.S + 0.05;
-  return { sk, spd: (5.6 + sk * 0.036) * pet.S, delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
+  return { sk, spd: (5.6 + sk * 0.036) * pet.S * (pet.d.breed === 'husky' ? 1.1 : 1), delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
 };
 // o.terrain(x, z) -> speed multiplier (sand traps etc.)
 G.discPlan = function (pet, path, o = {}) {
@@ -3515,6 +3629,7 @@ G.stamp = function (id) {
 };
 G.checkStamps = function () {
   const s = G.state; if (!s || !s.pets) return; const st = s.stats;
+  if (G.checkBreeds) G.checkBreeds();
   if (s.pets.length) G.stamp('first');
   if (st.pets >= 100) G.stamp('pets100'); if (st.pets >= 1000) G.stamp('pets1000');
   if (s.pets.some((p) => (p.nameLearn || 0) >= 1)) G.stamp('named');
@@ -3540,10 +3655,17 @@ G.checkStamps = function () {
   if (s.trophies.some((t) => t.place === 1 && t.kind === 'obedience')) G.stamp('obedience');
 };
 G.ui.stampSheet = function () {
-  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
+  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'breeds', name: 'Breeds' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
     const s = G.state; s.stamps = s.stamps || {};
     if (tab === 'quests') { G.quests.tab(body); return; }
     if (tab === 'album') { G.photos.tab(body); return; }
+    if (tab === 'breeds') {
+      const n = G.BREED_ORDER.filter((b) => G.breedUnlocked(b)).length;
+      G.ui.note(body, n + ' of ' + G.BREED_ORDER.length + ' breeds unlocked at Maple Kennel. Each breed has its own coats and a special trait.');
+      const g = G.ui.grid(body); g.classList.add('breedGrid');
+      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + info.hint, dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
+      return;
+    }
     if (tab === 'stamps') {
       const got = G.STAMPS.filter((x) => s.stamps[x.id]).length;
       G.ui.note(body, got + ' of ' + G.STAMPS.length + ' stamps. Secret stamps show as ??? until you find them.');
@@ -4286,7 +4408,7 @@ G.quests = (() => {
       if (e.done) continue; const { q, n } = Q.progress(e);
       if (n >= q.n) { e.done = true; changed = true; G.state.coins += q.reward; G.audio.play('chime'); G.ui.banner('Daily quest complete!', q.text + '  +' + q.reward + ' coins', 2600); }
     }
-    if (!t.bonus && t.list.every((e) => e.done)) { t.bonus = true; G.state.coins += 100; setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('All quests done!', 'Bonus +100 coins. See you tomorrow!', 3000); G.stamp && G.stamp('quests'); }, 2800); changed = true; }
+    if (!t.bonus && t.list.every((e) => e.done)) { t.bonus = true; G.state.questDays = (G.state.questDays || 0) + 1; setTimeout(() => G.checkBreeds(), 6000); G.state.coins += 100; setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('All quests done!', 'Bonus +100 coins. See you tomorrow!', 3000); G.stamp && G.stamp('quests'); }, 2800); changed = true; }
     if (changed) { G.ui.refresh && G.ui.refresh(); G.save(); }
   };
   Q.tab = function (body) {
@@ -5092,7 +5214,7 @@ G.scenes.home = (() => {
     }
     while (T.accum > 85) {
       T.accum -= 85;
-      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
+      if (mode === 'brush') { pet.d.clean = Math.min(100, pet.d.clean + 1.6); pet.happy(pet.d.breed === 'pomeranian' || pet.d.breed === 'yorkie' ? 1.6 : 0.8, false); if (pet.d.clean >= 100 && !T.done) { T.done = true; G.ui.toast(pet.name + ' is super fluffy!'); G.state.stats.groom = (G.state.stats.groom || 0) + 1; G.state.stats.fluffy = (G.state.stats.fluffy || 0) + 1; G.checkBreeds(); pet.fx('sparkle', 6); G.audio.play('sparkle'); } }
       else { pet.happy(1.1, false); G.fx.spawn('heart', hit.point.clone().add(new V3(0, 0.05, 0)), 1); }
       G.state.stats.pets++; tutDone('pet');
       if (praise && praise.pet === pet && !praise.voice) doPraise();
@@ -5186,7 +5308,7 @@ G.scenes.home = (() => {
   function doPraise() {
     if (!praise) return; const { pet, id } = praise; praise = null; G.ui.prompts([]);
     const tr = G.TRICKS.find((t) => t.id === id);
-    pet.d.tricks[id] = Math.min(1, (pet.d.tricks[id] || 0) + 0.34);
+    pet.d.tricks[id] = Math.min(1, (pet.d.tricks[id] || 0) + (pet.d.breed === 'corgi' ? 0.5 : 0.34));
     pet.happy(5); pet.fx('heart', 4); G.audio.play('chime'); pet.excite = 1; pet.voice('happy');
     tutDone('trick');
     if (pet.d.tricks[id] >= 1) { setTimeout(() => G.audio.play('fanfare'), 300); G.ui.banner(pet.name + ' learned', tr.name + '!', 2400); pet.fx('star', 10); }
@@ -5652,7 +5774,7 @@ G.scenes.walk = (() => {
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
     walkT = 0; greeted = new Set(); race = null; talkBusy = false; steer = null; promptKey = '';
-    refreshPresence(); spawnPresents(); if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
+    refreshPresence(); spawnPresents(); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
     weatherSetup(); G.audio.loop(G.weather() === 'rain'); howled = false; poopT = U.rand(60, 120);
     if (poop) { scene.remove(poop.m); poop = null; } if (ufo) { scene.remove(ufo.m); ufo = null; }
     ufoT = G.daylight() < 0.3 && Math.random() < 0.35 ? U.rand(25, 80) : -1;
@@ -5675,7 +5797,7 @@ G.scenes.walk = (() => {
   W.exit = function () {
     G.audio.loop(false); G.audio.busk(null, 0);
     if (!pet) return;
-    if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + 2); pet.happy(6, false); }
+    if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + (pet.d.breed === 'golden' ? 3 : 2)); pet.happy(6, false); }
     scene.remove(pet.root); pet.stop();
     if (leashMesh) { scene.remove(leashMesh); leashMesh.geometry.dispose(); leashMesh = null; }
     for (const pr of presents) { if (pr.box) scene.remove(pr.box); }
@@ -6012,7 +6134,7 @@ G.scenes.walk = (() => {
   function pickPoop() { if (!poop) return; G.audio.play('poof'); G.fx.spawn('sparkle', poop.m.position.clone().setY(0.2), 4); scene.remove(poop.m); poop = null; G.state.stats.poop = (G.state.stats.poop || 0) + 1; pet.d.bond = Math.min(100, pet.d.bond + 1); G.ui.toast(U.pick(['Good citizen! Maple Hill thanks you.', 'Bagged and binned. Nice.', 'The park stays lovely thanks to you.'])); G.checkStamps(); promptKey = ''; }
   function updateDetail(dt) {
     // bones
-    for (let i = bones.length - 1; i >= 0; i--) { const b = bones[i]; b.m.rotation.y += dt; b.sp -= dt; if (b.sp < 0) { b.sp = U.rand(1.5, 4); if (b.m.position.distanceTo(pet.pos) < 22) G.fx.spawn('sparkle', b.m.position.clone().setY(0.2), 1, { color: '#ffd84a' }); }
+    for (let i = bones.length - 1; i >= 0; i--) { const b = bones[i]; b.m.rotation.y += dt; b.sp -= dt; if (b.sp < 0) { b.sp = U.rand(1.5, 4); if (b.m.position.distanceTo(pet.pos) < (pet.d.breed === 'beagle' ? 45 : 22)) G.fx.spawn('sparkle', b.m.position.clone().setY(0.2), 1, { color: '#ffd84a' }); }
       if (U.d2(b.m.position.x, b.m.position.z, pet.pos.x, pet.pos.z) < 0.7 * pet.S + 0.3) { scene.remove(b.m); bones.splice(i, 1); G.state.bones[b.i] = 1; const n = Object.keys(G.state.bones).length; G.audio.play('fanfare'); G.fx.spawn('star', pet.pos.clone().setY(0.5), 10); G.ui.banner('Golden bone!', n + ' of 8 found', 2000); pet.excite = 1; if (n >= 8 && !G.state.acc.collar_gold) G.addItem('collar_gold'); G.checkStamps(); } }
     // poop
     poopT -= dt * (pet.vel > 0.3 ? 1 : 0.2);
@@ -6523,7 +6645,7 @@ G.scenes.frisbee = (() => {
   }
 
   /* ---------------- rivals ---------------- */
-  const COATS = { shiba: ['red', 'sesame', 'cream', 'blacktan'], mame: ['red', 'cream'], corgi: ['corgi'], husky: ['husky'], golden: ['golden'], dachshund: ['dachs'], pug: ['pug'] };
+  const COATS = G.BREED_COATS;
   function randLook() { return { skin: U.pick(['#f6d2b8', '#e6b894', '#c99a76', '#8a5a3a', '#f3d0b5']), hair: U.pick(['#2a1d18', '#5a3a26', '#c4622a', '#e8d2a8', '#3b2420', '#7a5cff']), style: U.pick(['short', 'bob', 'pony', 'bun', 'messy']), top: U.pick(['#e2574c', '#4aa6e0', '#79b25a', '#f2c24b', '#7a5cff', '#f39bb0', '#33415c']), bottom: U.pick(['#3b4a6a', '#3a3a3a', '#5a4a3a', '#2c2c3a']), h: U.rand(0.92, 1.05), extra: U.chance(0.3) ? ['cap'] : U.chance(0.2) ? ['band'] : [] }; }
   /* ---------- field features: sand traps (slow you down) and glowing bonus zones ---------- */
   let fieldGrp = null;
@@ -7067,40 +7189,64 @@ G.scenes.kennel = (() => {
   };
   // first pet is free; each extra pet costs more (cats a little less)
   function adoptPrice(cat) { const base = [0, 3000, 5000, 8000][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
-  function candidates() {
+  function candidates(breed) {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
-    const seed = G.state.day * 7 + G.state.pets.length * 13;
+    const seed = G.state.day * 7 + G.state.pets.length * 13 + G.BREED_ORDER.indexOf(breed) * 31;
     const r = (i) => U.hash(seed, i, 3);
-    const coats = G.PET_COATS.dog.slice();
-    for (let i = 0; i < 3; i++) out.push({ breed: r(i + 10) < 0.25 ? 'mame' : 'shiba', coat: coats[(Math.floor(r(i) * 4) + i) % 4], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(false) });
-    const cc = G.PET_COATS.cat;
-    for (let i = 0; i < 2; i++) out.push({ breed: 'cat', coat: cc[(Math.floor(r(i + 30) * cc.length) + i * 2) % cc.length], personality: pers[Math.floor(r(i + 40) * pers.length)], sex: r(i + 50) < 0.5 ? 'boy' : 'girl', price: adoptPrice(true) });
-    if (G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
+    const coats = G.BREED_COATS[breed] || ['red']; const cat = breed === 'cat';
+    const off = Math.floor(r(99) * coats.length);
+    for (let i = 0; i < 3; i++) out.push({ breed, coat: coats[(off + i) % coats.length], personality: pers[Math.floor(r(i + 5) * pers.length)], sex: r(i + 20) < 0.5 ? 'boy' : 'girl', price: adoptPrice(cat) });
+    if (cat && G.state.npc.nori && G.state.npc.nori.fed >= 3 && !G.state.npc.nori.adopted) out.push({ breed: 'cat', coat: 'black', personality: 'proud', sex: 'girl', price: 0, nori: true, name: 'Nori' });
     return out;
+  }
+  // step 1: pick a breed (locked ones show how to unlock them)
+  function breedSheet() {
+    G.checkBreeds(true);
+    const firstPet = !G.state.pets.length;
+    G.ui.sheet({ title: firstPet ? 'Choose your first Shiba' : 'Choose a breed', render(body) {
+      G.ui.note(body, firstPet ? 'Every Maple Hill story starts with a Shiba! Pick a Shiba Inu or a pocket-sized Mame Shiba. More breeds (and kittens) arrive as you play.' : 'Pick a breed to meet the puppies. New breeds arrive at the kennel as you play — locked ones show how to unlock them. Adoption: ' + (adoptPrice(false) ? adoptPrice(false) + ' coins (kittens ' + adoptPrice(true) + ')' : 'free') + '.');
+      const g = G.ui.grid(body); g.classList.add('breedGrid');
+      for (const b of G.BREED_ORDER) {
+        const open = G.breedUnlocked(b) && !(firstPet && b === 'cat'); const info = G.BREED_INFO[b];
+        const img = G.M.icons.pet({ breed: b, coat: (G.BREED_COATS[b] || ['red'])[0] });
+        const name = b === 'cat' ? 'Kittens' : G.BREEDS[b].name;
+        const c = G.ui.card({ img, name, sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
+        if (!open) c.classList.add('locked'); g.appendChild(c);
+      }
+    } });
+  }
+  K.breedSheet = breedSheet;
+  // step 2: meet the puppies of that breed
+  function showBreed(breed) {
+    K.breed = breed;
+    for (const p of pups) scene.remove(p.root); pups = []; sel = null; G.ui.prompts([]);
+    candidates(breed).forEach((c, i) => spawnPup(c, i));
+    G.ui.hint(breed === 'cat' ? 'Tap a kitten to meet them.' : 'Tap a puppy to meet them. (Breeds button to see other breeds)', 0);
+  }
+  function spawnPup(c) {
+    const p = new G.Pet(Object.assign({ name: c.name || '', mood: 85, acc: {} }, c), { npc: true }); p.cand = c;
+    p.pos.set(U.rand(-2.2, 2.2), 0, U.rand(-1.4, 1.4)); p.heading = Math.random() * 6;
+    p.brain = (pp) => (function* () {
+      if (pp === sel) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act(pp.cat ? 'sit' : U.pick(['sit', 'bow', 'sit']), 2); if (!pp.cat && U.chance(0.4)) { pp.voice(); pp.excite = 1; } return; }
+      const r = Math.random();
+      if (r < 0.35) { yield* pp.goto(U.rand(-2.4, 2.4), U.rand(-1.6, 1.6), { speed: U.pick([0.8, 1.2, 2]) }); }
+      else if (r < 0.5) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act('sit', 2); }
+      else if (r < 0.6) yield* pp.act('lie', 3);
+      else if (r < 0.7) yield* pp.sniffAround(1);
+      else if (r < 0.78 && !pp.cat) yield* pp.zoomies(0, 0, 1.3, 1);
+      else if (r < 0.85 && pp.cat) yield* pp.groom();
+      else if (r < 0.92) { const o = U.pick(pups.filter((x) => x !== pp)); if (o) { yield* pp.goto(o.pos.x + 0.4, o.pos.z, { timeout: 4 }); yield* pp.face(o.pos.x, o.pos.z); pp.setPose(pp.cat ? 'sit' : 'bow'); yield* pp.wait(1); } }
+      else yield* pp.scratch();
+    })();
+    p.bounds = (pp) => { pp.pos.x = U.clamp(pp.pos.x, -2.7, 2.7); pp.pos.z = U.clamp(pp.pos.z, -1.9, 2.0); };
+    scene.add(p.root); pups.push(p);
   }
   K.enter = function (opts) {
     K.from = opts.from || 'home';
     first = !!opts.first || !G.state.pets.length;
     for (const p of pups) scene.remove(p.root); pups = []; sel = null;
-    candidates().forEach((c, i) => {
-      const p = new G.Pet(Object.assign({ name: c.name || '', mood: 85, acc: {} }, c), { npc: true }); p.cand = c;
-      p.pos.set(U.rand(-2.2, 2.2), 0, U.rand(-1.4, 1.4)); p.heading = Math.random() * 6;
-      p.brain = (pp) => (function* () {
-        if (pp === sel) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act(pp.cat ? 'sit' : U.pick(['sit', 'bow', 'sit']), 2); if (!pp.cat && U.chance(0.4)) { pp.voice(); pp.excite = 1; } return; }
-        const r = Math.random();
-        if (r < 0.35) { yield* pp.goto(U.rand(-2.4, 2.4), U.rand(-1.6, 1.6), { speed: U.pick([0.8, 1.2, 2]) }); }
-        else if (r < 0.5) { pp.lookCam = 3; yield* pp.face(cam.position.x, cam.position.z); yield* pp.act('sit', 2); }
-        else if (r < 0.6) yield* pp.act('lie', 3);
-        else if (r < 0.7) yield* pp.sniffAround(1);
-        else if (r < 0.78 && !pp.cat) yield* pp.zoomies(0, 0, 1.3, 1);
-        else if (r < 0.85 && pp.cat) yield* pp.groom();
-        else if (r < 0.92) { const o = U.pick(pups.filter((x) => x !== pp)); if (o) { yield* pp.goto(o.pos.x + 0.4, o.pos.z, { timeout: 4 }); yield* pp.face(o.pos.x, o.pos.z); pp.setPose(pp.cat ? 'sit' : 'bow'); yield* pp.wait(1); } }
-        else yield* pp.scratch();
-      })();
-      p.bounds = (pp) => { pp.pos.x = U.clamp(pp.pos.x, -2.7, 2.7); pp.pos.z = U.clamp(pp.pos.z, -1.9, 2.0); };
-      scene.add(p.root); pups.push(p);
-    });
+    // pups appear after choosing a breed
     if (K.ghost) { scene.remove(K.ghost.root); K.ghost = null; }
     const hr = new Date().getHours();
     if (hr < 3 && !first) {
@@ -7109,12 +7255,12 @@ G.scenes.kennel = (() => {
       gh.pos.set(2.3, 0, -1.6); gh.baseY = 0.15; gh.heading = -0.6; scene.add(gh.root); K.ghost = gh;
       gh.brain = (pp) => (function* () { pp.lookCam = 3; pp.excite = 1; yield* pp.act(U.pick(['sit', 'bow', 'stand']), 2.5); })();
     }
-    G.ui.hint(first ? 'Welcome to Maple Hill! Tap a puppy or kitten to meet them.' : 'Tap a pet to meet them.', 0);
+    K.breed = null; G.ui.hint(first ? 'Welcome to Maple Hill! Choose your first Shiba.' : 'Choose a breed to meet the puppies.', 0); setTimeout(breedSheet, 500);
     cam.position.set(0, 3.6, 6.4);
   };
   K.debugPups = () => pups;
   K.exit = function () { G.ui.hint(null); G.ui.prompts([]); };
-  K.dock = () => (first ? [] : [{ label: K.from === 'walk' ? 'Leave' : 'Home', icon: K.from === 'walk' ? 'door' : 'home', cls: 'go', fn: () => G.go(K.from === 'walk' ? 'walk' : 'home', { from: 'kennel' }) }]);
+  K.dock = () => [{ label: 'Breeds', icon: 'paw', fn: () => breedSheet() }].concat(first ? [] : [{ label: K.from === 'walk' ? 'Leave' : 'Home', icon: K.from === 'walk' ? 'door' : 'home', cls: 'go', fn: () => G.go(K.from === 'walk' ? 'walk' : 'home', { from: 'kennel' }) }]);
   K.onDown = function () { };
   K.onUp = function (p) {
     if (!p.tap) return;
@@ -7140,9 +7286,10 @@ G.scenes.kennel = (() => {
     const d = G.newPetData({ name: res.name, breed: c.breed, coat: c.coat, sex: res.sex, personality: c.personality, acc: c.breed === 'cat' ? { collar: 'collar_pink' } : { collar: 'collar_red' } });
     if (c.nori) { G.state.npc.nori.adopted = true; }
     if (c.breed === 'cat' && !G.state.acc.collar_pink) G.state.acc.collar_pink = 1;
+    if (!G.state.firstPlay) G.state.firstPlay = Date.now();
     G.state.pets.push(d); G.state.active = d.id;
     G.audio.play('fanfare'); G.ui.banner('Welcome home,', res.name + '!', 2200);
-    G.save();
+    G.save(); setTimeout(() => G.checkBreeds(), 4000);
     setTimeout(() => G.go('home'), 1600);
   }
   K.update = function (dt) {

@@ -106,6 +106,7 @@ G.stamp = function (id) {
 };
 G.checkStamps = function () {
   const s = G.state; if (!s || !s.pets) return; const st = s.stats;
+  if (G.checkBreeds) G.checkBreeds();
   if (s.pets.length) G.stamp('first');
   if (st.pets >= 100) G.stamp('pets100'); if (st.pets >= 1000) G.stamp('pets1000');
   if (s.pets.some((p) => (p.nameLearn || 0) >= 1)) G.stamp('named');
@@ -131,10 +132,17 @@ G.checkStamps = function () {
   if (s.trophies.some((t) => t.place === 1 && t.kind === 'obedience')) G.stamp('obedience');
 };
 G.ui.stampSheet = function () {
-  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
+  G.ui.sheet({ title: 'Stamp book', tabs: [{ id: 'quests', name: 'Daily' }, { id: 'stamps', name: 'Stamps' }, { id: 'album', name: 'Album' }, { id: 'breeds', name: 'Breeds' }, { id: 'caps', name: 'Capsules' }, { id: 'stats', name: 'Records' }], render(body, tab) {
     const s = G.state; s.stamps = s.stamps || {};
     if (tab === 'quests') { G.quests.tab(body); return; }
     if (tab === 'album') { G.photos.tab(body); return; }
+    if (tab === 'breeds') {
+      const n = G.BREED_ORDER.filter((b) => G.breedUnlocked(b)).length;
+      G.ui.note(body, n + ' of ' + G.BREED_ORDER.length + ' breeds unlocked at Maple Kennel. Each breed has its own coats and a special trait.');
+      const g = G.ui.grid(body); g.classList.add('breedGrid');
+      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + info.hint, dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
+      return;
+    }
     if (tab === 'stamps') {
       const got = G.STAMPS.filter((x) => s.stamps[x.id]).length;
       G.ui.note(body, got + ' of ' + G.STAMPS.length + ' stamps. Secret stamps show as ??? until you find them.');
