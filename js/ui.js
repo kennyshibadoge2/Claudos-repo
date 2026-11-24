@@ -295,20 +295,28 @@ G.ui = (() => {
         hd.innerHTML = '<img src="' + port + '" style="width:54px;height:54px;border-radius:16px;background:#fbe9cf" alt=""><div><b>Daisuke</b><div class="note" style="margin:0">' + U.esc(greet) + '</div></div>';
         body.appendChild(hd);
         const g = grid(body); const cats = G.SHOP_TABS.find((t) => t.id === tb).cats;
-        Object.keys(G.ITEMS).filter((k) => cats.includes(G.ITEMS[k].cat) && G.ITEMS[k].price > 0 && k !== 'crown' || (tb === 'acc' && k === 'crown')).forEach((k) => {
+        Object.keys(G.ITEMS).filter((k) => cats.includes(G.ITEMS[k].cat) && (G.ITEMS[k].price > 0 || G.ITEMS[k].prize)).forEach((k) => {
           const it = G.ITEMS[k]; const unique = it.cat === 'acc' || it.cat === 'toy';
           const have = it.cat === 'toy' ? G.state.toys[k] : it.cat === 'acc' ? G.state.acc[k] : G.state.inv[k];
           const owned = unique && have;
           const c = card({ img: G.M.icons.item(k), name: it.name, sub: it.desc, badge: !unique && have ? have : undefined });
-          const b = document.createElement('button'); b.className = 'buy'; b.textContent = owned ? 'Owned' : it.price + ' coins';
-          b.disabled = owned || G.state.coins < it.price;
-          b.onclick = (e) => { e.stopPropagation(); if (G.state.coins < it.price) return; G.state.coins -= it.price; G.addItem(k, 1); G.audio.play('coin'); ui.toast('Bought ' + it.name + '!'); ui.refresh(); ui.resheet(); G.save(); };
+          const b = document.createElement('button'); b.className = 'buy'; b.textContent = owned ? 'Owned' : it.prize ? '\ud83c\udfc6 ' + it.prize : it.price + ' coins';
+          b.disabled = owned || !!it.prize || G.state.coins < it.price; if (it.prize && !owned) b.classList.add('prizeOnly');
+          b.onclick = (e) => { e.stopPropagation(); if (it.prize || G.state.coins < it.price) return; G.state.coins -= it.price; G.addItem(k, 1); G.audio.play('coin'); ui.toast('Bought ' + it.name + '!'); ui.refresh(); ui.resheet(); G.save(); };
           c.appendChild(b); g.appendChild(c);
         });
       },
     });
   };
   /* ---- Pet info ---- */
+  // award exclusive accessories; returns the ones that are new
+  G.givePrize = function (ids) { const got = []; for (const k of ids) if (!G.state.acc[k]) { G.state.acc[k] = 1; got.push(k); } G.save(); return got; };
+  ui.prizeBox = function (body, got, ids, pet) {
+    const box = document.createElement('div'); box.className = 'prizeBox';
+    box.innerHTML = '<h3>' + (got.length ? '\ud83c\udfc6 Exclusive prize!' : 'Champion again!') + '</h3>' + ids.map((k) => '<div class="prizeItem"><img src="' + G.M.icons.item(k) + '" alt=""><b>' + U.esc(G.ITEMS[k].name) + '</b><small>' + U.esc(G.ITEMS[k].desc) + '</small></div>').join('') + (got.length ? '' : '<p class="note">You already own these \u2014 a true legend.</p>');
+    if (got.length && pet) { const b = document.createElement('button'); b.className = 'btn pink'; b.textContent = 'Put it on ' + pet.name + '!'; b.onclick = () => { for (const k of got) { pet.d.acc[G.ITEMS[k].slot] = k; } pet.applyAcc && pet.applyAcc(); G.audio.play('sparkle'); pet.fx && pet.fx('sparkle', 8); b.disabled = true; b.textContent = 'Looking good!'; G.save(); }; box.appendChild(b); }
+    body.appendChild(box);
+  };
   ui.petInfo = function (d) {
     const p = G.petObj(d.id);
     ui.sheet({
@@ -322,6 +330,11 @@ G.ui = (() => {
         note(body, G.PERSONALITIES[d.personality].desc);
         const h = document.createElement('h3'); h.textContent = 'Tricks learned'; body.appendChild(h);
         note(body, learned.length ? learned.join(', ') : 'None yet. Open Tricks to see how to teach them.');
+        if (d.breed !== 'cat') {
+          const cups = G.petCups(d); const h2 = document.createElement('h3'); h2.textContent = 'Contest progress'; body.appendChild(h2);
+          const row = (name, list, wonKey) => { const won = list.filter((c) => cups[wonKey(c)]).length; return name + ': ' + (won === list.length ? 'all ' + list.length + ' won \u2b50' : won + '/' + list.length + ' won'); };
+          note(body, [row('Disc Cups', G.CONTESTS, (c) => c.id + '_won'), G.TRIALS ? row('Agility', G.TRIALS.agility, (c) => c.id + '_won') : '', G.TRIALS ? row('Obedience', G.TRIALS.obedience, (c) => c.id + '_won') : ''].filter(Boolean).join(' \u00b7 ') + '. Each pet climbs the cups on their own.');
+        }
         const r = document.createElement('div'); r.className = 'mrow';
         const rn = document.createElement('button'); rn.className = 'btn ghost'; rn.textContent = 'Rename';
         rn.onclick = () => ui.nameModal({ title: 'Rename ' + d.name, value: d.name, sex: false }).then((v) => { if (v) { d.name = v.name; ui.refresh(true); ui.closeSheet(true); G.save(); } });

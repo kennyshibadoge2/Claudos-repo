@@ -86,7 +86,7 @@ G.scenes.kennel = (() => {
     const hills = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), G.M.mat(season === 'winter' ? '#e8f0f6' : '#8fc46a', { r: 1 })); hills.scale.set(1.6, 0.25, 1); hills.position.set(0, -0.5, -26); scene.add(hills);
   };
   // first pet is free; each extra pet costs more (cats a little less)
-  function adoptPrice(cat) { const base = [0, 600, 900, 1200][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
+  function adoptPrice(cat) { const base = [0, 3000, 5000, 8000][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
   function candidates() {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);

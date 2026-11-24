@@ -217,6 +217,8 @@ h3{margin:14px 0 6px;font-size:18px}
 .album{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.album img{width:100%;border-radius:10px;border:4px solid #fff;box-shadow:0 2px 6px rgba(59,42,31,.25);cursor:pointer;transform:rotate(-1deg)}.album img:nth-child(2n){transform:rotate(1.2deg)}
 .photoPrev{display:block;width:100%;max-height:52vh;object-fit:contain;border-radius:10px;border:5px solid #fff;box-shadow:0 3px 10px rgba(59,42,31,.3);margin:6px 0 10px}
 .photoFlash{position:fixed;inset:0;background:#fff;z-index:90;pointer-events:none;animation:pflash .45s ease-out forwards}@keyframes pflash{from{opacity:.95}to{opacity:0}}
+.prizeBox{background:linear-gradient(135deg,#fff6d6,#ffe9b0);border:3px solid #f2c24b;border-radius:18px;padding:12px;margin:10px 0;text-align:center}.prizeBox h3{margin:0 0 8px}.prizeItem{display:inline-flex;flex-direction:column;align-items:center;width:46%;vertical-align:top;margin:4px}.prizeItem img{width:72px;height:72px;border-radius:16px;background:#fff}.prizeItem small{color:#8a6a4a;font-size:12px}
+.buy.prizeOnly{font-size:11px;line-height:1.15;background:#fff1c4;color:#8a6a1a}
 </style>
 </head>
 <body>
@@ -334,6 +336,18 @@ G.newState = () => ({
 G.load = () => {
   try { const s = localStorage.getItem(G.SAVE_KEY); if (s) { const o = JSON.parse(s); const n = G.newState(); for (const k in o) n[k] = o[k]; return n; } } catch (e) { /* storage off */ }
   return null;
+};
+// cup progress is tracked per pet (each dog climbs the ladder on their own)
+G.petCups = function (d) {
+  if (!d.cups) {
+    d.cups = { beginner: true };
+    for (const t of (G.state && G.state.trophies) || []) {
+      if (t.pet !== d.id || t.place !== 1) continue;
+      if (t.kind) d.cups[t.cls + '_won'] = true;
+      else { const i = (G.CONTESTS || []).findIndex((c) => c.id === t.cls); if (i >= 0) { d.cups[t.cls + '_won'] = true; const nx = G.CONTESTS[i + 1]; if (nx) d.cups[nx.id] = true; } }
+    }
+  }
+  return d.cups;
 };
 G.save = () => { if (!G.state) return; try { G.state.last = Date.now(); localStorage.setItem(G.SAVE_KEY, JSON.stringify(G.state)); } catch (e) { /* full or blocked */ } };
 G.wipe = () => { try { localStorage.removeItem(G.SAVE_KEY); } catch (e) { } };
@@ -888,12 +902,15 @@ G.ITEMS = {
   flower: { name: 'Flower Crown', cat: 'acc', slot: 'head', price: 150, color: '#f39bb0', desc: 'Spring picnic royalty.' },
   straw: { name: 'Straw Hat', cat: 'acc', slot: 'head', price: 140, color: '#e8c87a', desc: 'Summer festival vibes.' },
   bow: { name: 'Big Bow', cat: 'acc', slot: 'head', price: 70, color: '#ff6f91', desc: 'Adorable. Non-negotiable.' },
+  cape: { name: 'Champion Cape', cat: 'acc', slot: 'neck', price: 0, prize: 'Win the Champions Cup', color: '#c8323c', desc: 'Red velvet, gold trim. Only true disc legends wear this.' },
+  medal_ag: { name: 'Agility Gold Medal', cat: 'acc', slot: 'neck', price: 0, prize: 'Win Agility: Masters', color: '#3b7dd8', desc: 'Fastest paws in Maple Hill.' },
+  medal_ob: { name: 'Obedience Gold Medal', cat: 'acc', slot: 'neck', price: 0, prize: 'Win Obedience: Utility', color: '#e2574c', desc: 'A perfectly good dog. Officially.' },
   bunny: { name: 'Bunny Ears', cat: 'acc', slot: 'head', price: 160, color: '#ffffff', desc: 'Hop hop. Floppy on one side.' },
   sailor: { name: 'Sailor Cap', cat: 'acc', slot: 'head', price: 170, color: '#ffffff', desc: 'Ahoy! Ready for the pond pier.' },
   tiara: { name: 'Sparkle Tiara', cat: 'acc', slot: 'head', price: 280, color: '#d9dde6', desc: 'For the royalty of the dog park.' },
   patch: { name: 'Pirate Patch', cat: 'acc', slot: 'face', price: 120, color: '#1a1a1a', desc: 'Arr. Strictly for treasure hunts.' },
   frog: { name: 'Frog Hat', cat: 'acc', slot: 'head', price: 220, color: '#79b25a', desc: 'Ribbit.' },
-  crown: { name: 'Champion Crown', cat: 'acc', slot: 'head', price: 900, color: '#f2c24b', desc: 'For legends of the disc.', metal: true },
+  crown: { name: 'Champion Crown', cat: 'acc', slot: 'head', price: 0, prize: 'Win the Champions Cup', color: '#f2c24b', desc: 'For legends of the disc.', metal: true },
   glasses: { name: 'Round Glasses', cat: 'acc', slot: 'face', price: 110, color: '#3b2a1f', desc: 'Very scholarly.' },
   shades: { name: 'Sunglasses', cat: 'acc', slot: 'face', price: 160, color: '#1a1a1a', desc: 'Too cool for the dog park.', dark: true },
 };
@@ -1546,6 +1563,26 @@ M.acc = function (id) {
       const tri = new THREE.ConeGeometry(0.1, 0.14, 3, 1); tri.rotateX(Math.PI); tri.scale(1, 1, 0.25);
       const tm = mesh(tri, mat, null, g); tm.position.set(0, -0.055, 0.118); tm.rotation.set(-0.2, Math.PI / 6 * 3, 0);
       if (!it.plaid) { const dots = M.mat('#fff4e0'); for (let i = 0; i < 5; i++) { const d = mesh(new THREE.SphereGeometry(0.008, 6, 6), dots, null, tm, false); d.position.set(U.rand(-0.04, 0.04), U.rand(-0.04, 0.04), 0.012); } }
+      break;
+    }
+    case 'cape': {
+      const vel = M.mat(col, { r: 0.85, side: THREE.DoubleSide }), gold = M.mat('#f2c24b', { r: 0.3, m: 0.85 });
+      const t = mesh(new THREE.TorusGeometry(0.13, 0.016, 8, 30), gold, null, g); t.rotation.x = Math.PI / 2;
+      const clasp = mesh(new THREE.SphereGeometry(0.024, 12, 10), gold, null, g); clasp.position.set(0, -0.01, 0.135);
+      const geo = new THREE.PlaneGeometry(0.3, 0.34, 8, 8); const pa = geo.attributes.position;
+      for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i); const k = (0.17 - y) / 0.34; pa.setXYZ(i, x * (0.8 + k * 0.6), y, -Math.cos(x / 0.3 * Math.PI) * 0.09 * (0.6 + k * 0.6) + k * k * 0.07 + Math.sin(k * 3 + x * 20) * 0.006); }
+      geo.computeVertexNormals();
+      const cg = new THREE.Group(); cg.rotation.x = -0.85; g.add(cg); // undo the neck tilt: body-aligned frame
+      const cp = mesh(geo, vel, null, cg); cp.rotation.x = 1.3; cp.position.set(0, 0.07, -0.2);
+      const star = mesh(new THREE.CircleGeometry(0.035, 5), gold, null, cp); star.position.set(0, -0.02, 0.012); star.rotation.z = Math.PI / 2;
+      break;
+    }
+    case 'medal_ag': case 'medal_ob': {
+      const rib = M.mat(col, { r: 0.7 }), gold = M.mat('#f2c24b', { r: 0.25, m: 0.9 });
+      const t = mesh(new THREE.TorusGeometry(0.128, 0.012, 6, 30), rib, null, g); t.rotation.x = Math.PI / 2;
+      for (const s of [-1, 1]) { const r = mesh(new THREE.BoxGeometry(0.03, 0.08, 0.008), rib, null, g); r.position.set(s * 0.02, -0.04, 0.135); r.rotation.z = s * 0.35; }
+      const md = mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.01, 24), gold, null, g); md.rotation.x = Math.PI / 2; md.position.set(0, -0.085, 0.14);
+      const st = mesh(new THREE.CircleGeometry(0.02, 5), M.mat('#fff4c0', { r: 0.4, m: 0.5 }), null, g); st.position.set(0, -0.085, 0.146); st.rotation.z = Math.PI / 2;
       break;
     }
     case 'scarf': {
@@ -3068,20 +3105,28 @@ G.ui = (() => {
         hd.innerHTML = '<img src="' + port + '" style="width:54px;height:54px;border-radius:16px;background:#fbe9cf" alt=""><div><b>Daisuke</b><div class="note" style="margin:0">' + U.esc(greet) + '</div></div>';
         body.appendChild(hd);
         const g = grid(body); const cats = G.SHOP_TABS.find((t) => t.id === tb).cats;
-        Object.keys(G.ITEMS).filter((k) => cats.includes(G.ITEMS[k].cat) && G.ITEMS[k].price > 0 && k !== 'crown' || (tb === 'acc' && k === 'crown')).forEach((k) => {
+        Object.keys(G.ITEMS).filter((k) => cats.includes(G.ITEMS[k].cat) && (G.ITEMS[k].price > 0 || G.ITEMS[k].prize)).forEach((k) => {
           const it = G.ITEMS[k]; const unique = it.cat === 'acc' || it.cat === 'toy';
           const have = it.cat === 'toy' ? G.state.toys[k] : it.cat === 'acc' ? G.state.acc[k] : G.state.inv[k];
           const owned = unique && have;
           const c = card({ img: G.M.icons.item(k), name: it.name, sub: it.desc, badge: !unique && have ? have : undefined });
-          const b = document.createElement('button'); b.className = 'buy'; b.textContent = owned ? 'Owned' : it.price + ' coins';
-          b.disabled = owned || G.state.coins < it.price;
-          b.onclick = (e) => { e.stopPropagation(); if (G.state.coins < it.price) return; G.state.coins -= it.price; G.addItem(k, 1); G.audio.play('coin'); ui.toast('Bought ' + it.name + '!'); ui.refresh(); ui.resheet(); G.save(); };
+          const b = document.createElement('button'); b.className = 'buy'; b.textContent = owned ? 'Owned' : it.prize ? '\ud83c\udfc6 ' + it.prize : it.price + ' coins';
+          b.disabled = owned || !!it.prize || G.state.coins < it.price; if (it.prize && !owned) b.classList.add('prizeOnly');
+          b.onclick = (e) => { e.stopPropagation(); if (it.prize || G.state.coins < it.price) return; G.state.coins -= it.price; G.addItem(k, 1); G.audio.play('coin'); ui.toast('Bought ' + it.name + '!'); ui.refresh(); ui.resheet(); G.save(); };
           c.appendChild(b); g.appendChild(c);
         });
       },
     });
   };
   /* ---- Pet info ---- */
+  // award exclusive accessories; returns the ones that are new
+  G.givePrize = function (ids) { const got = []; for (const k of ids) if (!G.state.acc[k]) { G.state.acc[k] = 1; got.push(k); } G.save(); return got; };
+  ui.prizeBox = function (body, got, ids, pet) {
+    const box = document.createElement('div'); box.className = 'prizeBox';
+    box.innerHTML = '<h3>' + (got.length ? '\ud83c\udfc6 Exclusive prize!' : 'Champion again!') + '</h3>' + ids.map((k) => '<div class="prizeItem"><img src="' + G.M.icons.item(k) + '" alt=""><b>' + U.esc(G.ITEMS[k].name) + '</b><small>' + U.esc(G.ITEMS[k].desc) + '</small></div>').join('') + (got.length ? '' : '<p class="note">You already own these \u2014 a true legend.</p>');
+    if (got.length && pet) { const b = document.createElement('button'); b.className = 'btn pink'; b.textContent = 'Put it on ' + pet.name + '!'; b.onclick = () => { for (const k of got) { pet.d.acc[G.ITEMS[k].slot] = k; } pet.applyAcc && pet.applyAcc(); G.audio.play('sparkle'); pet.fx && pet.fx('sparkle', 8); b.disabled = true; b.textContent = 'Looking good!'; G.save(); }; box.appendChild(b); }
+    body.appendChild(box);
+  };
   ui.petInfo = function (d) {
     const p = G.petObj(d.id);
     ui.sheet({
@@ -3095,6 +3140,11 @@ G.ui = (() => {
         note(body, G.PERSONALITIES[d.personality].desc);
         const h = document.createElement('h3'); h.textContent = 'Tricks learned'; body.appendChild(h);
         note(body, learned.length ? learned.join(', ') : 'None yet. Open Tricks to see how to teach them.');
+        if (d.breed !== 'cat') {
+          const cups = G.petCups(d); const h2 = document.createElement('h3'); h2.textContent = 'Contest progress'; body.appendChild(h2);
+          const row = (name, list, wonKey) => { const won = list.filter((c) => cups[wonKey(c)]).length; return name + ': ' + (won === list.length ? 'all ' + list.length + ' won \u2b50' : won + '/' + list.length + ' won'); };
+          note(body, [row('Disc Cups', G.CONTESTS, (c) => c.id + '_won'), G.TRIALS ? row('Agility', G.TRIALS.agility, (c) => c.id + '_won') : '', G.TRIALS ? row('Obedience', G.TRIALS.obedience, (c) => c.id + '_won') : ''].filter(Boolean).join(' \u00b7 ') + '. Each pet climbs the cups on their own.');
+        }
         const r = document.createElement('div'); r.className = 'mrow';
         const rn = document.createElement('button'); rn.className = 'btn ghost'; rn.textContent = 'Rename';
         rn.onclick = () => ui.nameModal({ title: 'Rename ' + d.name, value: d.name, sex: false }).then((v) => { if (v) { d.name = v.name; ui.refresh(true); ui.closeSheet(true); G.save(); } });
@@ -6373,7 +6423,7 @@ G.scenes.frisbee = (() => {
       G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, may get distracted and chew the disc, and might not let go of it!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
       const l = G.ui.list(body);
       G.CONTESTS.forEach((c) => {
-        const open = G.state.unlocked[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id).reduce((m, t) => Math.min(m, t.place), 9);
+        const open = G.petCups(pet.d)[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id && t.pet === pet.d.id).reduce((m, t) => Math.min(m, t.place), 9);
         l.appendChild(G.ui.li({ icon: 'trophy', title: c.name + (best < 9 ? ' — best: ' + ['', '1st', '2nd', '3rd'][best] : ''), sub: open ? c.time + 's round · entry ' + (c.fee ? c.fee + ' coins' : 'free') + ' · 1st prize ' + c.prize[0] : 'Locked: win the ' + G.CONTESTS.find((x) => x.id === c.need).name + ' first', lock: !open, fn: open ? () => { if (G.state.coins < c.fee) { G.ui.toast('Not enough coins for the entry fee.'); return; } G.ui.closeSheet(true); G.state.coins -= c.fee; G.ui.refresh(); start(c); } : null }));
       });
     } });
@@ -6540,7 +6590,8 @@ G.scenes.frisbee = (() => {
     const prize = place <= 3 ? c.prize[place - 1] : 15;
     if (place <= 3) { G.state.trophies.push({ cls: c.id, place, date: Date.now(), pet: pet.d.id }); pet.d.trophies = (pet.d.trophies || 0) + 1; }
     let unlockedNew = null;
-    if (place === 1) { const nx = G.CONTESTS[G.CONTESTS.indexOf(c) + 1]; if (nx && !G.state.unlocked[nx.id]) { G.state.unlocked[nx.id] = true; unlockedNew = nx; } if (c.id === 'champ' && !G.state.acc.crown) G.state.acc.crown = 1; }
+    let prizeAcc = [];
+    if (place === 1) { const cups = G.petCups(pet.d); cups[c.id + '_won'] = true; const nx = G.CONTESTS[G.CONTESTS.indexOf(c) + 1]; if (nx && !cups[nx.id]) { cups[nx.id] = true; unlockedNew = nx; } if (c.id === 'champ') prizeAcc = G.givePrize(['crown', 'cape']); }
     G.state.coins += prize; G.checkStamps(); G.save();
     G.audio.track(place <= 3 ? 'victory' : 'contestIntro');
     if (place === 1) { G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 60); crowdJump(1.5, 0); if (c.tier >= 2) fireworks(5); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
@@ -6549,7 +6600,8 @@ G.scenes.frisbee = (() => {
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', 'You won the ' + c.name + '!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         board.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + Math.round(b.score) + '</span>'; body.appendChild(r); });
-        G.ui.note(body, stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + (c.id === 'champ' && place === 1 ? ' You earned the Champion Crown!' : ''));
+        G.ui.note(body, stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + '');
+        if (c.id === 'champ' && place === 1) G.ui.prizeBox(body, prizeAcc, ['crown', 'cape'], pet);
         const r = document.createElement('div'); r.className = 'mrow';
         const again = document.createElement('button'); again.className = 'btn ghost'; again.textContent = 'Enter another cup'; again.onclick = () => { G.ui.closeSheet(true); st = null; clearRivals(); classMenu(); };
         const back = document.createElement('button'); back.className = 'btn orange'; back.textContent = from === 'walk' ? 'Back to town' : 'Go home'; back.onclick = () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' });
@@ -6701,7 +6753,7 @@ G.scenes.kennel = (() => {
     const hills = new THREE.Mesh(new THREE.SphereGeometry(18, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), G.M.mat(season === 'winter' ? '#e8f0f6' : '#8fc46a', { r: 1 })); hills.scale.set(1.6, 0.25, 1); hills.position.set(0, -0.5, -26); scene.add(hills);
   };
   // first pet is free; each extra pet costs more (cats a little less)
-  function adoptPrice(cat) { const base = [0, 600, 900, 1200][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
+  function adoptPrice(cat) { const base = [0, 3000, 5000, 8000][Math.min(3, G.state.pets.length)]; return Math.round(base * (cat ? 0.75 : 1) / 10) * 10; }
   function candidates() {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
@@ -7324,7 +7376,7 @@ G.scenes.trials = (() => {
       else { const learned = G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1); G.ui.note(body, 'Judge Hoshino calls commands. Perform each trick’s gesture on ' + pet.name + ' before time runs out. Only tricks ' + pet.name + ' has learned will be called (' + learned.length + ' learned).'); }
       const l = G.ui.list(body);
       list.forEach((c) => {
-        const open = !c.need || G.state.unlocked[c.need + '_won'];
+        const open = !c.need || G.petCups(pet.d)[c.need + '_won'];
         l.appendChild(G.ui.li({ icon: 'trophy', title: c.name, sub: open ? 'Entry ' + (c.fee ? c.fee + ' coins' : 'free') + ' · 1st prize ' + c.prize[0] + ' coins' : 'Locked: win the previous level first', lock: !open, fn: open ? () => {
           if (mode === 'obedience' && G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1).length < 2) { G.ui.toast(pet.name + ' needs to know at least 2 tricks. Teach Sit and Lie down at home!'); return; }
           if (G.state.coins < c.fee) { G.ui.toast('Not enough coins.'); return; } G.state.coins -= c.fee; G.ui.closeSheet(true); start(c); } : null }));
@@ -7461,13 +7513,15 @@ G.scenes.trials = (() => {
     const place = rivals.findIndex((x) => x.me) + 1; const prize = place <= 3 ? c.prize[place - 1] : 15;
     G.state.coins += prize; G.state.stats.contests++;
     if (place <= 3) G.state.trophies.push({ cls: c.id, kind: mode, place, date: Date.now(), pet: pet.d.id });
-    if (place === 1) { G.state.unlocked[c.id + '_won'] = true; G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 50); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
+    let prizeAcc = []; const PRZ = { ag3: 'medal_ag', ob3: 'medal_ob' }[c.id];
+    if (place === 1) { G.petCups(pet.d)[c.id + '_won'] = true; if (PRZ) prizeAcc = G.givePrize([PRZ]); G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 50); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
     G.checkStamps(); G.save();
     pet.do((function* () { pet.setPose('stand'); yield* pet.face(cam.position.x, cam.position.z); if (place <= 3) { pet.excite = 1; pet.voice(); yield* pet.act('beg', 1.6, 'happy'); } yield* pet.act('sit', 2); })());
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', '1st place!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         rivals.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + (lowerBetter ? b.score.toFixed(1) + 's' : b.score) + '</span>'; body.appendChild(r); });
         G.ui.note(body, 'Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Practice makes perfect!') + (place === 1 && G.TRIALS[mode].find((x) => x.need === c.id) ? ' The next level is unlocked!' : ''));
+        if (place === 1 && PRZ) G.ui.prizeBox(body, prizeAcc, [PRZ], pet);
         const r = document.createElement('div'); r.className = 'mrow';
         const again = document.createElement('button'); again.className = 'btn ghost'; again.textContent = 'Other events'; again.onclick = () => { G.ui.closeSheet(true); menu(); };
         const back = document.createElement('button'); back.className = 'btn orange'; back.textContent = from === 'walk' ? 'Back to town' : 'Go home'; back.onclick = () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' });

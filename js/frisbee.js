@@ -214,7 +214,7 @@ G.scenes.frisbee = (() => {
       G.ui.note(body, pet.name + '’s disc skill: ' + Math.round(sk) + '/100 — ' + (sk < 25 ? 'can’t jump yet, may get distracted and chew the disc, and might not let go of it!' : sk < 60 ? 'can make jumping catches.' : 'can do flip catches!') + (discId === 'prodisc' ? ' Using the Pro Disc.' : ''));
       const l = G.ui.list(body);
       G.CONTESTS.forEach((c) => {
-        const open = G.state.unlocked[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id).reduce((m, t) => Math.min(m, t.place), 9);
+        const open = G.petCups(pet.d)[c.id]; const best = G.state.trophies.filter((t) => t.cls === c.id && t.pet === pet.d.id).reduce((m, t) => Math.min(m, t.place), 9);
         l.appendChild(G.ui.li({ icon: 'trophy', title: c.name + (best < 9 ? ' — best: ' + ['', '1st', '2nd', '3rd'][best] : ''), sub: open ? c.time + 's round · entry ' + (c.fee ? c.fee + ' coins' : 'free') + ' · 1st prize ' + c.prize[0] : 'Locked: win the ' + G.CONTESTS.find((x) => x.id === c.need).name + ' first', lock: !open, fn: open ? () => { if (G.state.coins < c.fee) { G.ui.toast('Not enough coins for the entry fee.'); return; } G.ui.closeSheet(true); G.state.coins -= c.fee; G.ui.refresh(); start(c); } : null }));
       });
     } });
@@ -381,7 +381,8 @@ G.scenes.frisbee = (() => {
     const prize = place <= 3 ? c.prize[place - 1] : 15;
     if (place <= 3) { G.state.trophies.push({ cls: c.id, place, date: Date.now(), pet: pet.d.id }); pet.d.trophies = (pet.d.trophies || 0) + 1; }
     let unlockedNew = null;
-    if (place === 1) { const nx = G.CONTESTS[G.CONTESTS.indexOf(c) + 1]; if (nx && !G.state.unlocked[nx.id]) { G.state.unlocked[nx.id] = true; unlockedNew = nx; } if (c.id === 'champ' && !G.state.acc.crown) G.state.acc.crown = 1; }
+    let prizeAcc = [];
+    if (place === 1) { const cups = G.petCups(pet.d); cups[c.id + '_won'] = true; const nx = G.CONTESTS[G.CONTESTS.indexOf(c) + 1]; if (nx && !cups[nx.id]) { cups[nx.id] = true; unlockedNew = nx; } if (c.id === 'champ') prizeAcc = G.givePrize(['crown', 'cape']); }
     G.state.coins += prize; G.checkStamps(); G.save();
     G.audio.track(place <= 3 ? 'victory' : 'contestIntro');
     if (place === 1) { G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 60); crowdJump(1.5, 0); if (c.tier >= 2) fireworks(5); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
@@ -390,7 +391,8 @@ G.scenes.frisbee = (() => {
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', 'You won the ' + c.name + '!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         board.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + Math.round(b.score) + '</span>'; body.appendChild(r); });
-        G.ui.note(body, stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + (c.id === 'champ' && place === 1 ? ' You earned the Champion Crown!' : ''));
+        G.ui.note(body, stats.catches + ' catches from ' + stats.throws + ' throws. Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Keep practicing!') + (unlockedNew ? ' The ' + unlockedNew.name + ' is now unlocked!' : '') + '');
+        if (c.id === 'champ' && place === 1) G.ui.prizeBox(body, prizeAcc, ['crown', 'cape'], pet);
         const r = document.createElement('div'); r.className = 'mrow';
         const again = document.createElement('button'); again.className = 'btn ghost'; again.textContent = 'Enter another cup'; again.onclick = () => { G.ui.closeSheet(true); st = null; clearRivals(); classMenu(); };
         const back = document.createElement('button'); back.className = 'btn orange'; back.textContent = from === 'walk' ? 'Back to town' : 'Go home'; back.onclick = () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' });

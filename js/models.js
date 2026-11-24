@@ -385,6 +385,26 @@ M.acc = function (id) {
       if (!it.plaid) { const dots = M.mat('#fff4e0'); for (let i = 0; i < 5; i++) { const d = mesh(new THREE.SphereGeometry(0.008, 6, 6), dots, null, tm, false); d.position.set(U.rand(-0.04, 0.04), U.rand(-0.04, 0.04), 0.012); } }
       break;
     }
+    case 'cape': {
+      const vel = M.mat(col, { r: 0.85, side: THREE.DoubleSide }), gold = M.mat('#f2c24b', { r: 0.3, m: 0.85 });
+      const t = mesh(new THREE.TorusGeometry(0.13, 0.016, 8, 30), gold, null, g); t.rotation.x = Math.PI / 2;
+      const clasp = mesh(new THREE.SphereGeometry(0.024, 12, 10), gold, null, g); clasp.position.set(0, -0.01, 0.135);
+      const geo = new THREE.PlaneGeometry(0.3, 0.34, 8, 8); const pa = geo.attributes.position;
+      for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i); const k = (0.17 - y) / 0.34; pa.setXYZ(i, x * (0.8 + k * 0.6), y, -Math.cos(x / 0.3 * Math.PI) * 0.09 * (0.6 + k * 0.6) + k * k * 0.07 + Math.sin(k * 3 + x * 20) * 0.006); }
+      geo.computeVertexNormals();
+      const cg = new THREE.Group(); cg.rotation.x = -0.85; g.add(cg); // undo the neck tilt: body-aligned frame
+      const cp = mesh(geo, vel, null, cg); cp.rotation.x = 1.3; cp.position.set(0, 0.07, -0.2);
+      const star = mesh(new THREE.CircleGeometry(0.035, 5), gold, null, cp); star.position.set(0, -0.02, 0.012); star.rotation.z = Math.PI / 2;
+      break;
+    }
+    case 'medal_ag': case 'medal_ob': {
+      const rib = M.mat(col, { r: 0.7 }), gold = M.mat('#f2c24b', { r: 0.25, m: 0.9 });
+      const t = mesh(new THREE.TorusGeometry(0.128, 0.012, 6, 30), rib, null, g); t.rotation.x = Math.PI / 2;
+      for (const s of [-1, 1]) { const r = mesh(new THREE.BoxGeometry(0.03, 0.08, 0.008), rib, null, g); r.position.set(s * 0.02, -0.04, 0.135); r.rotation.z = s * 0.35; }
+      const md = mesh(new THREE.CylinderGeometry(0.038, 0.038, 0.01, 24), gold, null, g); md.rotation.x = Math.PI / 2; md.position.set(0, -0.085, 0.14);
+      const st = mesh(new THREE.CircleGeometry(0.02, 5), M.mat('#fff4c0', { r: 0.4, m: 0.5 }), null, g); st.position.set(0, -0.085, 0.146); st.rotation.z = Math.PI / 2;
+      break;
+    }
     case 'scarf': {
       const knit = M.mat('#ffffff', { r: 0.95, map: G.canvasTex(64, 64, (c) => { c.fillStyle = col; c.fillRect(0, 0, 64, 64); c.fillStyle = 'rgba(255,255,255,.35)'; for (let y = 0; y < 64; y += 8) for (let x = 0; x < 64; x += 8) { c.beginPath(); c.ellipse(x + 4, y + 4, 2, 3.5, 0.5, 0, 7); c.fill(); } c.fillStyle = '#e2574c'; c.fillRect(0, 24, 64, 10); }, { repeat: [4, 1] }) });
       const t = mesh(new THREE.TorusGeometry(0.13, 0.034, 12, 32), knit, null, g); t.rotation.x = Math.PI / 2;

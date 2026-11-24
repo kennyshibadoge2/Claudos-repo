@@ -48,6 +48,18 @@ G.load = () => {
   try { const s = localStorage.getItem(G.SAVE_KEY); if (s) { const o = JSON.parse(s); const n = G.newState(); for (const k in o) n[k] = o[k]; return n; } } catch (e) { /* storage off */ }
   return null;
 };
+// cup progress is tracked per pet (each dog climbs the ladder on their own)
+G.petCups = function (d) {
+  if (!d.cups) {
+    d.cups = { beginner: true };
+    for (const t of (G.state && G.state.trophies) || []) {
+      if (t.pet !== d.id || t.place !== 1) continue;
+      if (t.kind) d.cups[t.cls + '_won'] = true;
+      else { const i = (G.CONTESTS || []).findIndex((c) => c.id === t.cls); if (i >= 0) { d.cups[t.cls + '_won'] = true; const nx = G.CONTESTS[i + 1]; if (nx) d.cups[nx.id] = true; } }
+    }
+  }
+  return d.cups;
+};
 G.save = () => { if (!G.state) return; try { G.state.last = Date.now(); localStorage.setItem(G.SAVE_KEY, JSON.stringify(G.state)); } catch (e) { /* full or blocked */ } };
 G.wipe = () => { try { localStorage.removeItem(G.SAVE_KEY); } catch (e) { } };
 

@@ -98,7 +98,7 @@ G.scenes.trials = (() => {
       else { const learned = G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1); G.ui.note(body, 'Judge Hoshino calls commands. Perform each trick’s gesture on ' + pet.name + ' before time runs out. Only tricks ' + pet.name + ' has learned will be called (' + learned.length + ' learned).'); }
       const l = G.ui.list(body);
       list.forEach((c) => {
-        const open = !c.need || G.state.unlocked[c.need + '_won'];
+        const open = !c.need || G.petCups(pet.d)[c.need + '_won'];
         l.appendChild(G.ui.li({ icon: 'trophy', title: c.name, sub: open ? 'Entry ' + (c.fee ? c.fee + ' coins' : 'free') + ' · 1st prize ' + c.prize[0] + ' coins' : 'Locked: win the previous level first', lock: !open, fn: open ? () => {
           if (mode === 'obedience' && G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1).length < 2) { G.ui.toast(pet.name + ' needs to know at least 2 tricks. Teach Sit and Lie down at home!'); return; }
           if (G.state.coins < c.fee) { G.ui.toast('Not enough coins.'); return; } G.state.coins -= c.fee; G.ui.closeSheet(true); start(c); } : null }));
@@ -235,13 +235,15 @@ G.scenes.trials = (() => {
     const place = rivals.findIndex((x) => x.me) + 1; const prize = place <= 3 ? c.prize[place - 1] : 15;
     G.state.coins += prize; G.state.stats.contests++;
     if (place <= 3) G.state.trophies.push({ cls: c.id, kind: mode, place, date: Date.now(), pet: pet.d.id });
-    if (place === 1) { G.state.unlocked[c.id + '_won'] = true; G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 50); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
+    let prizeAcc = []; const PRZ = { ag3: 'medal_ag', ob3: 'medal_ob' }[c.id];
+    if (place === 1) { G.petCups(pet.d)[c.id + '_won'] = true; if (PRZ) prizeAcc = G.givePrize([PRZ]); G.audio.play('fanfare'); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 50); } else if (place <= 3) G.audio.play('chime'); else G.audio.play('sad');
     G.checkStamps(); G.save();
     pet.do((function* () { pet.setPose('stand'); yield* pet.face(cam.position.x, cam.position.z); if (place <= 3) { pet.excite = 1; pet.voice(); yield* pet.act('beg', 1.6, 'happy'); } yield* pet.act('sit', 2); })());
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', '1st place!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         rivals.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + (lowerBetter ? b.score.toFixed(1) + 's' : b.score) + '</span>'; body.appendChild(r); });
         G.ui.note(body, 'Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Practice makes perfect!') + (place === 1 && G.TRIALS[mode].find((x) => x.need === c.id) ? ' The next level is unlocked!' : ''));
+        if (place === 1 && PRZ) G.ui.prizeBox(body, prizeAcc, [PRZ], pet);
         const r = document.createElement('div'); r.className = 'mrow';
         const again = document.createElement('button'); again.className = 'btn ghost'; again.textContent = 'Other events'; again.onclick = () => { G.ui.closeSheet(true); menu(); };
         const back = document.createElement('button'); back.className = 'btn orange'; back.textContent = from === 'walk' ? 'Back to town' : 'Go home'; back.onclick = () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' });
