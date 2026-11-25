@@ -29,7 +29,7 @@ G.discSim = function (pos, vel, o = {}) {
 G.discSkill = function (pet) {
   const sk = pet.d.disc || 0;
   const reach = (pet.m.baseH + pet.m.dims.by + pet.m.headR) * pet.S + 0.05;
-  return { sk, spd: (5.6 + sk * 0.036) * pet.S * (pet.d.breed === 'husky' ? 1.1 : 1), delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
+  return { sk, spd: (5.6 + sk * 0.036) * pet.S * (pet.d.breed === 'husky' ? 1.1 : pet.d.breed === 'robo' ? 1.15 : 1), delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
 };
 // o.terrain(x, z) -> speed multiplier (sand traps etc.)
 G.discPlan = function (pet, path, o = {}) {

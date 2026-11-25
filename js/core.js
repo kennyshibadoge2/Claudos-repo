@@ -99,6 +99,12 @@ G.onResize = function () {
   if (G.cur && G.cur.onResize) G.cur.onResize(w, h);
 };
 G.aspect = () => innerWidth / innerHeight;
+// interiors: on tall (portrait) screens widen the field of view so the sides of the room aren't cut off
+G.fitFov = function (cam, minH) {
+  if (!cam || !minH) return; if (cam.userData.baseFov === undefined) cam.userData.baseFov = cam.fov;
+  const base = cam.userData.baseFov; const need = 2 * Math.atan(Math.tan(minH * Math.PI / 360) / Math.max(0.2, cam.aspect)) * 180 / Math.PI;
+  const f = Math.min(80, Math.max(base, need)); if (Math.abs(f - cam.fov) > 0.05) { cam.fov = f; cam.updateProjectionMatrix(); }
+};
 
 /* ---------------- Raycast helpers ---------------- */
 G.ray = function (p, cam) {

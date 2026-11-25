@@ -69,6 +69,7 @@ class Pet {
   voice(kind = 'bark') {
     if (this.voiceCd > 0 && kind !== 'force') return; this.voiceCd = 0.35;
     const p = (this.B.voice || 1) / Math.sqrt(this.S);
+    if (this.d.breed === 'robo') { G.audio.play(kind === 'whine' ? 'boop' : 'beep', p * U.rand(0.95, 1.08)); return; }
     if (this.cat) { if (kind === 'purr') G.audio.play('purr'); else if (kind === 'hiss') G.audio.play('hiss'); else G.audio.play('meow', p * U.rand(0.9, 1.1)); return; }
     if (kind === 'whine') G.audio.play('whine', p); else if (kind === 'happy') G.audio.play('happy', p); else if (kind === 'howl') G.audio.play('howl', p); else if (kind === 'yawn') G.audio.play('yawn', p); else if (kind === 'growl') G.audio.play('growl', p); else G.audio.play(Math.random() < 0.5 ? 'bark' : 'yip', p * U.rand(0.92, 1.08));
     this.mouthPop = 0.25;
@@ -94,6 +95,7 @@ class Pet {
     const sleeping = this.poseName === 'sleep';
     d.hunger = U.clamp(d.hunger - r * (active ? 1.8 : 1.0), 0, 100);
     d.thirst = U.clamp(d.thirst - r * (active ? 2.6 : 1.3), 0, 100);
+    if (d.breed === 'robo') d.clean = 100;
     d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0)) * (d.breed === 'pug' ? 0.6 : 1)), 0, 100);
     d.clean = U.clamp(d.clean - r * (G.curName === 'walk' ? 1.4 : 0.3), 0, 100);
     const base = Math.min(d.hunger, d.thirst, d.clean + 30, d.energy + 25) * 0.55 + 45;
@@ -196,6 +198,12 @@ class Pet {
         for (let i = 0; i <= 6; i++) { const a = i / 6 * Math.PI * 2; this.moveTarget = new V3(cx + Math.cos(a) * 0.35, 0, cz + Math.sin(a) * 0.35); this.speedMul = 1.1; yield* this.waitUntil(() => U.d2(this.pos.x, this.pos.z, this.moveTarget.x, this.moveTarget.z) < 0.08, 1.2); }
         this.moveTarget = null; yield* faceCam(this); this.shakeT = 0.45; yield* this.wait(0.5); this.lookCam = 3; yield* this.act('sit', 1.5); this.emote('heart', 1); break;
       }
+      case 'robo': { // system check: scan left and right, beep-boop, then a little rocket hop
+        yield* faceCam(this); this.setPose('sit');
+        for (const yaw of [1.6, -1.6, 0]) { this.lookTarget = this.root.localToWorld(new V3(Math.sin(yaw) * 2, 0.4, Math.cos(yaw) * 2)); G.audio.play('beep', 1 + Math.abs(yaw) * 0.1); yield* this.wait(0.45); }
+        this.lookTarget = null; this.emote('note', 1); this.setPose('stand'); this.jetT = 1.2; this.jump(2.4); G.audio.play('whoosh');
+        yield* this.waitUntil(() => !this.airborne, 2); yield* this.act('proud', 1.6); break;
+      }
       default: yield* this.wait(1);
     }
     this.eyeOverride = null; this.mouthOpen = 0;
@@ -275,7 +283,10 @@ class Pet {
     const petting = this.petT < 0.5;
     this.petLean = U.damp(this.petLean, petting ? 1 : 0, 5, dt);
     m.body.position.y = m.baseH + P.h + bob + this.squash * -0.3 * m.dims.by;
-    if (this.flipL) G.discFlip(this, this.flipL); // flips play out on their own, even after the catch
+    if (this.flipL) G.discFlip(this, this.flipL);
+    if (m.jets) { const on = this.airborne || (this.jetT || 0) > 0; this.jetT = Math.max(0, (this.jetT || 0) - dt); for (const j of m.jets) { j.visible = on; j.scale.set(1, 0.7 + Math.random() * 0.6, 1); } if (on && Math.random() < 0.5) G.fx.spawn('sparkle', this.root.position.clone().add(new V3(0, m.baseH * this.S, 0)), 1, { color: '#ffb04a', scale: 0.5 }); }
+    if (m.roboTip) m.roboTip.scale.setScalar(0.85 + Math.abs(Math.sin(this.t * 3)) * 0.35);
+    if (m.roboCore) m.roboCore.scale.set(1 + Math.sin(this.t * 2) * 0.12, 1 + Math.sin(this.t * 2) * 0.12, 0.35); // flips play out on their own, even after the catch
     m.body.rotation.set(P.pitch + gp + (this.extraPitch || 0), 0, roll + this.petLean * 0.05 * Math.sin(t * 2));
     m.body.scale.set(1 + this.squash * 0.5, 1 + breath - this.squash, 1 + this.squash * 0.3);
     // legs
@@ -432,11 +443,12 @@ G.offlineDecay = function () {
 class Person {
   constructor(look, o = {}) {
     this.look = look; this.m = G.M.person(look); this.root = this.m.root; this.t = Math.random() * 10;
-    this.vel = 0; this.heading = o.heading || 0; this.target = null; this.speed = o.speed || 1.1; this.sitting = !!o.sit;
+    this.vel = 0; this.heading = o.heading || 0; this.target = null; this.speed = o.speed || 1.1; this.seatY = o.seat !== undefined ? o.seat : (o.sit ? 0.45 : null); this.sitK = this.seatY != null ? 1 : 0; this._seatY = this.seatY || 0.45;
     this.talking = 0; this.waveT = 0; this.lookAt = null; this.yaw = 0; this.playing = !!o.playing; this.key = o.key;
     this.root.userData.person = this; this.root.traverse((x) => { if (x.isMesh) x.userData.person = this; });
   }
   get pos() { return this.root.position; }
+  get sitting() { return this.seatY != null; }
   walkPath(pts) { this.path = pts.map((p) => p.clone()); this.target = this.path.shift(); }
   get idle() { return !this.target && !(this.path && this.path.length); }
   update(dt) {
@@ -449,7 +461,18 @@ class Person {
     if (this.vel > 0.01) { this.pos.x += Math.sin(this.heading) * this.vel * dt; this.pos.z += Math.cos(this.heading) * this.vel * dt; }
     this.root.rotation.y = this.heading;
     const sp = Math.min(1, this.vel / 1.2), ph = this.t * (4 + this.vel * 3.5);
-    if (this.sitting) { m.legs.forEach((l) => { l.rotation.x = -1.45; }); m.rig.position.y = -0.2; m.arms.forEach((a) => { a.rotation.x = -0.35; }); }
+    // sitting on a chair / bench / tall stool, with a little hop getting on or off
+    if (this.seatY != null) this._seatY = this.seatY;
+    this.sitK += U.clamp((this.seatY != null ? 1 : 0) - this.sitK, -dt * 2.4, dt * 2.4);
+    if (this.sitK > 0.001) {
+      const k = this.sitK, e = k * k * (3 - 2 * k), hh = (m.L && m.L.h) || 1;
+      const rigSeat = this._seatY - 0.3 * hh + 0.03; const hop = k < 1 ? Math.sin(k * Math.PI) * 0.14 : 0;
+      m.rig.position.y = rigSeat * e + hop;
+      const dangle = this._seatY > 0.6 ? Math.sin(this.t * 2.2) * 0.18 : 0;
+      m.legs[0].rotation.x = (-1.45 + dangle) * e; m.legs[1].rotation.x = (-1.45 - dangle) * e;
+      m.arms.forEach((a) => { a.rotation.x = -0.35 * e; });
+      if (this.sipT > 0) { this.sipT -= dt; m.arms[1].rotation.x = -1.9 * Math.sin(Math.min(1, this.sipT) * Math.PI); }
+    }
     else {
       m.legs[0].rotation.x = Math.sin(ph) * 0.65 * sp; m.legs[1].rotation.x = -Math.sin(ph) * 0.65 * sp;
       m.arms[0].rotation.x = -Math.sin(ph) * 0.55 * sp; if (this.waveT <= 0) m.arms[1].rotation.x = Math.sin(ph) * 0.55 * sp;

@@ -3,7 +3,7 @@
    Shiba Days — Home (the living room)
    ========================================================= */
 G.scenes.home = (() => {
-  const H = { music: 'home' };
+  const H = { minHFov: 60, music: 'home' };
   let scene, cam, sun, hemi, lamp, winTex, winCanvas, clockHands, trophyGroup, frameMat;
   const BX0 = -3.85, BX1 = 3.85, BZ0 = -3.05, BZ1 = 2.75;
   const BOWL = new V3(2.05, 0, 1.25), WATER = new V3(2.75, 0, 0.6), BED = new V3(-3.2, 0, -1.4), TOYBOX = new V3(3.15, 0, -2.35), CALL = new V3(0, 0, 1.9);

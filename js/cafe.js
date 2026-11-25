@@ -30,7 +30,8 @@ G.NPCS.ito.talk = async function (D) {
 G.cafeSpecial = function () { const d = new Date(); return G.CAFE[(d.getDate() + d.getMonth()) % G.CAFE.length]; };
 
 G.scenes.cafe = (() => {
-  const C = { music: 'cafe' };
+  const C = { minHFov: 66, music: 'cafe' };
+  let custA, custB;
   let scene, cam, pet = null, from = 'home', yuki, ito, matcha, table, onTable = [], lookV = new V3(), focusPos = null, busy = false;
   C.init = function () {
     scene = new THREE.Scene(); C.scene = scene; scene.background = new THREE.Color('#3b2a1f');
@@ -82,7 +83,13 @@ G.scenes.cafe = (() => {
     const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 20), M.mat('#f39bb0', { r: 1 })); cushion.position.set(-1.35, 1.16, -2.35); st.add(cushion);
     scene.add(G.M.bake(st));
     // people
-    yuki = new G.Person('yuki', { key: 'yuki' }); yuki.pos.set(0.4, 0, -3.05); scene.add(yuki.root);
+    // tall stool behind the counter so Yuki can see over it
+    G.M.stoolAt(scene, 0.4, -3.12, 0.78);
+    yuki = new G.Person('yuki', { key: 'yuki', seat: 0.78 }); yuki.pos.set(0.4, 0, -3.12); scene.add(yuki.root);
+    // regulars at the other tables
+    custA = new G.Person({ skin: '#f0c7a6', hair: '#5a3a26', style: 'bob', top: '#f2c24b', bottom: '#3b4a6a', h: 0.98 }, { sit: true }); custA.pos.set(1.95, 0, -0.2); custA.heading = Math.PI / 2; scene.add(custA.root);
+    custB = new G.Person({ skin: '#c99a76', hair: '#2a1d18', style: 'short', top: '#4aa6e0', bottom: '#2c2c3a', h: 1.0, extra: ['cap'] }, { sit: true }); custB.pos.set(3.65, 0, -0.2); custB.heading = -Math.PI / 2; scene.add(custB.root);
+    for (const [x, z] of [[2.55, -0.25], [3.05, -0.15]]) { const cup = G.M.item(U.pick(['latte', 'matcha'])); cup.position.set(x, 0.765, z); scene.add(cup); }
     ito = new G.Person('ito', { key: 'ito', sit: true }); ito.pos.set(-1.75, 0, -0.4); ito.heading = -Math.PI / 2; scene.add(ito.root);
     const book = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.04), M.mat('#4aa6e0')); book.position.set(0, 0.42, 0.24); book.rotation.x = -0.6; ito.m.torso.add(book);
     matcha = new G.Pet({ name: 'Matcha', breed: 'cat', coat: 'grey', mood: 80, acc: { collar: 'collar_gold' } }, { npc: true });
@@ -101,7 +108,7 @@ G.scenes.cafe = (() => {
     setTimeout(() => G.ui.hint('Today’s special: ' + sp.name + ' (30% off)', 3500), 700);
     G.audio.play('bell');
   };
-  C.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); } G.ui.hint(null); };
+  C.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); } G.ui.hint(null); G.ui.prompts([]); };
   C.dock = () => [
     { label: 'Menu', icon: 'menu', fn: menuSheet },
     { label: 'Chat', icon: 'chat', fn: chatSheet },
@@ -151,15 +158,15 @@ G.scenes.cafe = (() => {
     busy = true; G.state.coins -= pr; G.ui.refresh(); G.audio.play('coin'); G.state.stats.cafe = (G.state.stats.cafe || 0) + 1; G.checkStamps();
     const item = G.M.item(it.id);
     const ROUTE = [new V3(3.4, 0, -3.05), new V3(3.4, 0, -1.3), new V3(1.5, 0, -1.3), new V3(-0.3, 0, 0.6)];
-    yuki.walkPath(ROUTE); yuki.speed = 1.3;
+    yuki.seatY = null; yuki.lookAt = null; setTimeout(() => yuki.walkPath(ROUTE), 520); yuki.speed = 1.3; // hop off the stool first
     const startT = G.time;
     const step = () => {
-      if (!yuki.idle && G.time - startT < 14) { requestAnimationFrame(step); return; }
+      if ((!yuki.idle || G.time - startT < 0.7) && G.time - startT < 15) { requestAnimationFrame(step); return; }
       yuki.heading = Math.atan2(-1.15 - yuki.pos.x, 1.15 - yuki.pos.z);
       yuki.waveT = 0.8; G.audio.play('pop');
       if (it.who === 'you') {
-        item.position.set(U.rand(-0.25, 0.25), 0.765, U.rand(0.05, 0.25)); table.add(item); onTable.push(item);
-        G.ui.toast(U.pick(['Mmm, cozy.', 'Delicious!', 'The perfect little treat.', 'You feel very relaxed.']) + ' ' + pet.name + ' watches hopefully.');
+        item.position.set(U.rand(-0.25, 0.25), 0.765, U.rand(0.05, 0.25)); item.userData.food = it; item.userData.bites = 0; table.add(item); onTable.push(item);
+        G.ui.hint('Your ' + it.name + ' is served! Tap it to ' + (/latte|soda|tea/.test(it.id) ? 'take a sip' : 'take a bite') + '. ' + pet.name + ' watches hopefully...', 5000);
         pet.lookTarget = table.localToWorld(item.position.clone()); pet.tiltT = 1.2; setTimeout(() => (pet.lookTarget = null), 2500);
         busy = false;
       } else {
@@ -172,21 +179,42 @@ G.scenes.cafe = (() => {
           G.ui.toast(pet.name + ' loved the ' + it.name + '!'); busy = false;
         })());
       }
-      setTimeout(() => yuki.walkPath(ROUTE.slice(0, 3).reverse().concat([new V3(0.4, 0, -3.05)])), 700);
+      setTimeout(() => { yuki.walkPath(ROUTE.slice(0, 3).reverse().concat([new V3(0.4, 0, -3.12)])); yuki.returning = true; }, 700);
     };
     requestAnimationFrame(step);
   }
+  C.debug = () => ({ yuki, onTable, busy, order, eatBite });
   C.onDown = function () { };
   C.onUp = function (p) {
     if (!p.tap) return;
     const hit = G.pick(p, [...pet.m.meshes, ...matcha.m.meshes], false)[0];
     if (hit) { const pp = hit.object.userData.pet; if (pp === matcha) { matcha.voice(); matcha.emote('heart', 1); matcha.eyeOverride = 'happy'; setTimeout(() => (matcha.eyeOverride = null), 1200); } else { pp.emote('heart', 1); pp.voice(); pp.happy(1); pp.excite = 0.8; } return; }
+    const fh = onTable.length ? G.pick(p, onTable, true)[0] : null;
+    if (fh) { let o = fh.object; while (o && !onTable.includes(o)) o = o.parent; if (o) { eatBite(o); return; } }
     const ph = G.pick(p, [yuki.root, ito.root], true)[0];
     if (ph) { const per = ph.object.userData.person; if (per === yuki) talk('yuki', yuki); else talk('ito', ito); }
   };
+  // eat or drink what you ordered, a bite at a time (your pet gets the last crumb)
+  function eatBite(o) {
+    const it = o.userData.food; const drink = /latte|soda|tea/.test(it.id); o.userData.bites++;
+    const wp = table.localToWorld(o.position.clone());
+    if (drink) { G.audio.play('pop', 0.7); o.scale.y *= 0.82; G.fx.spawn('bubble', wp.clone().setY(0.95), 3); }
+    else { G.audio.play('munch'); o.scale.multiplyScalar(0.78); G.fx.spawn('puff', wp.clone().setY(0.82), 3, { color: '#f6e2c4' }); }
+    pet.lookTarget = wp; pet.tiltT = 0.8; if (o.userData.bites === 2 && !pet.cat) { pet.setPose('beg'); pet.voice('whine'); }
+    if (o.userData.bites >= 3) {
+      table.remove(o); onTable.splice(onTable.indexOf(o), 1); pet.lookTarget = null;
+      G.ui.toast(U.pick(['Delicious! ', 'So cozy. ', 'The perfect little treat. ']) + 'You finished the ' + it.name + '.' + (drink ? '' : ' ' + pet.name + ' got the last crumb!'));
+      if (!drink) { pet.happy(4); pet.emote('heart', 1.2); pet.voice('happy'); pet.lickT = 1.2; }
+      G.state.stats.cafeAte = (G.state.stats.cafeAte || 0) + 1; pet.setPose('sit');
+    }
+  }
   C.update = function (dt) {
     if (!pet) return;
-    pet.update(dt); matcha.update(dt); yuki.update(dt); ito.update(dt);
+    pet.update(dt); matcha.update(dt); yuki.update(dt); ito.update(dt); custA.update(dt); custB.update(dt);
+    if (yuki.returning && yuki.idle) { yuki.returning = false; yuki.heading = 0; yuki.seatY = 0.78; }
+    if (Math.random() < dt * 0.15) { const c = U.chance(0.5) ? custA : custB; c.talking = U.rand(1, 2.5); c.lookAt = (c === custA ? custB : custA).pos; }
+    if (Math.random() < dt * 0.08) (U.chance(0.5) ? custA : custB).sipT = 1.2;
+    if (Math.random() < dt * 0.05) ito.sipT = 1.2;
     if (Math.random() < dt * 0.25) yuki.lookAt = U.chance(0.5) ? cam.position : null;
     const portrait = G.aspect() < 0.9;
     let pos = portrait ? new V3(0.3, 3.2, 6.8) : new V3(0.3, 2.3, 4.8), look = new V3(0, 0.75, -0.5);

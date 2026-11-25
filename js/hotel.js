@@ -51,7 +51,7 @@ G.NPCS.inoue.talk = async function (D) {
 };
 
 G.scenes.hotel = (() => {
-  const H = { music: 'cafe', hideNeeds: true };
+  const H = { minHFov: 68, music: 'cafe', hideNeeds: true };
   let scene, cam, from = 'home', guests = [], plates = [], inoue, sel = null, lookV = new V3(0, 0.8, -1), focus = null;
   const ROOM_W = 1.25, ROOMS_X0 = -((G.HOTEL_ROOMS / 2) - 0.5) * ROOM_W;
   const roomX = (i) => ROOMS_X0 + (i % 4) * ROOM_W + (i >= 4 ? 0 : 0);
@@ -104,7 +104,8 @@ G.scenes.hotel = (() => {
     const sb = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.7), M.mat('#c8323c', { r: 0.9 })); sb.position.y = 0.3; sofa.add(sb);
     const sbk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.18), M.mat('#c8323c', { r: 0.9 })); sbk.position.set(0, 0.65, -0.28); sofa.add(sbk);
     scene.add(G.M.bake(st));
-    inoue = new G.Person('inoue', { key: 'inoue' }); inoue.pos.set(3.7, 0, 1.5); inoue.heading = -2.3; scene.add(inoue.root);
+    G.M.stoolAt(scene, 3.75, 1.45, 0.8);
+    inoue = new G.Person('inoue', { key: 'inoue', seat: 0.8 }); inoue.pos.set(3.75, 0, 1.45); inoue.heading = -2.3; scene.add(inoue.root);
   }
   function plateFor(i, d) {
     const pl = plates[i]; if (pl.material.map) pl.material.map.dispose();

@@ -10,7 +10,7 @@ G.NPCS.daisuke.talk = async function (D) {
   else { await D.say('Kiwi is a 20-year-old parrot. He learned to say "frog hat" in a week. It took me three years to learn the cash register.'); D.once('kiwi', () => D.friend(1)); }
 };
 G.scenes.shop = (() => {
-  const S = { music: 'shop' };
+  const S = { minHFov: 64, music: 'shop' };
   let scene, cam, pet, from = 'home', dai, kiwi, fish = [], lookV = new V3(), shelves = [], focusPos = null;
   S.init = function () {
     scene = new THREE.Scene(); S.scene = scene; scene.background = new THREE.Color('#3b4a3a');
@@ -73,7 +73,8 @@ G.scenes.shop = (() => {
     const mat2 = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), M.mat('#fff', { map: G.textTex('WELCOME', { font: '700 56px Fredoka, sans-serif', bg: '#7a4a24', color: '#fff7ea', pad: 16, radius: 8 }) })); mat2.rotation.x = -Math.PI / 2; mat2.position.set(0, 0.01, 3.2); scene.add(mat2);
     scene.add(G.M.bake(st));
     // people + parrot
-    dai = new G.Person('daisuke', { key: 'daisuke' }); dai.pos.set(2.6, 0, -2.25); scene.add(dai.root);
+    G.M.stoolAt(scene, 2.6, -2.25, 0.74);
+    dai = new G.Person('daisuke', { key: 'daisuke', seat: 0.74 }); dai.pos.set(2.6, 0, -2.25); scene.add(dai.root);
     kiwi = new THREE.Group(); kiwi.position.set(3.85, 0, -1.4); scene.add(kiwi);
     const perch = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.7, 6), M.mat('#7a5236')); perch.position.y = 0.85; kiwi.add(perch);
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), M.mat('#7a5236')); bar.rotation.z = Math.PI / 2; bar.position.y = 1.7; kiwi.add(bar);

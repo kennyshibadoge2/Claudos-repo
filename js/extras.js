@@ -12,6 +12,10 @@
   S.snort = (p = 1) => { N(0.09, 0.4, 'lowpass', 420 * p, 3); N(0.07, 0.25, 'bandpass', 900 * p, 2, 0.06); };
   S.awoo = (p = 1) => { T('sine', 420 * p, 640 * p, 0.18, 0.16); T('sine', 640 * p, 520 * p, 0.28, 0.14, 0.18); T('triangle', 840 * p, 1040 * p, 0.2, 0.04); };
   S.aroo = (p = 1) => { T('sawtooth', 330 * p, 520 * p, 0.25, 0.06); T('sine', 520 * p, 470 * p, 0.6, 0.15, 0.24); T('sine', 470 * p, 360 * p, 0.35, 0.1, 0.82); };
+  S.zap = () => { N(0.18, 0.35, 'highpass', 2500, 1.2); T('sawtooth', 1200, 200, 0.2, 0.06); };
+  S.beep = (p = 1) => { T('square', 880 * p, 1320 * p, 0.07, 0.05); T('square', 1320 * p, 990 * p, 0.08, 0.05, 0.09); };
+  S.boop = (p = 1) => { T('square', 660 * p, 440 * p, 0.12, 0.05); };
+  S.robopart = () => { T('square', 523, 523, 0.08, 0.06); T('square', 659, 659, 0.08, 0.06, 0.09); T('square', 784, 784, 0.08, 0.06, 0.18); T('square', 1046, 1046, 0.22, 0.07, 0.27); };
   S.sneeze = () => { T('triangle', 900, 1400, 0.2, 0.1); N(0.18, 0.3, 'highpass', 2500, 0.6, 0.22); };
   S.clunk = () => { T('sine', 140, 70, 0.18, 0.35); N(0.08, 0.2, 'lowpass', 500, 1); };
   S.capsule = () => { for (let i = 0; i < 6; i++) T('square', 600 + i * 40, 620 + i * 40, 0.03, 0.04, i * 0.06); T('sine', 1200, 1600, 0.15, 0.1, 0.45); };
@@ -56,6 +60,7 @@ G.STAMPS = [
   { id: 'quests', name: 'Busy bee', desc: 'Finish all three daily quests in one day.', coins: 50 },
   { id: 'tug', name: 'Tug champion', desc: 'Win a tug of war at a Disc Cup.', coins: 40 },
   { id: 'dream', name: 'Sweet dreams', desc: 'Watch your pet dream 10 times.', coins: 30, secret: true },
+  { id: 'robo', name: 'Beep boop', desc: 'Rebuild Dr. Kurogane\u2019s Robo Shiba.', coins: 100, secret: true },
   { id: 'pets100', name: 'Gentle hands', desc: 'Give 100 pets.', coins: 30 },
   { id: 'pets1000', name: 'Professional petter', desc: 'Give 1,000 pets.', coins: 150 },
   { id: 'named', name: 'That’s me!', desc: 'Teach a pet its name.', coins: 30 },
@@ -143,7 +148,7 @@ G.ui.stampSheet = function () {
       const n = G.BREED_ORDER.filter((b) => G.breedUnlocked(b)).length;
       G.ui.note(body, n + ' of ' + G.BREED_ORDER.length + ' breeds unlocked at Maple Kennel. Each breed has its own coats and a special trait.');
       const g = G.ui.grid(body); g.classList.add('breedGrid');
-      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + info.hint, dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
+      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : b === 'robo' && !open ? '???' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + (b === 'robo' ? (G.robo.count() ? 'Robo Parts: ' + G.robo.count() + '/5 \u2014 check Dr. Kurogane\u2019s letter' : 'A secret... something beeps far away') : info.hint), dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
       return;
     }
     if (tab === 'stamps') {
@@ -216,6 +221,7 @@ G.spinCapsule = function () {
   const r = Math.random(); let pool = G.CAPSULES.filter((c) => !c.rare);
   if (r < 0.06) pool = G.CAPSULES.filter((c) => c.rare);
   const c = U.pick(pool); G.state.capsules = G.state.capsules || {}; G.state.capsules[c.id] = (G.state.capsules[c.id] || 0) + 1;
+  { const rb = G.robo.st(); rb.spins = (rb.spins || 0) + 1; if (!G.robo.has('chip') && (rb.spins >= 6 || Math.random() < 0.15)) setTimeout(() => { G.ui.toast('Wait... there\u2019s a tiny circuit chip stuck inside the capsule!', 'gold'); G.robo.give('chip'); }, 1800); }
   G.ui.refresh(); G.save(); return c;
 };
 
@@ -477,7 +483,7 @@ G.TV = class {
     const s = this.game || this.newGame(); if (s.over) return;
     s.t += dt; s.speed += dt * 4; s.vy += 900 * dt; s.y = Math.min(160, s.y + s.vy * dt); if (s.y >= 160) s.vy = 0;
     s.next -= dt; if (s.next <= 0) { s.obs.push({ x: 330, h: U.rand(14, 26), passed: false }); s.next = U.rand(0.9, 1.9) * 140 / s.speed; }
-    for (const o of s.obs) { o.x -= s.speed * dt; if (!o.passed && o.x < 40) { o.passed = true; s.score++; } if (o.x < 72 && o.x > 32 && s.y > 160 - o.h + 4) { s.over = true; if (!s.demo) { G.audio.play('gameover'); if (s.score > (G.state.retroHigh || 0)) { G.state.retroHigh = s.score; G.ui.toast('New Shiba Dash high score: ' + s.score + '!'); } } } }
+    for (const o of s.obs) { o.x -= s.speed * dt; if (!o.passed && o.x < 40) { o.passed = true; s.score++; if (!s.demo && s.score >= 10 && G.robo && !G.robo.has('battery')) { G.audio.play('zap'); setTimeout(() => { G.ui.toast('ZAP! The TV sparks and a tiny battery pops out of the cartridge slot!', 'gold'); G.robo.give('battery'); }, 400); } } if (o.x < 72 && o.x > 32 && s.y > 160 - o.h + 4) { s.over = true; if (!s.demo) { G.audio.play('gameover'); if (s.score > (G.state.retroHigh || 0)) { G.state.retroHigh = s.score; G.ui.toast('New Shiba Dash high score: ' + s.score + '!'); } } } }
     if (s.demo) { const n = s.obs.find((o) => o.x > 50 && o.x < 92); if (n && s.y >= 160) s.vy = -330; if (s.over) setTimeout(() => { if (this.game === s) this.newGame(true); }, 1500); }
     s.obs = s.obs.filter((o) => o.x > -20);
   }

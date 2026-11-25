@@ -150,3 +150,26 @@ G.dreams = (() => {
   };
   return D;
 })();
+
+/* ---------------- secret: Dr. Kurogane's Robo Shiba ---------------- */
+G.ROBO_PARTS = [
+  { id: 'gear', name: 'Mainspring Gear', icon: '⚙️', hint: 'A gear sleeps where wishes are rung after dark.' },
+  { id: 'bolt', name: 'Silver Bolt', icon: '🔩', hint: 'A bolt rests in the wishing fountain. Third wish of the day is the charm.' },
+  { id: 'battery', name: 'Tiny Battery', icon: '🔋', hint: 'My battery is powering a little TV game. Ten points should shake it loose.' },
+  { id: 'antenna', name: 'Star Antenna', icon: '📡', hint: 'The antenna fell from the strange light. The stargazer saw it — keep asking her what’s strange.' },
+  { id: 'chip', name: 'Memory Chip', icon: '💾', hint: 'A chip got mixed into the capsule machine by mistake. Keep spinning!' },
+];
+G.robo = {
+  st() { const s = G.state; s.robo = s.robo || { parts: {} }; s.robo.parts = s.robo.parts || {}; return s.robo; },
+  has(id) { return !!this.st().parts[id]; },
+  count() { return Object.keys(this.st().parts).length; },
+  give(id) {
+    const r = this.st(); if (r.parts[id]) return false; const part = G.ROBO_PARTS.find((p) => p.id === id); if (!part) return false;
+    r.parts[id] = Date.now(); const n = this.count();
+    G.audio.play('robopart'); G.ui.banner('Robo Part found! (' + n + '/5)', part.icon + ' ' + part.name, 3200);
+    G.state.mail = G.state.mail || [];
+    if (n === 1) G.state.mail.unshift({ id: 'robo_letter', from: 'Dr. Kurogane', subject: 'Did you find my gear?!', body: 'Dear finder,\n\nThat ' + part.name.toLowerCase() + ' you found belongs to me! I’m a retired toymaker, and my greatest invention — a little robot Shiba — fell apart when I tripped over a cat. Five parts scattered across Maple Hill. If you can find them all, he’s yours to keep.\n\nWhere I think they went:\n• ' + G.ROBO_PARTS.map((p) => p.icon + ' ' + p.hint).join('\n• ') + '\n\nYou can check your progress in the kennel and in the Stamp book (Breeds). Good luck!\n\n— Dr. Kurogane\n\nP.S. He beeps when he’s happy. It’s adorable.', day: G.today(), read: false });
+    if (n >= 5) { G.stamp('robo'); setTimeout(() => { G.checkBreeds(); }, 3600); }
+    G.ui.refresh && G.ui.refresh(); G.save(); return true;
+  },
+};

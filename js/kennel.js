@@ -63,7 +63,7 @@ G.scenes.title = (() => {
 
 /* ---------------- Kennel ---------------- */
 G.scenes.kennel = (() => {
-  const K = { music: 'kennel', hideNeeds: true };
+  const K = { minHFov: 60, music: 'kennel', hideNeeds: true };
   let scene, cam, pups = [], sel = null, first = false, lookV = new V3(0, 0.3, 0);
   K.init = function () {
     scene = new THREE.Scene(); K.scene = scene;
@@ -87,7 +87,7 @@ G.scenes.kennel = (() => {
   };
   // first pet is free; each extra pet costs more (cats a little less)
   // your very first Shiba is free; after that every breed has its own price
-  function adoptPrice(breed) { if (!G.state.pets.length && !(G.state.hotel || []).length) return 0; return G.BREED_PRICE[breed] || 5000; }
+  function adoptPrice(breed) { if (!G.state.pets.length && !(G.state.hotel || []).length) return 0; return G.BREED_PRICE[breed] ?? 5000; }
   function candidates(breed) {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
@@ -109,8 +109,8 @@ G.scenes.kennel = (() => {
       for (const b of G.BREED_ORDER) {
         const open = G.breedUnlocked(b) && !(firstPet && b === 'cat'); const info = G.BREED_INFO[b];
         const img = G.M.icons.pet({ breed: b, coat: (G.BREED_COATS[b] || ['red'])[0] });
-        const name = b === 'cat' ? 'Kittens' : G.BREEDS[b].name;
-        const c = G.ui.card({ img, name: name + (open && adoptPrice(b) ? ' \u00b7 ' + adoptPrice(b) + 'c' : ''), sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
+        const name = b === 'cat' ? 'Kittens' : b === 'robo' && !open ? '???' : G.BREEDS[b].name;
+        const c = G.ui.card({ img, name: name + (open && adoptPrice(b) ? ' \u00b7 ' + adoptPrice(b) + 'c' : ''), sub: open ? info.trait : '\ud83d\udd12 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : b === 'robo' ? (G.robo.count() ? 'Robo Parts: ' + G.robo.count() + '/5' : 'A secret... something beeps far away') : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
         if (!open) c.classList.add('locked'); g.appendChild(c);
       }
     } });

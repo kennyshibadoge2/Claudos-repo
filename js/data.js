@@ -14,6 +14,7 @@ G.BREEDS = {
   akita: { species: 'dog', name: 'Akita', legL: 0.15, legW: 0.058, body: [0.2, 0.19, 0.32], headR: 0.18, earH: 0.12, earR: 0.072, ear: 'prick', snout: 1.05, tail: 'curl', voice: 0.82, scale: 1.35, cheek: 1.18 },
   pomeranian: { species: 'dog', name: 'Pomeranian', legL: 0.075, legW: 0.04, body: [0.15, 0.15, 0.2], headR: 0.15, earH: 0.075, earR: 0.045, ear: 'prick', snout: 0.6, tail: 'plume', voice: 1.7, scale: 0.72, cheek: 1.15, fluff: true },
   yorkie: { species: 'dog', name: 'Yorkshire Terrier', legL: 0.085, legW: 0.036, body: [0.13, 0.13, 0.22], headR: 0.14, earH: 0.09, earR: 0.045, ear: 'prick', snout: 0.85, tail: 'straight', voice: 1.75, scale: 0.7, cheek: 1.02, hair: 'long' },
+  robo: { species: 'dog', name: 'Robo Shiba', legL: 0.12, legW: 0.05, body: [0.17, 0.165, 0.27], headR: 0.165, earH: 0.125, earR: 0.062, ear: 'prick', snout: 1, tail: 'curl', voice: 1.3, cheek: 1.1, robo: true },
   cat: { species: 'cat', name: 'Cat', legL: 0.115, legW: 0.034, body: [0.13, 0.135, 0.25], headR: 0.15, earH: 0.11, earR: 0.058, ear: 'cat', snout: 0.5, tail: 'cat', voice: 1, cheek: 1.08 },
 };
 
@@ -48,6 +49,8 @@ G.COATS = {
   pom_black: { name: 'Black', top: '#1f1b1c', mid: '#2a2526', under: '#3a3335', dots: '#3a3335', sock: 0 },
   yorkie: { name: 'Blue & Tan', top: '#55657a', mid: '#6c7c90', under: '#d9a56a', tan: '#c98f55', tanHead: true, dots: '#c98f55', sock: 0.9 },
   yorkie_gold: { name: 'Blue & Gold', top: '#3e4c5e', mid: '#56667a', under: '#e6b878', tan: '#d9a660', tanHead: true, dots: '#d9a660', sock: 0.9 },
+  robo: { name: 'Chrome', top: '#7f8a97', mid: '#b4bdc8', under: '#eef1f5', dots: '#eef1f5', eye: '#4ff0ff', glowEye: true, sock: 0.85 },
+  robo_gold: { name: 'Gold Edition', top: '#a8781e', mid: '#d4a640', under: '#f6e6b8', dots: '#f6e6b8', eye: '#ff7a4a', glowEye: true, sock: 0.85 },
   // cats
   tabby: { name: 'Orange Tabby', top: '#d9782e', mid: '#ef9b4e', under: '#fff1dc', stripes: '#b65a1c', eye: '#9ccc4a', nose: '#e88a8a' },
   grey: { name: 'Blue Grey', top: '#7d8590', mid: '#9aa2ac', under: '#d9dde2', eye: '#f2c24b', nose: '#b58a8a' },
@@ -60,7 +63,7 @@ G.PET_COATS = { dog: ['red', 'sesame', 'blacktan', 'cream'], cat: ['tabby', 'gre
 G.BREED_COATS = {
   shiba: ['red', 'sesame', 'blacktan', 'cream'], mame: ['red', 'cream', 'sesame', 'blacktan'], corgi: ['corgi', 'corgi_tri', 'corgi_sable'], husky: ['husky', 'husky_black', 'husky_red'],
   dachshund: ['dachs', 'dachs_bt', 'dachs_choc'], pug: ['pug', 'pug_black'], golden: ['golden', 'golden_cream', 'golden_red'], beagle: ['beagle_tri', 'beagle_lemon'],
-  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
+  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], robo: ['robo', 'robo_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
 };
 // adoption: Shibas from day one, everyone else unlocks (checked for old saves too)
 G.BREED_INFO = {
@@ -75,10 +78,11 @@ G.BREED_INFO = {
   golden: { trait: 'Gentle and devoted: bonds with you faster.', hint: 'Reach max bond with any pet', from: 'Maple Kennel' },
   akita: { trait: 'The Shiba\u2019s big cousin: strong, calm and fearless.', hint: 'Win the Expert Cup with a Shiba', from: 'Maple Kennel' },
   pomeranian: { trait: 'A walking puffball: brushing makes them extra happy.', hint: 'Finish all daily quests on 2 different days', from: 'Maple Pets' },
+  robo: { trait: 'Rocket-powered, never gets muddy, beeps when happy. One of a kind.', hint: 'Find the 5 lost Robo Parts', from: 'Dr. Kurogane' },
   yorkie: { trait: 'Tiny fashionista: loves outfits and brushing.', hint: 'Own 8 accessories and brush a pet until super fluffy', from: 'Daisuke (Maple Pets)' },
 };
-G.BREED_PRICE = { shiba: 4000, mame: 4500, cat: 4000, pug: 5000, corgi: 5500, dachshund: 5000, beagle: 5000, husky: 6500, golden: 6500, akita: 7500, pomeranian: 7000, yorkie: 8000 };
-G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie'];
+G.BREED_PRICE = { shiba: 4000, mame: 4500, cat: 4000, pug: 5000, corgi: 5500, dachshund: 5000, beagle: 5000, husky: 6500, golden: 6500, akita: 7500, pomeranian: 7000, yorkie: 8000, robo: 0 };
+G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie', 'robo'];
 G.breedUnlocked = function (b) {
   const s = G.state; if (!s) return false; s.breeds = s.breeds || {};
   if (b === 'shiba' || b === 'mame') return true;
@@ -97,6 +101,7 @@ G.breedCheck = function (b) { // is the requirement met right now?
     case 'golden': return s.pets.concat(s.hotel || []).some((d) => (d.bond || 0) >= 100);
     case 'akita': return won('expert', isShiba);
     case 'pomeranian': return (s.questDays || 0) >= 2;
+    case 'robo': return G.robo && G.robo.count() >= 5;
     case 'yorkie': return Object.keys(s.acc || {}).filter((k) => G.ITEMS[k] && G.ITEMS[k].cat === 'acc').length >= 8 && (st.fluffy || 0) >= 1;
     default: return true;
   }
@@ -108,7 +113,7 @@ G.checkBreeds = function (quiet) {
     if (G.breedUnlocked(b) || !G.breedCheck(b)) continue;
     s.breeds[b] = Date.now(); got.push(b);
     const nm = b === 'cat' ? 'Kittens' : G.BREEDS[b].name + ' puppies'; const info = G.BREED_INFO[b];
-    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
+    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'robo' ? 'All five parts are back! I tightened the last bolt, charged the battery, and he booted up wagging. He\u2019s waiting for you at Maple Kennel \u2014 no charge, of course. Take good care of him!\n\n\u2014 Dr. Kurogane\n\n' : b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
     if (!quiet) setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('New at the kennel!', nm + ' can now be adopted', 2800); }, 400 + got.length * 3000);
   }
   if (got.length) { G.ui.refresh && G.ui.refresh(); G.save(); }
@@ -436,6 +441,7 @@ G.NPCS = {
       if (c === 0) { await D.say('Tonight it\u2019s ' + phase + '. Here, look through the eyepiece.'); await D.say(ph > 0.45 && ph < 0.55 ? 'You can see every crater! ' + D.name + ' is howling a little. Fair.' : ph < 0.05 || ph > 0.95 ? 'Hmm, the moon\u2019s hiding tonight. But that means the stars are extra bright!' : 'See the line between light and shadow? That\u2019s where the craters look sharpest.'); D.once('moon', () => D.friend(1)); }
       else if (c === 1) { await D.say(U.pick(['See that bright one low in the sky? Sirius, the "Dog Star". It\u2019s in the constellation Canis Major, the Great Dog.', 'There\u2019s a little constellation called Canis Minor too. The Lesser Dog. Like a mame shiba of the sky.', 'Every July, on Tanabata, two star lovers meet across the Milky Way. People write wishes on paper strips.', 'The "Dog Days" of summer are named after Sirius rising with the sun. Hot days, sleepy dogs.'])); D.once('star', () => D.friend(1)); }
       else { await D.say(U.pick(['Strange? Well... sometimes there\u2019s a light over the hills that moves wrong. Not a plane. Not a star. If you see it, tap it. For science.', 'Pip says it\u2019s a kite. Kites don\u2019t hum.', 'I logged an unidentified object last Tuesday. Mr. Ogawa says it was a disc thrown by a very strong golden retriever.'])); }
+      if (c === 2) { const rb = G.robo.st(); rb.luna = (rb.luna || 0) + 1; if (rb.luna >= 3 && !G.robo.has('antenna')) { await D.say('You really want to know? ...Okay. The night that light flew over, something fell into the reeds by the pond. I kept it. It hums when nobody\u2019s looking.'); await D.say('Here. It looks like an antenna. I think it wants to go home.'); G.robo.give('antenna'); } }
       if (D.f >= 3 && !D.flag('gift')) { D.setFlag('gift'); await D.say('Here, take this. I found it under the oak one night. It glints like a star.'); D.coins(50, 'Luna gave you 50 coins she found!'); }
     },
   },

@@ -135,7 +135,7 @@ M.pet = function (spec) {
   const root = new THREE.Group(); root.name = 'pet';
   const rig = new THREE.Group(); rig.scale.setScalar(S); root.add(rig);
   const P = { root, rig, B, C, S, meshes: [], legs: [], ears: [], eyes: [], cat };
-  const fur = M.fur(cat ? 0.3 : 0.38);
+  const fur = B.robo ? M.mat('#ffffff', { vc: true, r: 0.28, m: 0.38 }) : M.fur(cat ? 0.3 : 0.38);
   const [bx, by, bz] = B.body;
   const L1 = B.legL, L2 = B.legL * 0.95, lw = B.legW, pawH = lw * 0.78;
   const baseH = L1 + L2 + pawH + by * 0.4;
@@ -217,7 +217,7 @@ M.pet = function (spec) {
 
   // eyes
   const eyeR = hr * (cat ? 0.165 : 0.148);
-  const eyeMat = M.mat(cat ? '#111' : '#151012', { r: 0.12 });
+  const eyeMat = C.glowEye ? M.mat(C.eye, { r: 0.2, em: C.eye, ei: 1.8 }) : M.mat(cat ? '#111' : '#151012', { r: 0.12 });
   const hiMat = M.basic(0xffffff);
   const arcMat = M.mat('#1d1716', { r: 0.5 });
   for (const s of [-1, 1]) {
@@ -229,7 +229,7 @@ M.pet = function (spec) {
       const iris = mesh(new THREE.SphereGeometry(eyeR * 0.92, 24, 18), M.mat(C.eye || '#9ccc4a', { r: 0.2 }), null, open, false); iris.scale.set(1, 1.12, 0.45); iris.position.z = eyeR * 0.09;
       const pup = mesh(new THREE.SphereGeometry(eyeR * 0.5, 16, 12), eyeMat, null, open, false); pup.scale.set(0.42, 1.5, 0.4); pup.position.z = eyeR * 0.3; P.eyes.push({ pup });
     } else if (C.eye) {
-      const iris = mesh(new THREE.SphereGeometry(eyeR * 0.8, 20, 14), M.mat(C.eye, { r: 0.2 }), null, open, false); iris.scale.set(1, 1.1, 0.45); iris.position.z = eyeR * 0.1;
+      const iris = mesh(new THREE.SphereGeometry(eyeR * 0.8, 20, 14), M.mat(C.eye, C.glowEye ? { r: 0.2, em: C.eye, ei: 1.6 } : { r: 0.2 }), null, open, false); iris.scale.set(1, 1.1, 0.45); iris.position.z = eyeR * 0.1;
       const pup = mesh(new THREE.SphereGeometry(eyeR * 0.45, 16, 12), eyeMat, null, open, false); pup.scale.set(1, 1, 0.4); pup.position.z = eyeR * 0.3;
     }
     const h1 = mesh(new THREE.SphereGeometry(eyeR * 0.34, 12, 10), hiMat, null, open, false); h1.position.set(eyeR * 0.3, eyeR * 0.42, eyeR * 0.42);
@@ -378,6 +378,17 @@ M.pet = function (spec) {
     mesh(new THREE.SphereGeometry(hr * 0.09, 12, 10), bowM, null, tk).position.set(0, hr * 0.42, hr * 0.14);
     // little moustache
     for (const sd of [-1, 1]) { const ms = paintSphere(new THREE.SphereGeometry(1, 10, 8), C, 'muzzle', 1, 1, 1); ms.scale(hr * 0.16, hr * 0.22, hr * 0.12); addM(mesh(ms, fur, 'head', hc)).position.set(sd * hr * 0.16, -hr * 0.32, rz * 0.88); }
+  }
+  if (B.robo) { // Robo Shiba: antenna, LED cheeks, rocket pack, rivets
+    const metal = M.mat('#8a96a4', { r: 0.3, m: 0.6 }), glow = M.mat(C.eye || '#4ff0ff', { r: 0.2, em: C.eye || '#4ff0ff', ei: 2 });
+    const ant = new THREE.Group(); ant.position.set(0, ry * 0.92, -hr * 0.1); hc.add(ant);
+    mesh(new THREE.CylinderGeometry(hr * 0.03, hr * 0.04, hr * 0.5, 8), metal, null, ant).position.y = hr * 0.25;
+    const tip = mesh(new THREE.SphereGeometry(hr * 0.09, 14, 10), glow, null, ant); tip.position.y = hr * 0.54; P.roboTip = tip;
+    for (const sd of [-1, 1]) { const led = mesh(new THREE.SphereGeometry(hr * 0.06, 12, 8), glow, null, hc, false); led.scale.z = 0.4; led.position.set(sd * rx * 0.58, -hr * 0.1, rz * 0.84); }
+    const core = mesh(new THREE.SphereGeometry(bx * 0.16, 16, 10), glow, null, body, false); core.scale.z = 0.35; core.position.set(0, by * 0.05, bz * 1.12); P.roboCore = core;
+    const pack = new THREE.Group(); pack.position.set(0, by * 0.95, -bz * 0.15); body.add(pack);
+    for (const sd of [-1, 1]) { const j = mesh(new THREE.CylinderGeometry(bx * 0.18, bx * 0.24, bz * 0.55, 12), metal, null, pack); j.rotation.x = Math.PI / 2; j.position.set(sd * bx * 0.28, 0, 0); const fl = mesh(new THREE.ConeGeometry(bx * 0.14, bz * 0.3, 10), M.mat('#ffb04a', { em: '#ff7a1a', ei: 1.5, op: 0.85 }), null, pack, false); fl.rotation.x = -Math.PI / 2; fl.position.set(sd * bx * 0.28, 0, -bz * 0.42); P.jets = (P.jets || []).concat(fl); }
+    for (const [x, y, z] of [[bx * 0.98, 0, bz * 0.5], [-bx * 0.98, 0, bz * 0.5], [bx * 0.98, 0, -bz * 0.5], [-bx * 0.98, 0, -bz * 0.5]]) mesh(new THREE.SphereGeometry(bx * 0.07, 8, 6), metal, null, body, false).position.set(x, y, z);
   }
   if (B.fluff) { // Pomeranian: big fluffy ruff + puffy coat
     const bumpy = (g, amt) => { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const v = new V3(p.getX(i), p.getY(i), p.getZ(i)); const n = 1 + (U.noise3(v.x * 6, v.y * 6, v.z * 6) - 0.5) * amt; p.setXYZ(i, v.x * n, v.y * n, v.z * n); } g.computeVertexNormals(); return g; };
@@ -836,6 +847,8 @@ M.tree = function (season, kind = 'round', rnd = Math.random) {
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 };
+// tall stool for staff behind counters
+M.stoolAt = function (parent, x, z, h = 0.78) { const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g); const mm = M.mat('#3b2a1f', { r: 0.5, m: 0.3 }); const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.06, 18), M.mat('#c8323c', { r: 0.8 })); seat.position.y = h; g.add(seat); for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, h, 6), mm); l.position.set(Math.cos(a) * 0.12, h / 2, Math.sin(a) * 0.12); l.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12); g.add(l); } const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.012, 6, 18), mm); ring.rotation.x = Math.PI / 2; ring.position.y = h * 0.38; g.add(ring); g.traverse((o) => { if (o.isMesh) o.castShadow = true; }); return g; };
 M.bench = function () {
   const g = new THREE.Group(); const wood = M.mat('#b9773f', { r: 0.85 }), iron = M.mat('#3a3433', { r: 0.5, m: 0.4 });
   for (let i = 0; i < 3; i++) { const s = mesh(new THREE.BoxGeometry(1.6, 0.05, 0.13), wood, null, g); s.position.set(0, 0.45, -0.16 + i * 0.16); }

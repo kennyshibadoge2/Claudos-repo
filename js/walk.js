@@ -78,7 +78,7 @@ G.scenes.walk = (() => {
     const pal = [['#fde3e3', '#c84a4a'], ['#e3eefd', '#3b5ba8'], ['#fff3d6', '#c8922a'], ['#e9f6e9', '#4a8a5a'], ['#f2e6fa', '#7a5c9a'], ['#fff0e6', '#b35a3a']];
     const styles = ['gable', 'japanese', 'hip', 'saltbox', 'flat', 'gable', 'japanese'], walls = ['siding', 'plaster', 'brick', 'shingle', 'plaster', 'boards', 'plaster'];
     BLD.push({ t: 0.59, kind: 'hotel', name: 'Paw Inn', o: { w: 5.2, d: 3.8, h: 2.6, stories: 2, wall: '#e9f1fb', wallKind: 'siding', style: 'hip', roof: '#3b5ba8', sign: 'Paw Inn', signCol: '#3b5ba8', awning: '#6a8fd8', door: '#3b5ba8', porch: true, flowers: true, pots: 2, shutters: '#3b5ba8', fence: false, mailbox: false } });
-    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => t !== 0.59 && BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
+    [0.17, -1, 0.46, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => t >= 0 && t !== 0.59 && BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
     // Maple Dog Park entrance: stone pillars, wooden arch with a carved sign, hedges, flowers, map board
     function parkEntrance(P, n, b) {
       const g = new THREE.Group(); g.position.copy(P.clone().addScaledVector(n, 3.2)); g.rotation.y = Math.atan2(-n.x, -n.z); st.add(g);
@@ -101,8 +101,8 @@ G.scenes.walk = (() => {
         add(new THREE.CylinderGeometry(0.42, 0.34, 0.42, 14), M.mat('#b5653a', { r: 0.9 }), x + sx * 0.9, 0.21, 0.5);
         const fl = M.flowers(14, 0.32); fl.position.set(x + sx * 0.9, 0.42, 0.5); g.add(fl);
         // hedges + fence running off to the sides
-        for (let k = 0; k < 4; k++) { const bu = M.bush(k % 2 ? '#5e9e44' : '#6aa94e', 1.25); bu.position.set(sx * (3.4 + k * 1.1), 0, -0.25); g.add(bu); }
-        const fe = M.fence(7, '#c8a07a'); fe.position.set(sx * 6.7, 0, -0.9); g.add(fe);
+        for (let k = 0; k < 3; k++) { const bu = M.bush(k % 2 ? '#5e9e44' : '#6aa94e', 1.2); bu.position.set(sx * (3.4 + k * 1.05), 0, -0.25); g.add(bu); }
+        const fe = M.fence(4, '#c8a07a'); fe.position.set(sx * 7.4, 0, -0.9); g.add(fe);
         const tr = M.tree(G.season(), 'round'); tr.position.set(sx * U.rand(4.5, 6.5), 0, -3.2); tr.scale.setScalar(1.2); g.add(tr);
       }
       // wooden arch
@@ -251,7 +251,7 @@ G.scenes.walk = (() => {
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
     walkT = 0; greeted = new Set(); race = null; talkBusy = false; steer = null; promptKey = '';
-    refreshPresence(); spawnPresents(); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
+    refreshPresence(); spawnPresents(); setTimeout(() => { if (G.curName === 'walk' && presents.length) G.ui.toast(presents.length + ' presents are buried around town today. Look for twinkling mounds!'); }, 4000); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
     weatherSetup(); G.audio.loop(G.weather() === 'rain'); howled = false; poopT = U.rand(60, 120);
     if (poop) { scene.remove(poop.m); poop = null; } if (ufo) { scene.remove(ufo.m); ufo = null; }
     ufoT = G.daylight() < 0.3 && Math.random() < 0.35 ? U.rand(25, 80) : -1;
@@ -277,7 +277,7 @@ G.scenes.walk = (() => {
     if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + (pet.d.breed === 'golden' ? 3 : 2)); pet.happy(6, false); }
     scene.remove(pet.root); pet.stop();
     if (leashMesh) { scene.remove(leashMesh); leashMesh.geometry.dispose(); leashMesh = null; }
-    for (const pr of presents) { if (pr.box) scene.remove(pr.box); }
+    for (const pr of presents) { if (pr.box) scene.remove(pr.box); if (pr.g) scene.remove(pr.g); }
     presents = []; G.ui.prompts([]); G.ui.hint(null);
   };
   W.dock = () => [
@@ -320,16 +320,30 @@ G.scenes.walk = (() => {
   }
 
   /* ---------------- presents ---------------- */
-  function spawnPresents() {
-    presents = [];
-    for (let i = 0; i < 6; i++) {
-      for (let k = 0; k < 20; k++) {
-        const t = Math.random(); const P = curvePt(t), n = outward(t); const side = Math.random() < 0.5 ? 1 : -1;
-        const p = P.clone().addScaledVector(n, side * U.rand(1.8, 4.5));
-        if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8)) { presents.push({ pos: p, found: false, sp: Math.random() }); break; }
-      }
-    }
+  // presents: little dirt mounds with a twinkling glint, near the path; your pet sniffs them out
+  let moundMat = null;
+  function makePresent(p) {
+    if (!moundMat) moundMat = G.M.mat('#7a5232', { r: 1 });
+    const g = new THREE.Group(); g.position.copy(p); scene.add(g);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), moundMat); m.scale.set(1, 0.35, 0.85); m.receiveShadow = true; g.add(m);
+    for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), moundMat); c.position.set(U.rand(-0.3, 0.3), 0.02, U.rand(-0.3, 0.3)); g.add(c); }
+    const glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: G.tex.sparkle, color: '#fff3a0', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glint.position.y = 0.32; glint.scale.setScalar(0.5); g.add(glint);
+    presents.push({ pos: p, found: false, sp: Math.random(), g, glint, ph: Math.random() * 6 });
   }
+  function presentSpot() {
+    for (let k = 0; k < 30; k++) {
+      const t = Math.random(); const P = curvePt(t), n = outward(t); const side = Math.random() < 0.5 ? 1 : -1;
+      const p = P.clone().addScaledVector(n, side * U.rand(1.0, 2.6));
+      if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8) && presents.every((q) => q.found || U.d2(p.x, p.z, q.pos.x, q.pos.z) > 6)) return p;
+    }
+    return null;
+  }
+  function spawnPresents() {
+    for (const pr of presents) if (pr.g) scene.remove(pr.g);
+    presents = [];
+    for (let i = 0; i < 6; i++) { const p = presentSpot(); if (p) makePresent(p); }
+  }
+  function addPresent() { const p = presentSpot(); if (p) makePresent(p); }
   function rewardPresent() {
     const r = Math.random();
     G.state.stats.presents++;
@@ -341,6 +355,7 @@ G.scenes.walk = (() => {
   }
   function* digUp(pr) {
     pr.found = true; talkBusy = true; steer = null;
+    if (pr.g) { scene.remove(pr.g); pr.g = null; }
     try { yield* digInner(pr); } finally { talkBusy = false; if (pr.box) { scene.remove(pr.box); pr.box = null; } }
   }
   function* digInner(pr) {
@@ -578,7 +593,7 @@ G.scenes.walk = (() => {
         G.state.fortune = { day: G.today(), i }; G.audio.play(i === 0 ? 'fanfare' : 'shrine');
         if (i === 0) { G.stamp('fortune'); for (let k = 0; k < 3; k++) addPresent(); G.ui.toast('Great blessing! Extra presents appear around town!', 'gold'); }
         G.ui.refresh(); G.ui.resheet(); } }));
-      l.appendChild(G.ui.li({ icon: 'paw', title: 'Ring the bell and pray', sub: 'Toss a coin, ring twice, bow twice, clap twice...', right: '1c', fn: () => { if (G.state.coins < 1) return; G.state.coins -= 1; G.audio.play('coins'); setTimeout(() => G.audio.play('shrine'), 300); pet.do((function* () { yield* pet.act('bow', 1.2); pet.emote('sparkle'); })()); G.ui.toast(U.pick(['You pray for many happy walks.', pet.name + ' bows too. Very polite.', 'A warm breeze. Somehow you feel lucky.', 'You wish for ' + pet.name + ' to stay healthy forever.'])); G.ui.closeSheet(true); } }));
+      l.appendChild(G.ui.li({ icon: 'paw', title: 'Ring the bell and pray', sub: 'Toss a coin, ring twice, bow twice, clap twice...', right: '1c', fn: () => { if (G.state.coins < 1) return; G.state.coins -= 1; G.audio.play('coins'); setTimeout(() => G.audio.play('shrine'), 300); { const hr = new Date().getHours(); if ((hr >= 20 || hr < 5) && !G.robo.has('gear')) { G.ui.closeSheet(true); setTimeout(() => { G.ui.toast('The bell rings out in the dark... something glints under the offering box!', 'gold'); pet.do((function* () { pet.setPose('crouch'); pet.digT = 1.2; yield* pet.wait(1.2); G.fx.spawn('star', pet.pos.clone().setY(0.4), 10); G.robo.give('gear'); })()); }, 900); } } pet.do((function* () { yield* pet.act('bow', 1.2); pet.emote('sparkle'); })()); G.ui.toast(U.pick(['You pray for many happy walks.', pet.name + ' bows too. Very polite.', 'A warm breeze. Somehow you feel lucky.', 'You wish for ' + pet.name + ' to stay healthy forever.'])); G.ui.closeSheet(true); } }));
     } });
   }
   function fountainSheet() {
@@ -587,13 +602,13 @@ G.scenes.walk = (() => {
       const l = G.ui.list(body);
       l.appendChild(G.ui.li({ icon: 'coin', title: 'Toss a coin and make a wish', sub: 'Who knows what might happen?', right: '5c', fn: () => {
         if (G.state.coins < 5) { G.ui.toast('Not enough coins.'); return; } G.state.coins -= 5; G.audio.play('coins'); G.ui.closeSheet(true);
+        { const rb = G.robo.st(); if (rb.wishDay !== G.today()) { rb.wishDay = G.today(); rb.wishes = 0; } rb.wishes++; if (rb.wishes >= 3 && !G.robo.has('bolt')) { setTimeout(() => { G.audio.play('splash'); G.ui.toast('Your third wish makes the water swirl... a silver bolt bobs up!', 'gold'); G.fx.spawn('star', fountainPos.clone().setY(1), 10); G.robo.give('bolt'); }, 1400); } }
         setTimeout(() => { G.audio.play('splash'); G.fx.spawn('drop', fountainPos.clone().setY(0.6), 10);
           if (Math.random() < 0.07) { G.stamp('fountain'); G.audio.play('fanfare'); G.ui.banner('Wish granted!', 'Coins rain down!', 2200); G.addCoins(120, 'The fountain sparkles: +120 coins!'); for (let k = 0; k < 4; k++) setTimeout(() => G.fx.spawn('star', pet.pos.clone().setY(2), 8), k * 200); }
           else G.ui.toast(U.pick(['You wish for endless treats. ' + pet.name + ' approves.', 'The water sparkles. Nothing happens. Yet.', 'A duck from the pond stares at you judgmentally.', 'You hear a faint "woof" from the water. Probably an echo.', pet.name + ' tries to drink from the fountain. Not allowed!'])); G.ui.refresh(); }, 500);
       } }));
     } });
   }
-  function addPresent() { for (let k = 0; k < 20; k++) { const t = Math.random(); const P = curvePt(t), n = outward(t); const p = P.clone().addScaledVector(n, (Math.random() < 0.5 ? 1 : -1) * U.rand(1.8, 4.5)); if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8)) { presents.push({ pos: p, found: false, sp: Math.random() }); return; } } }
   function* doPoop() {
     talkBusy = true;
     try {
@@ -769,7 +784,10 @@ G.scenes.walk = (() => {
     // presents
     for (const pr of presents) {
       if (pr.found) continue;
-      pr.sp += dt; if (pr.sp > 0.45) { pr.sp = 0; if (pr.pos.distanceTo(pet.pos) < 28) G.fx.spawn('sparkle', pr.pos.clone().add(new V3(U.rand(-0.2, 0.2), 0.15, U.rand(-0.2, 0.2))), 1); }
+      pr.ph += dt; if (pr.glint) { const tw = Math.max(0, Math.sin(pr.ph * 2.2)); pr.glint.material.opacity = 0.35 + tw * 0.65; pr.glint.scale.setScalar(0.35 + tw * 0.35); pr.glint.material.rotation = pr.ph * 0.6; pr.glint.position.y = 0.32 + Math.sin(pr.ph) * 0.04; }
+      pr.sp += dt; if (pr.sp > 0.6) { pr.sp = 0; if (pr.pos.distanceTo(pet.pos) < 28) G.fx.spawn('sparkle', pr.pos.clone().add(new V3(U.rand(-0.2, 0.2), 0.25, U.rand(-0.2, 0.2))), 1); }
+      const dd = U.d2(pr.pos.x, pr.pos.z, pet.pos.x, pet.pos.z);
+      if (!pr.sniffed && dd < 5 && !talkBusy) { pr.sniffed = true; pet.emote('bang', 1); pet.lookTarget = pr.pos.clone().setY(0.1); G.audio.play('sniff'); G.ui.hint(pet.name + ' smells something! Lead them to the little mound.', 3000); setTimeout(() => { if (pet) pet.lookTarget = null; }, 1500); }
       if (!talkBusy && U.d2(pr.pos.x, pr.pos.z, pet.pos.x, pet.pos.z) < 1.3) { pet.stop(); pet.do(digUp(pr)); }
     }
     // ducks
