@@ -432,6 +432,12 @@ G.onResize = function () {
   if (G.cur && G.cur.onResize) G.cur.onResize(w, h);
 };
 G.aspect = () => innerWidth / innerHeight;
+// interiors: on tall (portrait) screens widen the field of view so the sides of the room aren't cut off
+G.fitFov = function (cam, minH) {
+  if (!cam || !minH) return; if (cam.userData.baseFov === undefined) cam.userData.baseFov = cam.fov;
+  const base = cam.userData.baseFov; const need = 2 * Math.atan(Math.tan(minH * Math.PI / 360) / Math.max(0.2, cam.aspect)) * 180 / Math.PI;
+  const f = Math.min(80, Math.max(base, need)); if (Math.abs(f - cam.fov) > 0.05) { cam.fov = f; cam.updateProjectionMatrix(); }
+};
 
 /* ---------------- Raycast helpers ---------------- */
 G.ray = function (p, cam) {
@@ -867,6 +873,7 @@ G.BREEDS = {
   akita: { species: 'dog', name: 'Akita', legL: 0.15, legW: 0.058, body: [0.2, 0.19, 0.32], headR: 0.18, earH: 0.12, earR: 0.072, ear: 'prick', snout: 1.05, tail: 'curl', voice: 0.82, scale: 1.35, cheek: 1.18 },
   pomeranian: { species: 'dog', name: 'Pomeranian', legL: 0.075, legW: 0.04, body: [0.15, 0.15, 0.2], headR: 0.15, earH: 0.075, earR: 0.045, ear: 'prick', snout: 0.6, tail: 'plume', voice: 1.7, scale: 0.72, cheek: 1.15, fluff: true },
   yorkie: { species: 'dog', name: 'Yorkshire Terrier', legL: 0.085, legW: 0.036, body: [0.13, 0.13, 0.22], headR: 0.14, earH: 0.09, earR: 0.045, ear: 'prick', snout: 0.85, tail: 'straight', voice: 1.75, scale: 0.7, cheek: 1.02, hair: 'long' },
+  robo: { species: 'dog', name: 'Robo Shiba', legL: 0.12, legW: 0.05, body: [0.17, 0.165, 0.27], headR: 0.165, earH: 0.125, earR: 0.062, ear: 'prick', snout: 1, tail: 'curl', voice: 1.3, cheek: 1.1, robo: true },
   cat: { species: 'cat', name: 'Cat', legL: 0.115, legW: 0.034, body: [0.13, 0.135, 0.25], headR: 0.15, earH: 0.11, earR: 0.058, ear: 'cat', snout: 0.5, tail: 'cat', voice: 1, cheek: 1.08 },
 };
 
@@ -901,6 +908,8 @@ G.COATS = {
   pom_black: { name: 'Black', top: '#1f1b1c', mid: '#2a2526', under: '#3a3335', dots: '#3a3335', sock: 0 },
   yorkie: { name: 'Blue & Tan', top: '#55657a', mid: '#6c7c90', under: '#d9a56a', tan: '#c98f55', tanHead: true, dots: '#c98f55', sock: 0.9 },
   yorkie_gold: { name: 'Blue & Gold', top: '#3e4c5e', mid: '#56667a', under: '#e6b878', tan: '#d9a660', tanHead: true, dots: '#d9a660', sock: 0.9 },
+  robo: { name: 'Chrome', top: '#7f8a97', mid: '#b4bdc8', under: '#eef1f5', dots: '#eef1f5', eye: '#4ff0ff', glowEye: true, sock: 0.85 },
+  robo_gold: { name: 'Gold Edition', top: '#a8781e', mid: '#d4a640', under: '#f6e6b8', dots: '#f6e6b8', eye: '#ff7a4a', glowEye: true, sock: 0.85 },
   // cats
   tabby: { name: 'Orange Tabby', top: '#d9782e', mid: '#ef9b4e', under: '#fff1dc', stripes: '#b65a1c', eye: '#9ccc4a', nose: '#e88a8a' },
   grey: { name: 'Blue Grey', top: '#7d8590', mid: '#9aa2ac', under: '#d9dde2', eye: '#f2c24b', nose: '#b58a8a' },
@@ -913,7 +922,7 @@ G.PET_COATS = { dog: ['red', 'sesame', 'blacktan', 'cream'], cat: ['tabby', 'gre
 G.BREED_COATS = {
   shiba: ['red', 'sesame', 'blacktan', 'cream'], mame: ['red', 'cream', 'sesame', 'blacktan'], corgi: ['corgi', 'corgi_tri', 'corgi_sable'], husky: ['husky', 'husky_black', 'husky_red'],
   dachshund: ['dachs', 'dachs_bt', 'dachs_choc'], pug: ['pug', 'pug_black'], golden: ['golden', 'golden_cream', 'golden_red'], beagle: ['beagle_tri', 'beagle_lemon'],
-  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
+  akita: ['akita_red', 'akita_brindle', 'akita_white'], pomeranian: ['pom_orange', 'pom_cream', 'pom_black'], yorkie: ['yorkie', 'yorkie_gold'], robo: ['robo', 'robo_gold'], cat: ['tabby', 'grey', 'calico', 'tuxedo', 'siamese', 'black'],
 };
 // adoption: Shibas from day one, everyone else unlocks (checked for old saves too)
 G.BREED_INFO = {
@@ -928,10 +937,11 @@ G.BREED_INFO = {
   golden: { trait: 'Gentle and devoted: bonds with you faster.', hint: 'Reach max bond with any pet', from: 'Maple Kennel' },
   akita: { trait: 'The Shiba\u2019s big cousin: strong, calm and fearless.', hint: 'Win the Expert Cup with a Shiba', from: 'Maple Kennel' },
   pomeranian: { trait: 'A walking puffball: brushing makes them extra happy.', hint: 'Finish all daily quests on 2 different days', from: 'Maple Pets' },
+  robo: { trait: 'Rocket-powered, never gets muddy, beeps when happy. One of a kind.', hint: 'Find the 5 lost Robo Parts', from: 'Dr. Kurogane' },
   yorkie: { trait: 'Tiny fashionista: loves outfits and brushing.', hint: 'Own 8 accessories and brush a pet until super fluffy', from: 'Daisuke (Maple Pets)' },
 };
-G.BREED_PRICE = { shiba: 4000, mame: 4500, cat: 4000, pug: 5000, corgi: 5500, dachshund: 5000, beagle: 5000, husky: 6500, golden: 6500, akita: 7500, pomeranian: 7000, yorkie: 8000 };
-G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie'];
+G.BREED_PRICE = { shiba: 4000, mame: 4500, cat: 4000, pug: 5000, corgi: 5500, dachshund: 5000, beagle: 5000, husky: 6500, golden: 6500, akita: 7500, pomeranian: 7000, yorkie: 8000, robo: 0 };
+G.BREED_ORDER = ['shiba', 'mame', 'cat', 'pug', 'corgi', 'dachshund', 'beagle', 'husky', 'golden', 'akita', 'pomeranian', 'yorkie', 'robo'];
 G.breedUnlocked = function (b) {
   const s = G.state; if (!s) return false; s.breeds = s.breeds || {};
   if (b === 'shiba' || b === 'mame') return true;
@@ -950,6 +960,7 @@ G.breedCheck = function (b) { // is the requirement met right now?
     case 'golden': return s.pets.concat(s.hotel || []).some((d) => (d.bond || 0) >= 100);
     case 'akita': return won('expert', isShiba);
     case 'pomeranian': return (s.questDays || 0) >= 2;
+    case 'robo': return G.robo && G.robo.count() >= 5;
     case 'yorkie': return Object.keys(s.acc || {}).filter((k) => G.ITEMS[k] && G.ITEMS[k].cat === 'acc').length >= 8 && (st.fluffy || 0) >= 1;
     default: return true;
   }
@@ -961,7 +972,7 @@ G.checkBreeds = function (quiet) {
     if (G.breedUnlocked(b) || !G.breedCheck(b)) continue;
     s.breeds[b] = Date.now(); got.push(b);
     const nm = b === 'cat' ? 'Kittens' : G.BREEDS[b].name + ' puppies'; const info = G.BREED_INFO[b];
-    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
+    s.mail = s.mail || []; s.mail.unshift({ id: 'breed_' + b, from: info.from || 'Maple Kennel', subject: nm + ' at the kennel!', body: (b === 'robo' ? 'All five parts are back! I tightened the last bolt, charged the battery, and he booted up wagging. He\u2019s waiting for you at Maple Kennel \u2014 no charge, of course. Take good care of him!\n\n\u2014 Dr. Kurogane\n\n' : b === 'yorkie' ? 'A customer\u2019s Yorkie just had a litter, and with all those outfits and that brushing, I told them you\u2019d be the perfect owner. ' : b === 'akita' ? 'Word travelled fast about your Shiba\u2019s Expert Cup win. A breeder of Akitas, the Shiba\u2019s big cousins, would love one of their pups to go to you. ' : '') + nm + ' are now waiting at Maple Kennel. ' + info.trait + ' Visit the kennel on your walk to meet them!', day: G.today(), read: false });
     if (!quiet) setTimeout(() => { G.audio.play('fanfare'); G.ui.banner('New at the kennel!', nm + ' can now be adopted', 2800); }, 400 + got.length * 3000);
   }
   if (got.length) { G.ui.refresh && G.ui.refresh(); G.save(); }
@@ -1289,6 +1300,7 @@ G.NPCS = {
       if (c === 0) { await D.say('Tonight it\u2019s ' + phase + '. Here, look through the eyepiece.'); await D.say(ph > 0.45 && ph < 0.55 ? 'You can see every crater! ' + D.name + ' is howling a little. Fair.' : ph < 0.05 || ph > 0.95 ? 'Hmm, the moon\u2019s hiding tonight. But that means the stars are extra bright!' : 'See the line between light and shadow? That\u2019s where the craters look sharpest.'); D.once('moon', () => D.friend(1)); }
       else if (c === 1) { await D.say(U.pick(['See that bright one low in the sky? Sirius, the "Dog Star". It\u2019s in the constellation Canis Major, the Great Dog.', 'There\u2019s a little constellation called Canis Minor too. The Lesser Dog. Like a mame shiba of the sky.', 'Every July, on Tanabata, two star lovers meet across the Milky Way. People write wishes on paper strips.', 'The "Dog Days" of summer are named after Sirius rising with the sun. Hot days, sleepy dogs.'])); D.once('star', () => D.friend(1)); }
       else { await D.say(U.pick(['Strange? Well... sometimes there\u2019s a light over the hills that moves wrong. Not a plane. Not a star. If you see it, tap it. For science.', 'Pip says it\u2019s a kite. Kites don\u2019t hum.', 'I logged an unidentified object last Tuesday. Mr. Ogawa says it was a disc thrown by a very strong golden retriever.'])); }
+      if (c === 2) { const rb = G.robo.st(); rb.luna = (rb.luna || 0) + 1; if (rb.luna >= 3 && !G.robo.has('antenna')) { await D.say('You really want to know? ...Okay. The night that light flew over, something fell into the reeds by the pond. I kept it. It hums when nobody\u2019s looking.'); await D.say('Here. It looks like an antenna. I think it wants to go home.'); G.robo.give('antenna'); } }
       if (D.f >= 3 && !D.flag('gift')) { D.setFlag('gift'); await D.say('Here, take this. I found it under the oak one night. It glints like a star.'); D.coins(50, 'Luna gave you 50 coins she found!'); }
     },
   },
@@ -1440,7 +1452,7 @@ M.pet = function (spec) {
   const root = new THREE.Group(); root.name = 'pet';
   const rig = new THREE.Group(); rig.scale.setScalar(S); root.add(rig);
   const P = { root, rig, B, C, S, meshes: [], legs: [], ears: [], eyes: [], cat };
-  const fur = M.fur(cat ? 0.3 : 0.38);
+  const fur = B.robo ? M.mat('#ffffff', { vc: true, r: 0.28, m: 0.38 }) : M.fur(cat ? 0.3 : 0.38);
   const [bx, by, bz] = B.body;
   const L1 = B.legL, L2 = B.legL * 0.95, lw = B.legW, pawH = lw * 0.78;
   const baseH = L1 + L2 + pawH + by * 0.4;
@@ -1522,7 +1534,7 @@ M.pet = function (spec) {
 
   // eyes
   const eyeR = hr * (cat ? 0.165 : 0.148);
-  const eyeMat = M.mat(cat ? '#111' : '#151012', { r: 0.12 });
+  const eyeMat = C.glowEye ? M.mat(C.eye, { r: 0.2, em: C.eye, ei: 1.8 }) : M.mat(cat ? '#111' : '#151012', { r: 0.12 });
   const hiMat = M.basic(0xffffff);
   const arcMat = M.mat('#1d1716', { r: 0.5 });
   for (const s of [-1, 1]) {
@@ -1534,7 +1546,7 @@ M.pet = function (spec) {
       const iris = mesh(new THREE.SphereGeometry(eyeR * 0.92, 24, 18), M.mat(C.eye || '#9ccc4a', { r: 0.2 }), null, open, false); iris.scale.set(1, 1.12, 0.45); iris.position.z = eyeR * 0.09;
       const pup = mesh(new THREE.SphereGeometry(eyeR * 0.5, 16, 12), eyeMat, null, open, false); pup.scale.set(0.42, 1.5, 0.4); pup.position.z = eyeR * 0.3; P.eyes.push({ pup });
     } else if (C.eye) {
-      const iris = mesh(new THREE.SphereGeometry(eyeR * 0.8, 20, 14), M.mat(C.eye, { r: 0.2 }), null, open, false); iris.scale.set(1, 1.1, 0.45); iris.position.z = eyeR * 0.1;
+      const iris = mesh(new THREE.SphereGeometry(eyeR * 0.8, 20, 14), M.mat(C.eye, C.glowEye ? { r: 0.2, em: C.eye, ei: 1.6 } : { r: 0.2 }), null, open, false); iris.scale.set(1, 1.1, 0.45); iris.position.z = eyeR * 0.1;
       const pup = mesh(new THREE.SphereGeometry(eyeR * 0.45, 16, 12), eyeMat, null, open, false); pup.scale.set(1, 1, 0.4); pup.position.z = eyeR * 0.3;
     }
     const h1 = mesh(new THREE.SphereGeometry(eyeR * 0.34, 12, 10), hiMat, null, open, false); h1.position.set(eyeR * 0.3, eyeR * 0.42, eyeR * 0.42);
@@ -1683,6 +1695,17 @@ M.pet = function (spec) {
     mesh(new THREE.SphereGeometry(hr * 0.09, 12, 10), bowM, null, tk).position.set(0, hr * 0.42, hr * 0.14);
     // little moustache
     for (const sd of [-1, 1]) { const ms = paintSphere(new THREE.SphereGeometry(1, 10, 8), C, 'muzzle', 1, 1, 1); ms.scale(hr * 0.16, hr * 0.22, hr * 0.12); addM(mesh(ms, fur, 'head', hc)).position.set(sd * hr * 0.16, -hr * 0.32, rz * 0.88); }
+  }
+  if (B.robo) { // Robo Shiba: antenna, LED cheeks, rocket pack, rivets
+    const metal = M.mat('#8a96a4', { r: 0.3, m: 0.6 }), glow = M.mat(C.eye || '#4ff0ff', { r: 0.2, em: C.eye || '#4ff0ff', ei: 2 });
+    const ant = new THREE.Group(); ant.position.set(0, ry * 0.92, -hr * 0.1); hc.add(ant);
+    mesh(new THREE.CylinderGeometry(hr * 0.03, hr * 0.04, hr * 0.5, 8), metal, null, ant).position.y = hr * 0.25;
+    const tip = mesh(new THREE.SphereGeometry(hr * 0.09, 14, 10), glow, null, ant); tip.position.y = hr * 0.54; P.roboTip = tip;
+    for (const sd of [-1, 1]) { const led = mesh(new THREE.SphereGeometry(hr * 0.06, 12, 8), glow, null, hc, false); led.scale.z = 0.4; led.position.set(sd * rx * 0.58, -hr * 0.1, rz * 0.84); }
+    const core = mesh(new THREE.SphereGeometry(bx * 0.16, 16, 10), glow, null, body, false); core.scale.z = 0.35; core.position.set(0, by * 0.05, bz * 1.12); P.roboCore = core;
+    const pack = new THREE.Group(); pack.position.set(0, by * 0.95, -bz * 0.15); body.add(pack);
+    for (const sd of [-1, 1]) { const j = mesh(new THREE.CylinderGeometry(bx * 0.18, bx * 0.24, bz * 0.55, 12), metal, null, pack); j.rotation.x = Math.PI / 2; j.position.set(sd * bx * 0.28, 0, 0); const fl = mesh(new THREE.ConeGeometry(bx * 0.14, bz * 0.3, 10), M.mat('#ffb04a', { em: '#ff7a1a', ei: 1.5, op: 0.85 }), null, pack, false); fl.rotation.x = -Math.PI / 2; fl.position.set(sd * bx * 0.28, 0, -bz * 0.42); P.jets = (P.jets || []).concat(fl); }
+    for (const [x, y, z] of [[bx * 0.98, 0, bz * 0.5], [-bx * 0.98, 0, bz * 0.5], [bx * 0.98, 0, -bz * 0.5], [-bx * 0.98, 0, -bz * 0.5]]) mesh(new THREE.SphereGeometry(bx * 0.07, 8, 6), metal, null, body, false).position.set(x, y, z);
   }
   if (B.fluff) { // Pomeranian: big fluffy ruff + puffy coat
     const bumpy = (g, amt) => { const p = g.attributes.position; for (let i = 0; i < p.count; i++) { const v = new V3(p.getX(i), p.getY(i), p.getZ(i)); const n = 1 + (U.noise3(v.x * 6, v.y * 6, v.z * 6) - 0.5) * amt; p.setXYZ(i, v.x * n, v.y * n, v.z * n); } g.computeVertexNormals(); return g; };
@@ -2141,6 +2164,8 @@ M.tree = function (season, kind = 'round', rnd = Math.random) {
   g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 };
+// tall stool for staff behind counters
+M.stoolAt = function (parent, x, z, h = 0.78) { const g = new THREE.Group(); g.position.set(x, 0, z); parent.add(g); const mm = M.mat('#3b2a1f', { r: 0.5, m: 0.3 }); const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.06, 18), M.mat('#c8323c', { r: 0.8 })); seat.position.y = h; g.add(seat); for (let i = 0; i < 3; i++) { const a = i / 3 * Math.PI * 2; const l = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.022, h, 6), mm); l.position.set(Math.cos(a) * 0.12, h / 2, Math.sin(a) * 0.12); l.rotation.set(Math.sin(a) * 0.12, 0, -Math.cos(a) * 0.12); g.add(l); } const ring = new THREE.Mesh(new THREE.TorusGeometry(0.14, 0.012, 6, 18), mm); ring.rotation.x = Math.PI / 2; ring.position.y = h * 0.38; g.add(ring); g.traverse((o) => { if (o.isMesh) o.castShadow = true; }); return g; };
 M.bench = function () {
   const g = new THREE.Group(); const wood = M.mat('#b9773f', { r: 0.85 }), iron = M.mat('#3a3433', { r: 0.5, m: 0.4 });
   for (let i = 0; i < 3; i++) { const s = mesh(new THREE.BoxGeometry(1.6, 0.05, 0.13), wood, null, g); s.position.set(0, 0.45, -0.16 + i * 0.16); }
@@ -2496,6 +2521,7 @@ class Pet {
   voice(kind = 'bark') {
     if (this.voiceCd > 0 && kind !== 'force') return; this.voiceCd = 0.35;
     const p = (this.B.voice || 1) / Math.sqrt(this.S);
+    if (this.d.breed === 'robo') { G.audio.play(kind === 'whine' ? 'boop' : 'beep', p * U.rand(0.95, 1.08)); return; }
     if (this.cat) { if (kind === 'purr') G.audio.play('purr'); else if (kind === 'hiss') G.audio.play('hiss'); else G.audio.play('meow', p * U.rand(0.9, 1.1)); return; }
     if (kind === 'whine') G.audio.play('whine', p); else if (kind === 'happy') G.audio.play('happy', p); else if (kind === 'howl') G.audio.play('howl', p); else if (kind === 'yawn') G.audio.play('yawn', p); else if (kind === 'growl') G.audio.play('growl', p); else G.audio.play(Math.random() < 0.5 ? 'bark' : 'yip', p * U.rand(0.92, 1.08));
     this.mouthPop = 0.25;
@@ -2521,6 +2547,7 @@ class Pet {
     const sleeping = this.poseName === 'sleep';
     d.hunger = U.clamp(d.hunger - r * (active ? 1.8 : 1.0), 0, 100);
     d.thirst = U.clamp(d.thirst - r * (active ? 2.6 : 1.3), 0, 100);
+    if (d.breed === 'robo') d.clean = 100;
     d.energy = U.clamp(d.energy + (sleeping ? r * 14 : -r * (0.6 + (active ? 2.2 : 0)) * (d.breed === 'pug' ? 0.6 : 1)), 0, 100);
     d.clean = U.clamp(d.clean - r * (G.curName === 'walk' ? 1.4 : 0.3), 0, 100);
     const base = Math.min(d.hunger, d.thirst, d.clean + 30, d.energy + 25) * 0.55 + 45;
@@ -2623,6 +2650,12 @@ class Pet {
         for (let i = 0; i <= 6; i++) { const a = i / 6 * Math.PI * 2; this.moveTarget = new V3(cx + Math.cos(a) * 0.35, 0, cz + Math.sin(a) * 0.35); this.speedMul = 1.1; yield* this.waitUntil(() => U.d2(this.pos.x, this.pos.z, this.moveTarget.x, this.moveTarget.z) < 0.08, 1.2); }
         this.moveTarget = null; yield* faceCam(this); this.shakeT = 0.45; yield* this.wait(0.5); this.lookCam = 3; yield* this.act('sit', 1.5); this.emote('heart', 1); break;
       }
+      case 'robo': { // system check: scan left and right, beep-boop, then a little rocket hop
+        yield* faceCam(this); this.setPose('sit');
+        for (const yaw of [1.6, -1.6, 0]) { this.lookTarget = this.root.localToWorld(new V3(Math.sin(yaw) * 2, 0.4, Math.cos(yaw) * 2)); G.audio.play('beep', 1 + Math.abs(yaw) * 0.1); yield* this.wait(0.45); }
+        this.lookTarget = null; this.emote('note', 1); this.setPose('stand'); this.jetT = 1.2; this.jump(2.4); G.audio.play('whoosh');
+        yield* this.waitUntil(() => !this.airborne, 2); yield* this.act('proud', 1.6); break;
+      }
       default: yield* this.wait(1);
     }
     this.eyeOverride = null; this.mouthOpen = 0;
@@ -2702,7 +2735,10 @@ class Pet {
     const petting = this.petT < 0.5;
     this.petLean = U.damp(this.petLean, petting ? 1 : 0, 5, dt);
     m.body.position.y = m.baseH + P.h + bob + this.squash * -0.3 * m.dims.by;
-    if (this.flipL) G.discFlip(this, this.flipL); // flips play out on their own, even after the catch
+    if (this.flipL) G.discFlip(this, this.flipL);
+    if (m.jets) { const on = this.airborne || (this.jetT || 0) > 0; this.jetT = Math.max(0, (this.jetT || 0) - dt); for (const j of m.jets) { j.visible = on; j.scale.set(1, 0.7 + Math.random() * 0.6, 1); } if (on && Math.random() < 0.5) G.fx.spawn('sparkle', this.root.position.clone().add(new V3(0, m.baseH * this.S, 0)), 1, { color: '#ffb04a', scale: 0.5 }); }
+    if (m.roboTip) m.roboTip.scale.setScalar(0.85 + Math.abs(Math.sin(this.t * 3)) * 0.35);
+    if (m.roboCore) m.roboCore.scale.set(1 + Math.sin(this.t * 2) * 0.12, 1 + Math.sin(this.t * 2) * 0.12, 0.35); // flips play out on their own, even after the catch
     m.body.rotation.set(P.pitch + gp + (this.extraPitch || 0), 0, roll + this.petLean * 0.05 * Math.sin(t * 2));
     m.body.scale.set(1 + this.squash * 0.5, 1 + breath - this.squash, 1 + this.squash * 0.3);
     // legs
@@ -2859,11 +2895,12 @@ G.offlineDecay = function () {
 class Person {
   constructor(look, o = {}) {
     this.look = look; this.m = G.M.person(look); this.root = this.m.root; this.t = Math.random() * 10;
-    this.vel = 0; this.heading = o.heading || 0; this.target = null; this.speed = o.speed || 1.1; this.sitting = !!o.sit;
+    this.vel = 0; this.heading = o.heading || 0; this.target = null; this.speed = o.speed || 1.1; this.seatY = o.seat !== undefined ? o.seat : (o.sit ? 0.45 : null); this.sitK = this.seatY != null ? 1 : 0; this._seatY = this.seatY || 0.45;
     this.talking = 0; this.waveT = 0; this.lookAt = null; this.yaw = 0; this.playing = !!o.playing; this.key = o.key;
     this.root.userData.person = this; this.root.traverse((x) => { if (x.isMesh) x.userData.person = this; });
   }
   get pos() { return this.root.position; }
+  get sitting() { return this.seatY != null; }
   walkPath(pts) { this.path = pts.map((p) => p.clone()); this.target = this.path.shift(); }
   get idle() { return !this.target && !(this.path && this.path.length); }
   update(dt) {
@@ -2876,7 +2913,18 @@ class Person {
     if (this.vel > 0.01) { this.pos.x += Math.sin(this.heading) * this.vel * dt; this.pos.z += Math.cos(this.heading) * this.vel * dt; }
     this.root.rotation.y = this.heading;
     const sp = Math.min(1, this.vel / 1.2), ph = this.t * (4 + this.vel * 3.5);
-    if (this.sitting) { m.legs.forEach((l) => { l.rotation.x = -1.45; }); m.rig.position.y = -0.2; m.arms.forEach((a) => { a.rotation.x = -0.35; }); }
+    // sitting on a chair / bench / tall stool, with a little hop getting on or off
+    if (this.seatY != null) this._seatY = this.seatY;
+    this.sitK += U.clamp((this.seatY != null ? 1 : 0) - this.sitK, -dt * 2.4, dt * 2.4);
+    if (this.sitK > 0.001) {
+      const k = this.sitK, e = k * k * (3 - 2 * k), hh = (m.L && m.L.h) || 1;
+      const rigSeat = this._seatY - 0.3 * hh + 0.03; const hop = k < 1 ? Math.sin(k * Math.PI) * 0.14 : 0;
+      m.rig.position.y = rigSeat * e + hop;
+      const dangle = this._seatY > 0.6 ? Math.sin(this.t * 2.2) * 0.18 : 0;
+      m.legs[0].rotation.x = (-1.45 + dangle) * e; m.legs[1].rotation.x = (-1.45 - dangle) * e;
+      m.arms.forEach((a) => { a.rotation.x = -0.35 * e; });
+      if (this.sipT > 0) { this.sipT -= dt; m.arms[1].rotation.x = -1.9 * Math.sin(Math.min(1, this.sipT) * Math.PI); }
+    }
     else {
       m.legs[0].rotation.x = Math.sin(ph) * 0.65 * sp; m.legs[1].rotation.x = -Math.sin(ph) * 0.65 * sp;
       m.arms[0].rotation.x = -Math.sin(ph) * 0.55 * sp; if (this.waveT <= 0) m.arms[1].rotation.x = Math.sin(ph) * 0.55 * sp;
@@ -2951,7 +2999,7 @@ G.discSim = function (pos, vel, o = {}) {
 G.discSkill = function (pet) {
   const sk = pet.d.disc || 0;
   const reach = (pet.m.baseH + pet.m.dims.by + pet.m.headR) * pet.S + 0.05;
-  return { sk, spd: (5.6 + sk * 0.036) * pet.S * (pet.d.breed === 'husky' ? 1.1 : 1), delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
+  return { sk, spd: (5.6 + sk * 0.036) * pet.S * (pet.d.breed === 'husky' ? 1.1 : pet.d.breed === 'robo' ? 1.15 : 1), delay: 0.3 - sk * 0.0015, reach, canJump: sk >= 25, canFlip: sk >= 60, jumpReach: reach + (sk >= 25 ? 0.35 + sk * 0.006 : 0.06) };
 };
 // o.terrain(x, z) -> speed multiplier (sand traps etc.)
 G.discPlan = function (pet, path, o = {}) {
@@ -3613,6 +3661,10 @@ G.ui = (() => {
   S.snort = (p = 1) => { N(0.09, 0.4, 'lowpass', 420 * p, 3); N(0.07, 0.25, 'bandpass', 900 * p, 2, 0.06); };
   S.awoo = (p = 1) => { T('sine', 420 * p, 640 * p, 0.18, 0.16); T('sine', 640 * p, 520 * p, 0.28, 0.14, 0.18); T('triangle', 840 * p, 1040 * p, 0.2, 0.04); };
   S.aroo = (p = 1) => { T('sawtooth', 330 * p, 520 * p, 0.25, 0.06); T('sine', 520 * p, 470 * p, 0.6, 0.15, 0.24); T('sine', 470 * p, 360 * p, 0.35, 0.1, 0.82); };
+  S.zap = () => { N(0.18, 0.35, 'highpass', 2500, 1.2); T('sawtooth', 1200, 200, 0.2, 0.06); };
+  S.beep = (p = 1) => { T('square', 880 * p, 1320 * p, 0.07, 0.05); T('square', 1320 * p, 990 * p, 0.08, 0.05, 0.09); };
+  S.boop = (p = 1) => { T('square', 660 * p, 440 * p, 0.12, 0.05); };
+  S.robopart = () => { T('square', 523, 523, 0.08, 0.06); T('square', 659, 659, 0.08, 0.06, 0.09); T('square', 784, 784, 0.08, 0.06, 0.18); T('square', 1046, 1046, 0.22, 0.07, 0.27); };
   S.sneeze = () => { T('triangle', 900, 1400, 0.2, 0.1); N(0.18, 0.3, 'highpass', 2500, 0.6, 0.22); };
   S.clunk = () => { T('sine', 140, 70, 0.18, 0.35); N(0.08, 0.2, 'lowpass', 500, 1); };
   S.capsule = () => { for (let i = 0; i < 6; i++) T('square', 600 + i * 40, 620 + i * 40, 0.03, 0.04, i * 0.06); T('sine', 1200, 1600, 0.15, 0.1, 0.45); };
@@ -3657,6 +3709,7 @@ G.STAMPS = [
   { id: 'quests', name: 'Busy bee', desc: 'Finish all three daily quests in one day.', coins: 50 },
   { id: 'tug', name: 'Tug champion', desc: 'Win a tug of war at a Disc Cup.', coins: 40 },
   { id: 'dream', name: 'Sweet dreams', desc: 'Watch your pet dream 10 times.', coins: 30, secret: true },
+  { id: 'robo', name: 'Beep boop', desc: 'Rebuild Dr. Kurogane\u2019s Robo Shiba.', coins: 100, secret: true },
   { id: 'pets100', name: 'Gentle hands', desc: 'Give 100 pets.', coins: 30 },
   { id: 'pets1000', name: 'Professional petter', desc: 'Give 1,000 pets.', coins: 150 },
   { id: 'named', name: 'That’s me!', desc: 'Teach a pet its name.', coins: 30 },
@@ -3744,7 +3797,7 @@ G.ui.stampSheet = function () {
       const n = G.BREED_ORDER.filter((b) => G.breedUnlocked(b)).length;
       G.ui.note(body, n + ' of ' + G.BREED_ORDER.length + ' breeds unlocked at Maple Kennel. Each breed has its own coats and a special trait.');
       const g = G.ui.grid(body); g.classList.add('breedGrid');
-      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + info.hint, dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
+      for (const b of G.BREED_ORDER) { const open = G.breedUnlocked(b); const info = G.BREED_INFO[b]; const c = G.ui.card({ img: G.M.icons.pet({ breed: b, coat: G.BREED_COATS[b][0] }), name: b === 'cat' ? 'Kittens' : b === 'robo' && !open ? '???' : G.BREEDS[b].name, sub: open ? info.trait : '\ud83d\udd12 ' + (b === 'robo' ? (G.robo.count() ? 'Robo Parts: ' + G.robo.count() + '/5 \u2014 check Dr. Kurogane\u2019s letter' : 'A secret... something beeps far away') : info.hint), dim: !open }); if (!open) c.classList.add('locked'); g.appendChild(c); }
       return;
     }
     if (tab === 'stamps') {
@@ -3817,6 +3870,7 @@ G.spinCapsule = function () {
   const r = Math.random(); let pool = G.CAPSULES.filter((c) => !c.rare);
   if (r < 0.06) pool = G.CAPSULES.filter((c) => c.rare);
   const c = U.pick(pool); G.state.capsules = G.state.capsules || {}; G.state.capsules[c.id] = (G.state.capsules[c.id] || 0) + 1;
+  { const rb = G.robo.st(); rb.spins = (rb.spins || 0) + 1; if (!G.robo.has('chip') && (rb.spins >= 6 || Math.random() < 0.15)) setTimeout(() => { G.ui.toast('Wait... there\u2019s a tiny circuit chip stuck inside the capsule!', 'gold'); G.robo.give('chip'); }, 1800); }
   G.ui.refresh(); G.save(); return c;
 };
 
@@ -4078,7 +4132,7 @@ G.TV = class {
     const s = this.game || this.newGame(); if (s.over) return;
     s.t += dt; s.speed += dt * 4; s.vy += 900 * dt; s.y = Math.min(160, s.y + s.vy * dt); if (s.y >= 160) s.vy = 0;
     s.next -= dt; if (s.next <= 0) { s.obs.push({ x: 330, h: U.rand(14, 26), passed: false }); s.next = U.rand(0.9, 1.9) * 140 / s.speed; }
-    for (const o of s.obs) { o.x -= s.speed * dt; if (!o.passed && o.x < 40) { o.passed = true; s.score++; } if (o.x < 72 && o.x > 32 && s.y > 160 - o.h + 4) { s.over = true; if (!s.demo) { G.audio.play('gameover'); if (s.score > (G.state.retroHigh || 0)) { G.state.retroHigh = s.score; G.ui.toast('New Shiba Dash high score: ' + s.score + '!'); } } } }
+    for (const o of s.obs) { o.x -= s.speed * dt; if (!o.passed && o.x < 40) { o.passed = true; s.score++; if (!s.demo && s.score >= 10 && G.robo && !G.robo.has('battery')) { G.audio.play('zap'); setTimeout(() => { G.ui.toast('ZAP! The TV sparks and a tiny battery pops out of the cartridge slot!', 'gold'); G.robo.give('battery'); }, 400); } } if (o.x < 72 && o.x > 32 && s.y > 160 - o.h + 4) { s.over = true; if (!s.demo) { G.audio.play('gameover'); if (s.score > (G.state.retroHigh || 0)) { G.state.retroHigh = s.score; G.ui.toast('New Shiba Dash high score: ' + s.score + '!'); } } } }
     if (s.demo) { const n = s.obs.find((o) => o.x > 50 && o.x < 92); if (n && s.y >= 160) s.vy = -330; if (s.over) setTimeout(() => { if (this.game === s) this.newGame(true); }, 1500); }
     s.obs = s.obs.filter((o) => o.x > -20);
   }
@@ -4599,6 +4653,29 @@ G.dreams = (() => {
   return D;
 })();
 
+/* ---------------- secret: Dr. Kurogane's Robo Shiba ---------------- */
+G.ROBO_PARTS = [
+  { id: 'gear', name: 'Mainspring Gear', icon: '⚙️', hint: 'A gear sleeps where wishes are rung after dark.' },
+  { id: 'bolt', name: 'Silver Bolt', icon: '🔩', hint: 'A bolt rests in the wishing fountain. Third wish of the day is the charm.' },
+  { id: 'battery', name: 'Tiny Battery', icon: '🔋', hint: 'My battery is powering a little TV game. Ten points should shake it loose.' },
+  { id: 'antenna', name: 'Star Antenna', icon: '📡', hint: 'The antenna fell from the strange light. The stargazer saw it — keep asking her what’s strange.' },
+  { id: 'chip', name: 'Memory Chip', icon: '💾', hint: 'A chip got mixed into the capsule machine by mistake. Keep spinning!' },
+];
+G.robo = {
+  st() { const s = G.state; s.robo = s.robo || { parts: {} }; s.robo.parts = s.robo.parts || {}; return s.robo; },
+  has(id) { return !!this.st().parts[id]; },
+  count() { return Object.keys(this.st().parts).length; },
+  give(id) {
+    const r = this.st(); if (r.parts[id]) return false; const part = G.ROBO_PARTS.find((p) => p.id === id); if (!part) return false;
+    r.parts[id] = Date.now(); const n = this.count();
+    G.audio.play('robopart'); G.ui.banner('Robo Part found! (' + n + '/5)', part.icon + ' ' + part.name, 3200);
+    G.state.mail = G.state.mail || [];
+    if (n === 1) G.state.mail.unshift({ id: 'robo_letter', from: 'Dr. Kurogane', subject: 'Did you find my gear?!', body: 'Dear finder,\n\nThat ' + part.name.toLowerCase() + ' you found belongs to me! I’m a retired toymaker, and my greatest invention — a little robot Shiba — fell apart when I tripped over a cat. Five parts scattered across Maple Hill. If you can find them all, he’s yours to keep.\n\nWhere I think they went:\n• ' + G.ROBO_PARTS.map((p) => p.icon + ' ' + p.hint).join('\n• ') + '\n\nYou can check your progress in the kennel and in the Stamp book (Breeds). Good luck!\n\n— Dr. Kurogane\n\nP.S. He beeps when he’s happy. It’s adorable.', day: G.today(), read: false });
+    if (n >= 5) { G.stamp('robo'); setTimeout(() => { G.checkBreeds(); }, 3600); }
+    G.ui.refresh && G.ui.refresh(); G.save(); return true;
+  },
+};
+
 </script>
 <script>/* js/home.js */
 'use strict';
@@ -4606,7 +4683,7 @@ G.dreams = (() => {
    Shiba Days — Home (the living room)
    ========================================================= */
 G.scenes.home = (() => {
-  const H = { music: 'home' };
+  const H = { minHFov: 60, music: 'home' };
   let scene, cam, sun, hemi, lamp, winTex, winCanvas, clockHands, trophyGroup, frameMat;
   const BX0 = -3.85, BX1 = 3.85, BZ0 = -3.05, BZ1 = 2.75;
   const BOWL = new V3(2.05, 0, 1.25), WATER = new V3(2.75, 0, 0.6), BED = new V3(-3.2, 0, -1.4), TOYBOX = new V3(3.15, 0, -2.35), CALL = new V3(0, 0, 1.9);
@@ -5685,7 +5762,7 @@ G.scenes.walk = (() => {
     const pal = [['#fde3e3', '#c84a4a'], ['#e3eefd', '#3b5ba8'], ['#fff3d6', '#c8922a'], ['#e9f6e9', '#4a8a5a'], ['#f2e6fa', '#7a5c9a'], ['#fff0e6', '#b35a3a']];
     const styles = ['gable', 'japanese', 'hip', 'saltbox', 'flat', 'gable', 'japanese'], walls = ['siding', 'plaster', 'brick', 'shingle', 'plaster', 'boards', 'plaster'];
     BLD.push({ t: 0.59, kind: 'hotel', name: 'Paw Inn', o: { w: 5.2, d: 3.8, h: 2.6, stories: 2, wall: '#e9f1fb', wallKind: 'siding', style: 'hip', roof: '#3b5ba8', sign: 'Paw Inn', signCol: '#3b5ba8', awning: '#6a8fd8', door: '#3b5ba8', porch: true, flowers: true, pots: 2, shutters: '#3b5ba8', fence: false, mailbox: false } });
-    [0.17, 0.33, 0.41, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => t !== 0.59 && BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
+    [0.17, -1, 0.46, 0.59, 0.66, 0.84, 0.92].forEach((t, i) => t >= 0 && t !== 0.59 && BLD.push({ t, kind: 'house', o: { w: U.lerp(3.8, 4.8, rnd()), d: 3.4, h: U.lerp(2.3, 2.7, rnd()), stories: i % 3 === 1 ? 2 : 1, style: styles[i], wallKind: walls[i], wall: walls[i] === 'brick' ? '#c8786a' : pal[i % pal.length][0], roof: styles[i] === 'japanese' ? '#3b4a5a' : pal[i % pal.length][1], number: 12 + i * 4, rnd: mulberry(i * 31 + 5), trim: i % 2 ? '#fff7ea' : '#f6efe2' } }));
     // Maple Dog Park entrance: stone pillars, wooden arch with a carved sign, hedges, flowers, map board
     function parkEntrance(P, n, b) {
       const g = new THREE.Group(); g.position.copy(P.clone().addScaledVector(n, 3.2)); g.rotation.y = Math.atan2(-n.x, -n.z); st.add(g);
@@ -5708,8 +5785,8 @@ G.scenes.walk = (() => {
         add(new THREE.CylinderGeometry(0.42, 0.34, 0.42, 14), M.mat('#b5653a', { r: 0.9 }), x + sx * 0.9, 0.21, 0.5);
         const fl = M.flowers(14, 0.32); fl.position.set(x + sx * 0.9, 0.42, 0.5); g.add(fl);
         // hedges + fence running off to the sides
-        for (let k = 0; k < 4; k++) { const bu = M.bush(k % 2 ? '#5e9e44' : '#6aa94e', 1.25); bu.position.set(sx * (3.4 + k * 1.1), 0, -0.25); g.add(bu); }
-        const fe = M.fence(7, '#c8a07a'); fe.position.set(sx * 6.7, 0, -0.9); g.add(fe);
+        for (let k = 0; k < 3; k++) { const bu = M.bush(k % 2 ? '#5e9e44' : '#6aa94e', 1.2); bu.position.set(sx * (3.4 + k * 1.05), 0, -0.25); g.add(bu); }
+        const fe = M.fence(4, '#c8a07a'); fe.position.set(sx * 7.4, 0, -0.9); g.add(fe);
         const tr = M.tree(G.season(), 'round'); tr.position.set(sx * U.rand(4.5, 6.5), 0, -3.2); tr.scale.setScalar(1.2); g.add(tr);
       }
       // wooden arch
@@ -5858,7 +5935,7 @@ G.scenes.walk = (() => {
     pet.pos.copy(P).addScaledVector(n, 0.4); pet.heading = Math.atan2(curve.getTangentAt(startT).x, curve.getTangentAt(startT).z);
     camYaw = pet.heading; lookV.copy(pet.pos);
     walkT = 0; greeted = new Set(); race = null; talkBusy = false; steer = null; promptKey = '';
-    refreshPresence(); spawnPresents(); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
+    refreshPresence(); spawnPresents(); setTimeout(() => { if (G.curName === 'walk' && presents.length) G.ui.toast(presents.length + ' presents are buried around town today. Look for twinkling mounds!'); }, 4000); if (pet && pet.d.breed === 'dachshund') { for (let k = 0; k < 3; k++) addPresent(); setTimeout(() => G.ui.toast(pet.name + '\u2019s nose is twitching... there are extra presents around!'), 2500); } if (G.state.fortune && G.state.fortune.day === G.today() && G.state.fortune.i === 0) for (let k = 0; k < 3; k++) addPresent();
     weatherSetup(); G.audio.loop(G.weather() === 'rain'); howled = false; poopT = U.rand(60, 120);
     if (poop) { scene.remove(poop.m); poop = null; } if (ufo) { scene.remove(ufo.m); ufo = null; }
     ufoT = G.daylight() < 0.3 && Math.random() < 0.35 ? U.rand(25, 80) : -1;
@@ -5884,7 +5961,7 @@ G.scenes.walk = (() => {
     if (walkT > 20) { pet.d.walks = (pet.d.walks || 0) + 1; G.state.stats.walks++; pet.d.bond = Math.min(100, pet.d.bond + (pet.d.breed === 'golden' ? 3 : 2)); pet.happy(6, false); }
     scene.remove(pet.root); pet.stop();
     if (leashMesh) { scene.remove(leashMesh); leashMesh.geometry.dispose(); leashMesh = null; }
-    for (const pr of presents) { if (pr.box) scene.remove(pr.box); }
+    for (const pr of presents) { if (pr.box) scene.remove(pr.box); if (pr.g) scene.remove(pr.g); }
     presents = []; G.ui.prompts([]); G.ui.hint(null);
   };
   W.dock = () => [
@@ -5927,16 +6004,30 @@ G.scenes.walk = (() => {
   }
 
   /* ---------------- presents ---------------- */
-  function spawnPresents() {
-    presents = [];
-    for (let i = 0; i < 6; i++) {
-      for (let k = 0; k < 20; k++) {
-        const t = Math.random(); const P = curvePt(t), n = outward(t); const side = Math.random() < 0.5 ? 1 : -1;
-        const p = P.clone().addScaledVector(n, side * U.rand(1.8, 4.5));
-        if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8)) { presents.push({ pos: p, found: false, sp: Math.random() }); break; }
-      }
-    }
+  // presents: little dirt mounds with a twinkling glint, near the path; your pet sniffs them out
+  let moundMat = null;
+  function makePresent(p) {
+    if (!moundMat) moundMat = G.M.mat('#7a5232', { r: 1 });
+    const g = new THREE.Group(); g.position.copy(p); scene.add(g);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), moundMat); m.scale.set(1, 0.35, 0.85); m.receiveShadow = true; g.add(m);
+    for (let i = 0; i < 4; i++) { const c = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 4), moundMat); c.position.set(U.rand(-0.3, 0.3), 0.02, U.rand(-0.3, 0.3)); g.add(c); }
+    const glint = new THREE.Sprite(new THREE.SpriteMaterial({ map: G.tex.sparkle, color: '#fff3a0', transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); glint.position.y = 0.32; glint.scale.setScalar(0.5); g.add(glint);
+    presents.push({ pos: p, found: false, sp: Math.random(), g, glint, ph: Math.random() * 6 });
   }
+  function presentSpot() {
+    for (let k = 0; k < 30; k++) {
+      const t = Math.random(); const P = curvePt(t), n = outward(t); const side = Math.random() < 0.5 ? 1 : -1;
+      const p = P.clone().addScaledVector(n, side * U.rand(1.0, 2.6));
+      if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8) && presents.every((q) => q.found || U.d2(p.x, p.z, q.pos.x, q.pos.z) > 6)) return p;
+    }
+    return null;
+  }
+  function spawnPresents() {
+    for (const pr of presents) if (pr.g) scene.remove(pr.g);
+    presents = [];
+    for (let i = 0; i < 6; i++) { const p = presentSpot(); if (p) makePresent(p); }
+  }
+  function addPresent() { const p = presentSpot(); if (p) makePresent(p); }
   function rewardPresent() {
     const r = Math.random();
     G.state.stats.presents++;
@@ -5948,6 +6039,7 @@ G.scenes.walk = (() => {
   }
   function* digUp(pr) {
     pr.found = true; talkBusy = true; steer = null;
+    if (pr.g) { scene.remove(pr.g); pr.g = null; }
     try { yield* digInner(pr); } finally { talkBusy = false; if (pr.box) { scene.remove(pr.box); pr.box = null; } }
   }
   function* digInner(pr) {
@@ -6185,7 +6277,7 @@ G.scenes.walk = (() => {
         G.state.fortune = { day: G.today(), i }; G.audio.play(i === 0 ? 'fanfare' : 'shrine');
         if (i === 0) { G.stamp('fortune'); for (let k = 0; k < 3; k++) addPresent(); G.ui.toast('Great blessing! Extra presents appear around town!', 'gold'); }
         G.ui.refresh(); G.ui.resheet(); } }));
-      l.appendChild(G.ui.li({ icon: 'paw', title: 'Ring the bell and pray', sub: 'Toss a coin, ring twice, bow twice, clap twice...', right: '1c', fn: () => { if (G.state.coins < 1) return; G.state.coins -= 1; G.audio.play('coins'); setTimeout(() => G.audio.play('shrine'), 300); pet.do((function* () { yield* pet.act('bow', 1.2); pet.emote('sparkle'); })()); G.ui.toast(U.pick(['You pray for many happy walks.', pet.name + ' bows too. Very polite.', 'A warm breeze. Somehow you feel lucky.', 'You wish for ' + pet.name + ' to stay healthy forever.'])); G.ui.closeSheet(true); } }));
+      l.appendChild(G.ui.li({ icon: 'paw', title: 'Ring the bell and pray', sub: 'Toss a coin, ring twice, bow twice, clap twice...', right: '1c', fn: () => { if (G.state.coins < 1) return; G.state.coins -= 1; G.audio.play('coins'); setTimeout(() => G.audio.play('shrine'), 300); { const hr = new Date().getHours(); if ((hr >= 20 || hr < 5) && !G.robo.has('gear')) { G.ui.closeSheet(true); setTimeout(() => { G.ui.toast('The bell rings out in the dark... something glints under the offering box!', 'gold'); pet.do((function* () { pet.setPose('crouch'); pet.digT = 1.2; yield* pet.wait(1.2); G.fx.spawn('star', pet.pos.clone().setY(0.4), 10); G.robo.give('gear'); })()); }, 900); } } pet.do((function* () { yield* pet.act('bow', 1.2); pet.emote('sparkle'); })()); G.ui.toast(U.pick(['You pray for many happy walks.', pet.name + ' bows too. Very polite.', 'A warm breeze. Somehow you feel lucky.', 'You wish for ' + pet.name + ' to stay healthy forever.'])); G.ui.closeSheet(true); } }));
     } });
   }
   function fountainSheet() {
@@ -6194,13 +6286,13 @@ G.scenes.walk = (() => {
       const l = G.ui.list(body);
       l.appendChild(G.ui.li({ icon: 'coin', title: 'Toss a coin and make a wish', sub: 'Who knows what might happen?', right: '5c', fn: () => {
         if (G.state.coins < 5) { G.ui.toast('Not enough coins.'); return; } G.state.coins -= 5; G.audio.play('coins'); G.ui.closeSheet(true);
+        { const rb = G.robo.st(); if (rb.wishDay !== G.today()) { rb.wishDay = G.today(); rb.wishes = 0; } rb.wishes++; if (rb.wishes >= 3 && !G.robo.has('bolt')) { setTimeout(() => { G.audio.play('splash'); G.ui.toast('Your third wish makes the water swirl... a silver bolt bobs up!', 'gold'); G.fx.spawn('star', fountainPos.clone().setY(1), 10); G.robo.give('bolt'); }, 1400); } }
         setTimeout(() => { G.audio.play('splash'); G.fx.spawn('drop', fountainPos.clone().setY(0.6), 10);
           if (Math.random() < 0.07) { G.stamp('fountain'); G.audio.play('fanfare'); G.ui.banner('Wish granted!', 'Coins rain down!', 2200); G.addCoins(120, 'The fountain sparkles: +120 coins!'); for (let k = 0; k < 4; k++) setTimeout(() => G.fx.spawn('star', pet.pos.clone().setY(2), 8), k * 200); }
           else G.ui.toast(U.pick(['You wish for endless treats. ' + pet.name + ' approves.', 'The water sparkles. Nothing happens. Yet.', 'A duck from the pond stares at you judgmentally.', 'You hear a faint "woof" from the water. Probably an echo.', pet.name + ' tries to drink from the fountain. Not allowed!'])); G.ui.refresh(); }, 500);
       } }));
     } });
   }
-  function addPresent() { for (let k = 0; k < 20; k++) { const t = Math.random(); const P = curvePt(t), n = outward(t); const p = P.clone().addScaledVector(n, (Math.random() < 0.5 ? 1 : -1) * U.rand(1.8, 4.5)); if (colliders.every((c) => U.d2(p.x, p.z, c.x, c.z) > c.r + 0.8)) { presents.push({ pos: p, found: false, sp: Math.random() }); return; } } }
   function* doPoop() {
     talkBusy = true;
     try {
@@ -6376,7 +6468,10 @@ G.scenes.walk = (() => {
     // presents
     for (const pr of presents) {
       if (pr.found) continue;
-      pr.sp += dt; if (pr.sp > 0.45) { pr.sp = 0; if (pr.pos.distanceTo(pet.pos) < 28) G.fx.spawn('sparkle', pr.pos.clone().add(new V3(U.rand(-0.2, 0.2), 0.15, U.rand(-0.2, 0.2))), 1); }
+      pr.ph += dt; if (pr.glint) { const tw = Math.max(0, Math.sin(pr.ph * 2.2)); pr.glint.material.opacity = 0.35 + tw * 0.65; pr.glint.scale.setScalar(0.35 + tw * 0.35); pr.glint.material.rotation = pr.ph * 0.6; pr.glint.position.y = 0.32 + Math.sin(pr.ph) * 0.04; }
+      pr.sp += dt; if (pr.sp > 0.6) { pr.sp = 0; if (pr.pos.distanceTo(pet.pos) < 28) G.fx.spawn('sparkle', pr.pos.clone().add(new V3(U.rand(-0.2, 0.2), 0.25, U.rand(-0.2, 0.2))), 1); }
+      const dd = U.d2(pr.pos.x, pr.pos.z, pet.pos.x, pet.pos.z);
+      if (!pr.sniffed && dd < 5 && !talkBusy) { pr.sniffed = true; pet.emote('bang', 1); pet.lookTarget = pr.pos.clone().setY(0.1); G.audio.play('sniff'); G.ui.hint(pet.name + ' smells something! Lead them to the little mound.', 3000); setTimeout(() => { if (pet) pet.lookTarget = null; }, 1500); }
       if (!talkBusy && U.d2(pr.pos.x, pr.pos.z, pet.pos.x, pet.pos.z) < 1.3) { pet.stop(); pet.do(digUp(pr)); }
     }
     // ducks
@@ -6457,7 +6552,8 @@ G.NPCS.ito.talk = async function (D) {
 G.cafeSpecial = function () { const d = new Date(); return G.CAFE[(d.getDate() + d.getMonth()) % G.CAFE.length]; };
 
 G.scenes.cafe = (() => {
-  const C = { music: 'cafe' };
+  const C = { minHFov: 66, music: 'cafe' };
+  let custA, custB;
   let scene, cam, pet = null, from = 'home', yuki, ito, matcha, table, onTable = [], lookV = new V3(), focusPos = null, busy = false;
   C.init = function () {
     scene = new THREE.Scene(); C.scene = scene; scene.background = new THREE.Color('#3b2a1f');
@@ -6509,7 +6605,13 @@ G.scenes.cafe = (() => {
     const cushion = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 0.1, 20), M.mat('#f39bb0', { r: 1 })); cushion.position.set(-1.35, 1.16, -2.35); st.add(cushion);
     scene.add(G.M.bake(st));
     // people
-    yuki = new G.Person('yuki', { key: 'yuki' }); yuki.pos.set(0.4, 0, -3.05); scene.add(yuki.root);
+    // tall stool behind the counter so Yuki can see over it
+    G.M.stoolAt(scene, 0.4, -3.12, 0.78);
+    yuki = new G.Person('yuki', { key: 'yuki', seat: 0.78 }); yuki.pos.set(0.4, 0, -3.12); scene.add(yuki.root);
+    // regulars at the other tables
+    custA = new G.Person({ skin: '#f0c7a6', hair: '#5a3a26', style: 'bob', top: '#f2c24b', bottom: '#3b4a6a', h: 0.98 }, { sit: true }); custA.pos.set(1.95, 0, -0.2); custA.heading = Math.PI / 2; scene.add(custA.root);
+    custB = new G.Person({ skin: '#c99a76', hair: '#2a1d18', style: 'short', top: '#4aa6e0', bottom: '#2c2c3a', h: 1.0, extra: ['cap'] }, { sit: true }); custB.pos.set(3.65, 0, -0.2); custB.heading = -Math.PI / 2; scene.add(custB.root);
+    for (const [x, z] of [[2.55, -0.25], [3.05, -0.15]]) { const cup = G.M.item(U.pick(['latte', 'matcha'])); cup.position.set(x, 0.765, z); scene.add(cup); }
     ito = new G.Person('ito', { key: 'ito', sit: true }); ito.pos.set(-1.75, 0, -0.4); ito.heading = -Math.PI / 2; scene.add(ito.root);
     const book = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.2, 0.04), M.mat('#4aa6e0')); book.position.set(0, 0.42, 0.24); book.rotation.x = -0.6; ito.m.torso.add(book);
     matcha = new G.Pet({ name: 'Matcha', breed: 'cat', coat: 'grey', mood: 80, acc: { collar: 'collar_gold' } }, { npc: true });
@@ -6528,7 +6630,7 @@ G.scenes.cafe = (() => {
     setTimeout(() => G.ui.hint('Today’s special: ' + sp.name + ' (30% off)', 3500), 700);
     G.audio.play('bell');
   };
-  C.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); } G.ui.hint(null); };
+  C.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); } G.ui.hint(null); G.ui.prompts([]); };
   C.dock = () => [
     { label: 'Menu', icon: 'menu', fn: menuSheet },
     { label: 'Chat', icon: 'chat', fn: chatSheet },
@@ -6578,15 +6680,15 @@ G.scenes.cafe = (() => {
     busy = true; G.state.coins -= pr; G.ui.refresh(); G.audio.play('coin'); G.state.stats.cafe = (G.state.stats.cafe || 0) + 1; G.checkStamps();
     const item = G.M.item(it.id);
     const ROUTE = [new V3(3.4, 0, -3.05), new V3(3.4, 0, -1.3), new V3(1.5, 0, -1.3), new V3(-0.3, 0, 0.6)];
-    yuki.walkPath(ROUTE); yuki.speed = 1.3;
+    yuki.seatY = null; yuki.lookAt = null; setTimeout(() => yuki.walkPath(ROUTE), 520); yuki.speed = 1.3; // hop off the stool first
     const startT = G.time;
     const step = () => {
-      if (!yuki.idle && G.time - startT < 14) { requestAnimationFrame(step); return; }
+      if ((!yuki.idle || G.time - startT < 0.7) && G.time - startT < 15) { requestAnimationFrame(step); return; }
       yuki.heading = Math.atan2(-1.15 - yuki.pos.x, 1.15 - yuki.pos.z);
       yuki.waveT = 0.8; G.audio.play('pop');
       if (it.who === 'you') {
-        item.position.set(U.rand(-0.25, 0.25), 0.765, U.rand(0.05, 0.25)); table.add(item); onTable.push(item);
-        G.ui.toast(U.pick(['Mmm, cozy.', 'Delicious!', 'The perfect little treat.', 'You feel very relaxed.']) + ' ' + pet.name + ' watches hopefully.');
+        item.position.set(U.rand(-0.25, 0.25), 0.765, U.rand(0.05, 0.25)); item.userData.food = it; item.userData.bites = 0; table.add(item); onTable.push(item);
+        G.ui.hint('Your ' + it.name + ' is served! Tap it to ' + (/latte|soda|tea/.test(it.id) ? 'take a sip' : 'take a bite') + '. ' + pet.name + ' watches hopefully...', 5000);
         pet.lookTarget = table.localToWorld(item.position.clone()); pet.tiltT = 1.2; setTimeout(() => (pet.lookTarget = null), 2500);
         busy = false;
       } else {
@@ -6599,21 +6701,42 @@ G.scenes.cafe = (() => {
           G.ui.toast(pet.name + ' loved the ' + it.name + '!'); busy = false;
         })());
       }
-      setTimeout(() => yuki.walkPath(ROUTE.slice(0, 3).reverse().concat([new V3(0.4, 0, -3.05)])), 700);
+      setTimeout(() => { yuki.walkPath(ROUTE.slice(0, 3).reverse().concat([new V3(0.4, 0, -3.12)])); yuki.returning = true; }, 700);
     };
     requestAnimationFrame(step);
   }
+  C.debug = () => ({ yuki, onTable, busy, order, eatBite });
   C.onDown = function () { };
   C.onUp = function (p) {
     if (!p.tap) return;
     const hit = G.pick(p, [...pet.m.meshes, ...matcha.m.meshes], false)[0];
     if (hit) { const pp = hit.object.userData.pet; if (pp === matcha) { matcha.voice(); matcha.emote('heart', 1); matcha.eyeOverride = 'happy'; setTimeout(() => (matcha.eyeOverride = null), 1200); } else { pp.emote('heart', 1); pp.voice(); pp.happy(1); pp.excite = 0.8; } return; }
+    const fh = onTable.length ? G.pick(p, onTable, true)[0] : null;
+    if (fh) { let o = fh.object; while (o && !onTable.includes(o)) o = o.parent; if (o) { eatBite(o); return; } }
     const ph = G.pick(p, [yuki.root, ito.root], true)[0];
     if (ph) { const per = ph.object.userData.person; if (per === yuki) talk('yuki', yuki); else talk('ito', ito); }
   };
+  // eat or drink what you ordered, a bite at a time (your pet gets the last crumb)
+  function eatBite(o) {
+    const it = o.userData.food; const drink = /latte|soda|tea/.test(it.id); o.userData.bites++;
+    const wp = table.localToWorld(o.position.clone());
+    if (drink) { G.audio.play('pop', 0.7); o.scale.y *= 0.82; G.fx.spawn('bubble', wp.clone().setY(0.95), 3); }
+    else { G.audio.play('munch'); o.scale.multiplyScalar(0.78); G.fx.spawn('puff', wp.clone().setY(0.82), 3, { color: '#f6e2c4' }); }
+    pet.lookTarget = wp; pet.tiltT = 0.8; if (o.userData.bites === 2 && !pet.cat) { pet.setPose('beg'); pet.voice('whine'); }
+    if (o.userData.bites >= 3) {
+      table.remove(o); onTable.splice(onTable.indexOf(o), 1); pet.lookTarget = null;
+      G.ui.toast(U.pick(['Delicious! ', 'So cozy. ', 'The perfect little treat. ']) + 'You finished the ' + it.name + '.' + (drink ? '' : ' ' + pet.name + ' got the last crumb!'));
+      if (!drink) { pet.happy(4); pet.emote('heart', 1.2); pet.voice('happy'); pet.lickT = 1.2; }
+      G.state.stats.cafeAte = (G.state.stats.cafeAte || 0) + 1; pet.setPose('sit');
+    }
+  }
   C.update = function (dt) {
     if (!pet) return;
-    pet.update(dt); matcha.update(dt); yuki.update(dt); ito.update(dt);
+    pet.update(dt); matcha.update(dt); yuki.update(dt); ito.update(dt); custA.update(dt); custB.update(dt);
+    if (yuki.returning && yuki.idle) { yuki.returning = false; yuki.heading = 0; yuki.seatY = 0.78; }
+    if (Math.random() < dt * 0.15) { const c = U.chance(0.5) ? custA : custB; c.talking = U.rand(1, 2.5); c.lookAt = (c === custA ? custB : custA).pos; }
+    if (Math.random() < dt * 0.08) (U.chance(0.5) ? custA : custB).sipT = 1.2;
+    if (Math.random() < dt * 0.05) ito.sipT = 1.2;
     if (Math.random() < dt * 0.25) yuki.lookAt = U.chance(0.5) ? cam.position : null;
     const portrait = G.aspect() < 0.9;
     let pos = portrait ? new V3(0.3, 3.2, 6.8) : new V3(0.3, 2.3, 4.8), look = new V3(0, 0.75, -0.5);
@@ -7260,7 +7383,7 @@ G.scenes.title = (() => {
 
 /* ---------------- Kennel ---------------- */
 G.scenes.kennel = (() => {
-  const K = { music: 'kennel', hideNeeds: true };
+  const K = { minHFov: 60, music: 'kennel', hideNeeds: true };
   let scene, cam, pups = [], sel = null, first = false, lookV = new V3(0, 0.3, 0);
   K.init = function () {
     scene = new THREE.Scene(); K.scene = scene;
@@ -7284,7 +7407,7 @@ G.scenes.kennel = (() => {
   };
   // first pet is free; each extra pet costs more (cats a little less)
   // your very first Shiba is free; after that every breed has its own price
-  function adoptPrice(breed) { if (!G.state.pets.length && !(G.state.hotel || []).length) return 0; return G.BREED_PRICE[breed] || 5000; }
+  function adoptPrice(breed) { if (!G.state.pets.length && !(G.state.hotel || []).length) return 0; return G.BREED_PRICE[breed] ?? 5000; }
   function candidates(breed) {
     const out = [];
     const pers = Object.keys(G.PERSONALITIES);
@@ -7306,8 +7429,8 @@ G.scenes.kennel = (() => {
       for (const b of G.BREED_ORDER) {
         const open = G.breedUnlocked(b) && !(firstPet && b === 'cat'); const info = G.BREED_INFO[b];
         const img = G.M.icons.pet({ breed: b, coat: (G.BREED_COATS[b] || ['red'])[0] });
-        const name = b === 'cat' ? 'Kittens' : G.BREEDS[b].name;
-        const c = G.ui.card({ img, name: name + (open && adoptPrice(b) ? ' \u00b7 ' + adoptPrice(b) + 'c' : ''), sub: open ? info.trait : '🔒 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
+        const name = b === 'cat' ? 'Kittens' : b === 'robo' && !open ? '???' : G.BREEDS[b].name;
+        const c = G.ui.card({ img, name: name + (open && adoptPrice(b) ? ' \u00b7 ' + adoptPrice(b) + 'c' : ''), sub: open ? info.trait : '\ud83d\udd12 ' + (firstPet && b === 'cat' ? 'Adopt your first Shiba' : b === 'robo' ? (G.robo.count() ? 'Robo Parts: ' + G.robo.count() + '/5' : 'A secret... something beeps far away') : info.hint), dim: !open, fn: () => { if (!open) { G.audio.play('blip'); G.ui.toast('Locked: ' + (firstPet && b === 'cat' ? 'adopt your first Shiba first' : info.hint)); return; } G.ui.closeSheet(true); showBreed(b); } });
         if (!open) c.classList.add('locked'); g.appendChild(c);
       }
     } });
@@ -7416,7 +7539,7 @@ G.NPCS.daisuke.talk = async function (D) {
   else { await D.say('Kiwi is a 20-year-old parrot. He learned to say "frog hat" in a week. It took me three years to learn the cash register.'); D.once('kiwi', () => D.friend(1)); }
 };
 G.scenes.shop = (() => {
-  const S = { music: 'shop' };
+  const S = { minHFov: 64, music: 'shop' };
   let scene, cam, pet, from = 'home', dai, kiwi, fish = [], lookV = new V3(), shelves = [], focusPos = null;
   S.init = function () {
     scene = new THREE.Scene(); S.scene = scene; scene.background = new THREE.Color('#3b4a3a');
@@ -7479,7 +7602,8 @@ G.scenes.shop = (() => {
     const mat2 = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.9), M.mat('#fff', { map: G.textTex('WELCOME', { font: '700 56px Fredoka, sans-serif', bg: '#7a4a24', color: '#fff7ea', pad: 16, radius: 8 }) })); mat2.rotation.x = -Math.PI / 2; mat2.position.set(0, 0.01, 3.2); scene.add(mat2);
     scene.add(G.M.bake(st));
     // people + parrot
-    dai = new G.Person('daisuke', { key: 'daisuke' }); dai.pos.set(2.6, 0, -2.25); scene.add(dai.root);
+    G.M.stoolAt(scene, 2.6, -2.25, 0.74);
+    dai = new G.Person('daisuke', { key: 'daisuke', seat: 0.74 }); dai.pos.set(2.6, 0, -2.25); scene.add(dai.root);
     kiwi = new THREE.Group(); kiwi.position.set(3.85, 0, -1.4); scene.add(kiwi);
     const perch = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.7, 6), M.mat('#7a5236')); perch.position.y = 0.85; kiwi.add(perch);
     const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.5, 6), M.mat('#7a5236')); bar.rotation.z = Math.PI / 2; bar.position.y = 1.7; kiwi.add(bar);
@@ -7588,7 +7712,7 @@ G.NPCS.inoue.talk = async function (D) {
 };
 
 G.scenes.hotel = (() => {
-  const H = { music: 'cafe', hideNeeds: true };
+  const H = { minHFov: 68, music: 'cafe', hideNeeds: true };
   let scene, cam, from = 'home', guests = [], plates = [], inoue, sel = null, lookV = new V3(0, 0.8, -1), focus = null;
   const ROOM_W = 1.25, ROOMS_X0 = -((G.HOTEL_ROOMS / 2) - 0.5) * ROOM_W;
   const roomX = (i) => ROOMS_X0 + (i % 4) * ROOM_W + (i >= 4 ? 0 : 0);
@@ -7641,7 +7765,8 @@ G.scenes.hotel = (() => {
     const sb = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.4, 0.7), M.mat('#c8323c', { r: 0.9 })); sb.position.y = 0.3; sofa.add(sb);
     const sbk = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.18), M.mat('#c8323c', { r: 0.9 })); sbk.position.set(0, 0.65, -0.28); sofa.add(sbk);
     scene.add(G.M.bake(st));
-    inoue = new G.Person('inoue', { key: 'inoue' }); inoue.pos.set(3.7, 0, 1.5); inoue.heading = -2.3; scene.add(inoue.root);
+    G.M.stoolAt(scene, 3.75, 1.45, 0.8);
+    inoue = new G.Person('inoue', { key: 'inoue', seat: 0.8 }); inoue.pos.set(3.75, 0, 1.45); inoue.heading = -2.3; scene.add(inoue.root);
   }
   function plateFor(i, d) {
     const pl = plates[i]; if (pl.material.map) pl.material.map.dispose();
@@ -8044,9 +8169,9 @@ G.LOOKS.judge = { skin: '#f0cfb3', hair: '#d9d6d0', style: 'bun', top: '#33415c'
 G.NPCS.judge = { name: 'Judge Hoshino', look: 'judge' };
 G.TRIALS = {
   agility: [
-    { id: 'ag1', name: 'Agility: Puppy Course', fee: 0, prize: [180, 100, 50], rival: [34, 48], need: null, n: 6 },
-    { id: 'ag2', name: 'Agility: Open Course', fee: 40, prize: [450, 240, 110], rival: [28, 38], need: 'ag1', n: 8 },
-    { id: 'ag3', name: 'Agility: Masters', fee: 100, prize: [1200, 600, 280], rival: [22, 30], need: 'ag2', n: 8, refuse: 1.5 },
+    { id: 'ag1', name: 'Agility: Puppy Course', fee: 0, prize: [180, 100, 50], rival: [16, 26], need: null, n: 6 },
+    { id: 'ag2', name: 'Agility: Open Course', fee: 40, prize: [450, 240, 110], rival: [21, 31], need: 'ag1', n: 8 },
+    { id: 'ag3', name: 'Agility: Masters', fee: 100, prize: [1200, 600, 280], rival: [25, 35], need: 'ag2', n: 10, refuse: 1.5 },
   ],
   obedience: [
     { id: 'ob1', name: 'Obedience: Novice', fee: 0, prize: [180, 100, 50], rival: [40, 70], need: null, n: 4, time: 7 },
@@ -8082,6 +8207,17 @@ G.scenes.trials = (() => {
     for (let i = 0; i < 16; i++) { const t = M.tree('summer', i % 4 ? 'round' : 'pine'); const a = i / 16 * Math.PI * 2; t.position.set(Math.cos(a) * 26, 0, Math.sin(a) * 20); t.scale.setScalar(U.rand(1.2, 1.7)); s.add(t); }
     const banTex = G.textTex('Maple Hill Dog Trials', { font: '700 72px Fredoka, sans-serif', bg: '#3b5ba8', color: '#fff', pad: 34 });
     const ban = new THREE.Mesh(new THREE.PlaneGeometry(8, 8 * banTex.userData.h / banTex.userData.w), M.mat('#fff', { map: banTex })); ban.position.set(0, 1.4, -AREA.z - 1.3); scene.add(ban);
+    // arena dressing: bunting, a judges' tent, crates, water station, flags
+    const bunt = (x0, z0, x1, z1) => { for (let i = 0; i <= 18; i++) { const k = i / 18; const fl = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.26, 3), M.mat(['#e2574c', '#f2c24b', '#4aa6e0', '#79b25a', '#f39bb0'][i % 5], { side: THREE.DoubleSide })); fl.rotation.z = Math.PI; fl.position.set(U.lerp(x0, x1, k), 1.45 - Math.sin(k * Math.PI) * 0.25, U.lerp(z0, z1, k)); s.add(fl); } };
+    bunt(-AREA.x - 1, -AREA.z - 1, -1, -AREA.z - 1); bunt(1, -AREA.z - 1, AREA.x + 1, -AREA.z - 1);
+    for (const [x, z] of [[-AREA.x - 1, -AREA.z - 1], [AREA.x + 1, -AREA.z - 1], [-AREA.x - 1, AREA.z + 1], [AREA.x + 1, AREA.z + 1]]) { const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 3, 8), M.mat('#fff')); pole.position.set(x, 1.5, z); s.add(pole); const fl = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.45), M.mat('#3b5ba8', { side: THREE.DoubleSide })); fl.position.set(x + 0.36, 2.7, z); s.add(fl); }
+    const tent = new THREE.Group(); tent.position.set(-AREA.x - 3.2, 0, -2); s.add(tent);
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(2.0, 1.1, 4, 1, true), M.mat('#e2574c', { side: THREE.DoubleSide })); roof.rotation.y = Math.PI / 4; roof.position.y = 2.6; tent.add(roof);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) { const p2 = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.1, 6), M.mat('#fff')); p2.position.set(sx * 1.3, 1.05, sz * 1.3); tent.add(p2); }
+    const tbl = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.7, 0.6), M.mat('#fff7ea')); tbl.position.y = 0.35; tent.add(tbl);
+    for (let i = 0; i < 3; i++) { const tr = G.M.trophy(['#f2c24b', '#c0c0c0', '#cd7f32'][i]); tr.position.set(-0.5 + i * 0.5, 0.7, 0); tr.scale.setScalar(0.8); tent.add(tr); }
+    for (let i = 0; i < 3; i++) { const cr = new THREE.Group(); cr.position.set(-AREA.x - 2.6, 0, 4 + i * 1.3); s.add(cr); const bx = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.7, 1.1), M.mat(['#79b25a', '#4aa6e0', '#f2c24b'][i])); bx.position.y = 0.35; cr.add(bx); const door = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.5), M.mat('#3b3b3b', { side: THREE.DoubleSide })); door.position.set(0.46, 0.35, 0); door.rotation.y = Math.PI / 2; cr.add(door); }
+    const wb = G.M.bowl('#4aa6e0'); wb.position.set(-AREA.x + 0.6, 0, AREA.z - 0.6); s.add(wb);
     scene.add(M.bake(s));
     judge = new G.Person('judge', { key: 'judge' }); judge.pos.set(-AREA.x + 1.5, 0, -AREA.z + 1.2); judge.heading = 0.8; scene.add(judge.root);
     const clip = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.24, 0.02), M.mat('#c48a52')); clip.position.set(0, 0.2, 0.22); judge.m.torso.add(clip);
@@ -8090,28 +8226,109 @@ G.scenes.trials = (() => {
     ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 32), new THREE.MeshBasicMaterial({ color: '#ee8a3c', transparent: true, opacity: 0.8, depthWrite: false })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.03; scene.add(ring);
   };
   /* ---------------- course ---------------- */
-  function buildCourse(n) {
-    for (const o of obstacles) scene.remove(o.g); obstacles = [];
-    const M = G.M;
-    const layout = [['hurdle', -7, -4, 0], ['hurdle', -2.5, -5, 0], ['tunnel', 3.5, -4.8, 0.35], ['weave', 8.2, -0.5, Math.PI / 2], ['aframe', 4.5, 4.5, Math.PI], ['tire', -0.8, 5, Math.PI], ['hurdle', -5.5, 3.5, Math.PI + 0.6], ['hurdle', -8.2, -0.2, -Math.PI / 2]].slice(0, n);
-    layout.push(['finish', -8.5, -4.6, -Math.PI / 2 - 0.3]);
-    layout.forEach(([type, x, z, ang], i) => {
-      const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ang + Math.PI / 2; scene.add(g);
-      const dir = new V3(Math.cos(-ang) * 0, 0, 0); dir.set(Math.sin(ang + Math.PI / 2), 0, Math.cos(ang + Math.PI / 2));
-      let len = 1.2;
-      const stripe = M.mat('#e2574c'), white = M.mat('#ffffff');
-      if (type === 'hurdle') { for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.8, 8), white); p.position.set(s * 0.7, 0.4, 0); g.add(p); } const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.4, 8), stripe); bar.rotation.z = Math.PI / 2; bar.position.y = 0.38; g.add(bar); }
-      if (type === 'tire') { for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 8), white); p.position.set(s * 0.65, 0.65, 0); g.add(p); } const top = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.3, 8), white); top.rotation.z = Math.PI / 2; top.position.y = 1.3; g.add(top); const tr = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.09, 12, 24), M.mat('#f2c24b')); tr.position.y = 0.62; g.add(tr); }
-      if (type === 'tunnel') { len = 3.2; const curve = new THREE.CatmullRomCurve3([new V3(0, 0.38, -1.6), new V3(0.3, 0.38, 0), new V3(0, 0.38, 1.6)]); const tm = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, 0.45, 16, false), M.mat('#4aa6e0', { side: THREE.DoubleSide, r: 0.7 })); g.add(tm); for (let k = 0; k < 5; k++) { const rr = new THREE.Mesh(new THREE.TorusGeometry(0.46, 0.03, 6, 20), white); const pp = curve.getPointAt(k / 4); rr.position.copy(pp); rr.lookAt(pp.clone().add(curve.getTangentAt(k / 4))); g.add(rr); } }
-      if (type === 'weave') { len = 3.6; for (let k = 0; k < 6; k++) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 8), k % 2 ? M.mat('#79b25a') : white); p.position.set(0, 0.5, -1.5 + k * 0.6); g.add(p); } }
-      if (type === 'aframe') { len = 3.0; for (const s of [-1, 1]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 1.65), M.mat('#f2c24b', { r: 0.8 })); b.position.set(0, 0.45, s * 0.72); b.rotation.x = s * 0.58; g.add(b); const cz = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.065, 0.5), stripe); cz.position.set(0, 0.16, s * 1.25); cz.rotation.x = s * 0.58; g.add(cz); } }
-      if (type === 'finish') { for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), M.mat('#3b2a1f')); p.position.set(s * 1.0, 1.1, 0); g.add(p); } const ft = G.textTex('FINISH', { font: '700 64px Fredoka, sans-serif', bg: '#e2574c', color: '#fff', pad: 16 }); const fb = new THREE.Mesh(new THREE.PlaneGeometry(2, 0.5), M.mat('#fff', { map: ft, side: THREE.DoubleSide })); fb.position.y = 2.0; g.add(fb); }
+  // the route is a loop; every obstacle faces along the route so you always run straight through it
+  const FINISH = { ag1: [4.4, 6.4], ag2: [-6.6, 5.6], ag3: [-4.6, -1.2] };
+  const ROUTE = [[-7.6, -5.4], [-3.6, -5.8], [1.6, -5.6], [6.6, -4.6], [9.6, -0.8], [8.0, 3.9], [3.0, 5.4], [-2.2, 5.4], [-6.8, 3.8], [-9.6, 0.4]];
+  const COURSES = { ag1: ['hurdle', 'hurdle', 'tunnel', 'tire', 'hurdle', 'aframe'], ag2: ['hurdle', 'tunnel', 'weave', 'hurdle', 'aframe', 'tire', 'table', 'hurdle'], ag3: ['hurdle', 'weave', 'tunnel', 'teeter', 'tire', 'aframe', 'hurdle', 'table', 'weave', 'hurdle'] };
+  const LEN = { hurdle: 0.3, tire: 0.3, tunnel: 3.0, weave: 3.6, aframe: 3.0, teeter: 3.6, table: 0.9, finish: 0.3 };
+  let courseGrp = null;
+  function buildCourse(cls) {
+    for (const o of obstacles) scene.remove(o.g); obstacles = []; if (courseGrp) scene.remove(courseGrp); courseGrp = new THREE.Group(); scene.add(courseGrp);
+    const M = G.M; const types = COURSES[cls.id] || COURSES.ag1; const n = types.length;
+    const pts = ROUTE.slice(0, n).map(([x, z]) => new V3(x, 0, z));
+    const first = pts[0], d0 = pts[1].clone().sub(first).normalize();
+    const startP = first.clone().addScaledVector(d0, -3.4); const finishP = pts[n - 1].clone().lerp(pts[0], n >= ROUTE.length ? 0.45 : 0).add(n >= ROUTE.length ? new V3(0, 0, 0) : new V3(0, 0, 0));
+    // finish: a few metres past the last obstacle, heading back toward the start area
+    const lastDir = pts[n - 1].clone().sub(pts[n - 2]).normalize(); const fz = FINISH[cls.id]; const fin = fz ? new V3(fz[0], 0, fz[1]) : pts[n - 1].clone().addScaledVector(lastDir, 4.2);
+    st.start = startP; st.startDir = d0;
+    const all = pts.concat([fin]);
+    const stripe = M.mat('#e2574c', { r: 0.6 }), white = M.mat('#ffffff', { r: 0.5 }), blue = M.mat('#3b5ba8', { r: 0.6 }), yellow = M.mat('#f2c24b', { r: 0.6 }), metal = M.mat('#c0c4c8', { r: 0.3, m: 0.7 });
+    const stripeTex = G.canvasTex(64, 16, (c) => { for (let i = 0; i < 8; i++) { c.fillStyle = i % 2 ? '#ffffff' : '#e2574c'; c.fillRect(i * 8, 0, 8, 16); } });
+    all.forEach((c, i) => {
+      const type = i < n ? types[i] : 'finish';
+      const prev = i === 0 ? startP : all[i - 1], next = all[i + 1] || c.clone().add(lastDir);
+      const dir = next.clone().sub(prev).setY(0).normalize(); if (type === 'finish') dir.copy(c.clone().sub(prev).setY(0).normalize());
+      const g = new THREE.Group(); g.position.copy(c); g.rotation.y = Math.atan2(dir.x, dir.z); scene.add(g);
+      const len = LEN[type];
+      const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); g.add(m); return m; };
+      const cyl = (r, h, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 10), mat); m.position.set(x, y, z); g.add(m); return m; };
+      if (type === 'hurdle') {
+        for (const sx of [-1, 1]) { box(0.08, 0.9, 0.08, white, sx * 0.72, 0.45, 0); box(0.32, 0.7, 0.03, sx > 0 ? blue : stripe, sx * 0.92, 0.38, 0); box(0.36, 0.04, 0.36, white, sx * 0.8, 0.02, 0); }
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.44, 10), M.mat('#fff', { map: stripeTex })); bar.rotation.z = Math.PI / 2; bar.position.y = 0.42; g.add(bar);
+      } else if (type === 'tire') {
+        const fr = M.mat('#3b5ba8', { r: 0.5 });
+        for (const sx of [-1, 1]) { box(0.08, 1.5, 0.08, fr, sx * 0.75, 0.75, 0); box(0.08, 0.06, 0.8, fr, sx * 0.75, 0.03, 0); }
+        box(1.58, 0.08, 0.08, fr, 0, 1.5, 0);
+        const tire = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.1, 12, 28), M.mat('#2a2a2a', { r: 0.9 })); tire.position.y = 0.78; g.add(tire);
+        const tape = new THREE.Mesh(new THREE.TorusGeometry(0.38, 0.105, 6, 28, Math.PI / 3), yellow); tape.position.y = 0.78; tape.rotation.z = 0.4; g.add(tape);
+        for (const a of [0.5, 2.6, Math.PI + 0.5, Math.PI + 2.6]) { const ch = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4), metal); const px = Math.cos(a) * 0.62, py = 0.78 + Math.sin(a) * 0.62; ch.position.set(px * 0.82, py * 0.9 + 0.08, 0); ch.rotation.z = a + Math.PI / 2; g.add(ch); }
+      } else if (type === 'tunnel') {
+        const tt = G.canvasTex(64, 64, (c2) => { c2.fillStyle = '#4aa6e0'; c2.fillRect(0, 0, 64, 64); c2.fillStyle = '#3a8ac0'; for (let y = 0; y < 64; y += 8) c2.fillRect(0, y, 64, 2); }, { repeat: [1, 6] });
+        const curve = new THREE.CatmullRomCurve3([new V3(0, 0.38, -1.5), new V3(0.35, 0.38, 0), new V3(0, 0.38, 1.5)]);
+        const tm = new THREE.Mesh(new THREE.TubeGeometry(curve, 30, 0.42, 18, false), M.mat('#fff', { map: tt, side: THREE.DoubleSide, r: 0.8 })); g.add(tm);
+        for (const z of [-1.5, 1.5]) { const rim = new THREE.Mesh(new THREE.TorusGeometry(0.42, 0.04, 8, 24), yellow); rim.position.set(0, 0.38, z); g.add(rim); }
+        for (const z of [-0.8, 0.8]) { const sb = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.1, 0.3), M.mat('#8a6a4a', { r: 0.9 })); sb.position.set(0.2, 0.05, z); g.add(sb); }
+      } else if (type === 'weave') {
+        box(0.08, 0.04, 3.7, white, 0, 0.02, 0);
+        for (let k = 0; k < 6; k++) { const p = cyl(0.025, 1.0, k % 2 ? M.mat('#79b25a') : white, 0, 0.52, -1.5 + k * 0.6); const cap = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), k % 2 ? white : M.mat('#79b25a')); cap.position.set(0, 1.03, -1.5 + k * 0.6); g.add(cap); }
+      } else if (type === 'aframe') {
+        const slat = M.mat('#8a6a4a');
+        for (const sz of [-1, 1]) {
+          const b = new THREE.Group(); b.position.set(0, 0.45, sz * 0.72); b.rotation.x = sz * 0.58; g.add(b);
+          const board = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 1.65), M.mat('#f2c24b', { r: 0.8 })); b.add(board);
+          const contact = new THREE.Mesh(new THREE.BoxGeometry(0.92, 0.065, 0.5), M.mat('#3b5ba8', { r: 0.8 })); contact.position.z = sz * 0.58; b.add(contact);
+          for (let k = 0; k < 6; k++) { const sl = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.02, 0.03), slat); sl.position.set(0, 0.04, -0.7 + k * 0.28); b.add(sl); }
+        }
+        for (const sx of [-1, 1]) { const ch = cyl(0.01, 1.2, metal, sx * 0.4, 0.3, 0); ch.rotation.x = Math.PI / 2; }
+      } else if (type === 'teeter') {
+        box(0.2, 0.42, 0.2, M.mat('#c0c4c8', { r: 0.4, m: 0.6 }), 0, 0.21, 0);
+        const plank = new THREE.Group(); plank.position.y = 0.45; g.add(plank); g.userData.plank = plank;
+        const pb = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.05, 3.6), M.mat('#e2574c', { r: 0.7 })); plank.add(pb);
+        for (const sz of [-1, 1]) { const ct = new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.055, 0.8), yellow); ct.position.z = sz * 1.4; plank.add(ct); }
+        plank.rotation.x = 0.24;
+      } else if (type === 'table') {
+        box(1.0, 0.08, 1.0, M.mat('#3b5ba8', { r: 0.6 }), 0, 0.45, 0);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) cyl(0.03, 0.45, metal, sx * 0.42, 0.22, sz * 0.42);
+        const tl = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.8), M.mat('#fff', { map: G.textTex('PAUSE', { font: '700 52px Fredoka, sans-serif', color: '#ffffff', pad: 16 }) })); tl.rotation.x = -Math.PI / 2; tl.position.y = 0.5; g.add(tl);
+      } else if (type === 'finish') {
+        for (const sx of [-1, 1]) { cyl(0.07, 2.4, M.mat('#3b2a1f'), sx * 1.2, 1.2, 0); const fl = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.34, 3), sx > 0 ? stripe : blue); fl.rotation.z = Math.PI / 2 * sx; fl.position.set(sx * 1.38, 2.25, 0); g.add(fl); }
+        const ft = G.textTex('FINISH', { font: '700 64px Fredoka, sans-serif', bg: '#e2574c', color: '#fff', pad: 16, radius: 10 });
+        const fb = new THREE.Mesh(new THREE.PlaneGeometry(2.3, 2.3 * ft.userData.h / ft.userData.w), M.mat('#fff', { map: ft, side: THREE.DoubleSide })); fb.position.y = 2.2; g.add(fb);
+        const ch = G.canvasTex(64, 16, (c2) => { for (let x = 0; x < 16; x++) for (let y = 0; y < 4; y++) { c2.fillStyle = (x + y) % 2 ? '#222' : '#fff'; c2.fillRect(x * 4, y * 4, 4, 4); } });
+        const line = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.4), M.mat('#fff', { map: ch })); line.rotation.x = -Math.PI / 2; line.position.y = 0.02; g.add(line);
+      }
       g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
-      if (type !== 'finish') { const nt = G.textTex(String(i + 1), { font: '700 64px Fredoka, sans-serif', bg: '#3b5ba8', color: '#fff', pad: 14, radius: 40 }); const num = new THREE.Sprite(new THREE.SpriteMaterial({ map: nt })); num.scale.set(0.45, 0.45, 1); num.position.y = type === 'tire' ? 1.7 : 1.3; g.add(num); }
-      const c = new V3(x, 0, z);
-      obstacles.push({ type, g, c, dir, len, entry: c.clone().addScaledVector(dir, -(len / 2 + 0.7)), exit: c.clone().addScaledVector(dir, len / 2 + 0.6) });
+      if (type !== 'finish') {
+        const nt = G.textTex(String(i + 1), { font: '700 64px Fredoka, sans-serif', bg: '#3b5ba8', color: '#fff', pad: 14, radius: 40 });
+        const cone = new THREE.Group(); cone.position.copy(c).addScaledVector(new V3(dir.z, 0, -dir.x), 1.25); scene.add(cone);
+        const cm = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.42, 14), M.mat('#ee8a3c', { r: 0.6 })); cm.position.y = 0.21; cm.castShadow = true; cone.add(cm);
+        const num = new THREE.Sprite(new THREE.SpriteMaterial({ map: nt })); num.scale.set(0.42, 0.42, 1); num.position.y = 0.72; cone.add(num); courseGrp.add(cone);
+      }
+      const o = { type, g, c: c.clone(), dir, len, entry: c.clone().addScaledVector(dir, -(len / 2 + 0.75)), exit: c.clone().addScaledVector(dir, len / 2 + 0.7) };
+      obstacles.push(o);
     });
+    // start gate
+    const sg = new THREE.Group(); sg.position.copy(startP); sg.rotation.y = Math.atan2(d0.x, d0.z); courseGrp.add(sg);
+    for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 1.8, 8), M.mat('#3b5ba8')); p.position.set(sx * 1.0, 0.9, 0); sg.add(p); }
+    const stt = G.textTex('START', { font: '700 56px Fredoka, sans-serif', bg: '#79b25a', color: '#fff', pad: 14, radius: 10 }); const sb2 = new THREE.Mesh(new THREE.PlaneGeometry(1.9, 1.9 * stt.userData.h / stt.userData.w), M.mat('#fff', { map: stt, side: THREE.DoubleSide })); sb2.position.y = 1.7; sg.add(sb2);
+    // paw-print route guide between obstacles
+    const pawT = G.canvasTex(32, 32, (c2) => { c2.fillStyle = 'rgba(226,118,46,.85)'; c2.beginPath(); c2.ellipse(16, 20, 6, 5, 0, 0, 7); c2.fill(); for (const [px, py] of [[8, 12], [13, 8], [19, 8], [24, 12]]) { c2.beginPath(); c2.arc(px, py, 2.4, 0, 7); c2.fill(); } });
+    const pawM = new THREE.MeshBasicMaterial({ map: pawT, transparent: true, depthWrite: false, opacity: 0.85 });
+    let prevExit = startP.clone();
+    for (const o of obstacles) {
+      const a = prevExit, bb = o.entry; const L2 = a.distanceTo(bb); const steps = Math.floor(L2 / 0.7);
+      for (let k = 1; k < steps; k++) { const p = a.clone().lerp(bb, k / steps); const pp = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.3), pawM); pp.rotation.set(-Math.PI / 2, 0, -Math.atan2(bb.x - a.x, bb.z - a.z) + Math.PI); pp.position.set(p.x + (k % 2 ? 0.08 : -0.08), 0.025, p.z); courseGrp.add(pp); }
+      prevExit = o.exit;
+    }
+    // big timer board
+    const tb = new THREE.Group(); tb.position.set(AREA.x - 2.2, 0, -AREA.z - 0.8); tb.rotation.y = -0.35; courseGrp.add(tb);
+    for (const sx of [-1, 1]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.15, 3.0, 0.15), M.mat('#3b2a1f')); p.position.set(sx * 1.6, 1.5, 0); tb.add(p); }
+    timerCanvas = document.createElement('canvas'); timerCanvas.width = 256; timerCanvas.height = 96; timerTex = new THREE.CanvasTexture(timerCanvas); timerTex.colorSpace = THREE.SRGBColorSpace;
+    const scr = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 1.2), new THREE.MeshBasicMaterial({ map: timerTex })); scr.position.y = 2.6; tb.add(scr);
+    drawTimer(0);
   }
+  let timerCanvas = null, timerTex = null;
+  function drawTimer(t) { if (!timerCanvas) return; const c = timerCanvas.getContext('2d'); c.fillStyle = '#1d2a24'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#ffd36a'; c.font = '700 54px monospace'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(t.toFixed(1) + 's', 128, 50); c.fillStyle = '#9fd4ff'; c.font = '600 16px Fredoka, sans-serif'; c.fillText(st && st.cls ? st.cls.name.replace('Agility: ', '') : 'AGILITY', 128, 14); timerTex.needsUpdate = true; }
   /* ---------------- enter ---------------- */
   T.enter = function (opts = {}) {
     mode = opts.mode || 'agility'; from = opts.from || 'home';
@@ -8127,7 +8344,7 @@ G.scenes.trials = (() => {
   };
   T.onVoice = function (kind, id) { if (mode === 'obedience' && st && st.phase === 'obey' && kind === 'trick') judgeGesture(id); return true; };
   T.debug = () => ({ st, obstacles, pet });
-  T.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.baseY = 0; } $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.banner('', null, 1); st = null; };
+  T.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.baseY = 0; pet.root.visible = true; } if (courseGrp) { scene.remove(courseGrp); courseGrp = null; } for (const o of obstacles) scene.remove(o.g); obstacles = []; $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.banner('', null, 1); st = null; };
   T.dock = () => [{ label: 'Events', icon: 'trophy', fn: () => { if (!st || st.phase === 'done') menu(); } }, { label: 'Leave', icon: 'door', cls: 'go', fn: () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' }) }];
   function menu() {
     st = null; $('#contestHud').classList.add('hidden');
@@ -8151,7 +8368,7 @@ G.scenes.trials = (() => {
     await G.ui.say('Judge Hoshino', mode === 'agility' ? 'Welcome to the ' + c.name + '. Guide ' + pet.name + ' through all obstacles in numbered order. The clock starts on my whistle.' : 'Welcome to the ' + c.name + '. I will call ' + c.n + ' commands. Show me the teamwork between you and ' + pet.name + '.', port);
     G.ui.endDialog();
     if (mode === 'agility') {
-      buildCourse(c.n); pet.stop(); pet.pos.set(-10, 0, -6); pet.heading = 0.6; pet.brain = null;
+      buildCourse(c); pet.stop(); pet.pos.copy(st.start); pet.heading = Math.atan2(st.startDir.x, st.startDir.z); pet.brain = null; pet.baseY = 0;
       G.ui.banner('Ready...', null, 900); await G.wait(1000); G.audio.play('whistle'); G.ui.banner('GO!', null, 700);
       st.phase = 'run'; st.t = 0; hud();
     } else {
@@ -8171,32 +8388,46 @@ G.scenes.trials = (() => {
   function* doObstacle(o) {
     st.busy = true; steer = null;
     const refuseP = Math.max(0, (45 - pet.d.mood) / 120) + (pet.d.energy < 15 ? 0.3 : 0) + (st.cls.refuse ? 0.05 : 0);
-    if (Math.random() < refuseP) { st.refusals++; pet.stop(); pet.setPose('sit'); pet.emote('q'); G.audio.play('aww'); G.ui.toast(pet.name + ' refused the obstacle! (+3s)'); st.t += 3; yield* pet.wait(1.0); pet.pos.addScaledVector(o.dir, -0.8); st.busy = false; return; }
+    if (Math.random() < refuseP) { st.refusals++; pet.stop(); pet.setPose('sit'); pet.emote('q'); G.audio.play('aww'); G.ui.toast(pet.name + ' refused the obstacle! (+3s)'); st.t += 3; yield* pet.wait(1.0); pet.pos.copy(o.entry).addScaledVector(o.dir, -0.9); st.busy = false; return; }
     const spd = (3.4 + (pet.d.agility || 0) * 0.02) * pet.S;
-    pet.heading = Math.atan2(o.dir.x, o.dir.z);
+    const H0 = Math.atan2(o.dir.x, o.dir.z);
+    // line up with the obstacle first (smoothly)
+    { const a = pet.pos.clone(), b = o.entry.clone(); let t = 0; const dur = Math.min(0.35, a.distanceTo(b) / (spd * 1.2) + 0.05); while (t < dur) { t += pet.dt; const k = Math.min(1, t / dur); pet.pos.x = U.lerp(a.x, b.x, k); pet.pos.z = U.lerp(a.z, b.z, k); pet.heading += U.angDiff(pet.heading, H0) * Math.min(1, pet.dt * 14); pet.vel = spd; yield; } }
+    pet.heading = H0;
     const from = pet.pos.clone(); const to = o.exit.clone();
     const total = from.distanceTo(to); let d = 0; let jumped = false;
     const side = new V3(o.dir.z, 0, -o.dir.x);
     if (o.type === 'tunnel') pet.setPose('crouch'); else pet.setPose('stand');
-    while (d < total) {
-      d += spd * pet.dt * (o.type === 'weave' ? 0.6 : o.type === 'tunnel' ? 0.8 : 1);
+    if (o.type === 'table') {
+      const top = o.c.clone(); let t = 0; pet.jump(2.6); pet.setPose('leap', 10); G.audio.play('whoosh');
+      while (t < 0.35) { t += pet.dt; const k = Math.min(1, t / 0.35); pet.pos.x = U.lerp(from.x, top.x, k); pet.pos.z = U.lerp(from.z, top.z, k); pet.baseY = 0.48 * k; yield; }
+      pet.setPose('sit'); pet.lookCam = 2; for (let n = 3; n > 0; n--) { G.audio.play('tick'); G.ui.toast(String(n)); yield* pet.wait(0.6); }
+      pet.setPose('stand'); pet.jump(2.4); t = 0; while (t < 0.35) { t += pet.dt; const k = Math.min(1, t / 0.35); pet.pos.x = U.lerp(top.x, to.x, k); pet.pos.z = U.lerp(top.z, to.z, k); pet.baseY = 0.48 * (1 - k); yield; }
+    } else while (d < total) {
+      d += spd * pet.dt * (o.type === 'weave' ? 0.6 : o.type === 'tunnel' ? 0.8 : o.type === 'teeter' ? 0.55 : 1);
       const k = Math.min(1, d / total);
       const p = from.clone().lerp(to, k);
-      if (o.type === 'weave') { const local = k * total - 0.7; p.addScaledVector(side, Math.sin(local / 0.6 * Math.PI) * 0.32); pet.heading = Math.atan2(o.dir.x, o.dir.z) + Math.cos(local / 0.6 * Math.PI) * 0.7; }
-      if (o.type === 'tunnel') { const tk = U.clamp((k * total - 0.7) / o.len, 0, 1); p.addScaledVector(side, -Math.sin(tk * Math.PI) * 0.3); }
-      if (o.type === 'aframe') { const ak = U.clamp((k * total - 0.7) / o.len, 0, 1); pet.baseY = (ak < 0.5 ? ak * 2 : (1 - ak) * 2) * 0.88; pet.extraPitch = ak > 0 && ak < 1 ? (ak < 0.5 ? -0.55 : 0.55) : 0; }
-      if ((o.type === 'hurdle' || o.type === 'tire') && !jumped && k * total > 0.7 + o.len / 2 - 0.55) { jumped = true; pet.jump(o.type === 'tire' ? 3.6 : 3.0); pet.setPose('leap', 10); G.audio.play('whoosh'); }
+      if (o.type === 'weave') { const local = k * total - 0.75; p.addScaledVector(side, Math.sin(local / 0.6 * Math.PI) * 0.3); pet.heading = H0 + Math.cos(local / 0.6 * Math.PI) * 0.7; }
+      if (o.type === 'tunnel') { const tk = U.clamp((k * total - 0.75) / o.len, 0, 1); p.addScaledVector(side, -Math.sin(tk * Math.PI) * 0.35); pet.root.visible = !(tk > 0.15 && tk < 0.85); }
+      if (o.type === 'aframe') { const ak = U.clamp((k * total - 0.75) / o.len, 0, 1); pet.baseY = (ak < 0.5 ? ak * 2 : (1 - ak) * 2) * 0.88; pet.extraPitch = ak > 0 && ak < 1 ? (ak < 0.5 ? -0.55 : 0.55) : 0; }
+      if (o.type === 'teeter') {
+        const sk = U.clamp((k * total - 0.75) / o.len, 0, 1); const plank = o.g.userData.plank;
+        const target = sk < 0.55 ? 0.24 : -0.24; if (plank) { const before = plank.rotation.x; plank.rotation.x = U.damp(plank.rotation.x, target, 7, pet.dt); if (before > 0 && plank.rotation.x <= 0) G.audio.play('clunk'); }
+        const ang = plank ? plank.rotation.x : 0; const sAlong = (sk - 0.5) * o.len;
+        pet.baseY = sk > 0 && sk < 1 ? Math.max(0, 0.47 - Math.tan(ang) * sAlong) : 0; pet.extraPitch = sk > 0 && sk < 1 ? ang : 0;
+      }
+      if ((o.type === 'hurdle' || o.type === 'tire') && !jumped && k * total > 0.75 + o.len / 2 - 0.6) { jumped = true; pet.jump(o.type === 'tire' ? 3.7 : 3.1); pet.setPose('leap', 10); G.audio.play('whoosh'); }
       pet.pos.x = p.x; pet.pos.z = p.z; pet.vel = spd;
       yield;
     }
-    pet.baseY = 0; pet.extraPitch = 0; pet.setPose('stand'); pet.vel = spd * 0.6;
-    G.audio.play('pop'); G.fx.spawn('sparkle', pet.pos.clone().setY(0.4), 3);
+    pet.root.visible = true; pet.baseY = 0; pet.extraPitch = 0; pet.setPose('stand'); pet.vel = spd * 0.6;
+    if (o.type === 'teeter' && o.g.userData.plank) o.g.userData.plank.rotation.x = -0.24;
+    G.audio.play('pop'); G.fx.spawn('sparkle', pet.pos.clone().setY(0.4), 4); specs.forEach((sp) => { if (Math.random() < 0.4) sp.clapT = 0.8; });
     st.idx++; st.busy = false; pet.d.agility = Math.min(100, (pet.d.agility || 0) + 0.4);
-    if (st.idx >= obstacles.length) finishAgility();
   }
   function finishAgility() {
     st.phase = 'done'; G.audio.play('whistle'); const time = Math.round((st.t + st.refusals * 2) * 10) / 10;
-    G.ui.banner('Finished!', time.toFixed(1) + ' seconds', 2000); G.audio.play('cheer'); specs.forEach((s) => (s.waveT = 2));
+    drawTimer(time); G.ui.banner('Finished!', time.toFixed(1) + ' seconds', 2000); G.audio.play('cheer'); specs.forEach((s) => { s.cheerT = 2; }); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 40);
     results(time, true);
   }
 
@@ -8298,13 +8529,19 @@ G.scenes.trials = (() => {
     judge.update(dt); for (const s of specs) { s.update(dt); s.lookAt = pet.pos; if (Math.random() < dt * 0.05) s.waveT = 1; }
     judge.lookAt = pet.pos;
     if (st && mode === 'agility' && st.phase === 'run') {
-      st.t += dt; hud();
+      st.t += dt; hud(); if (Math.floor(st.t * 10) !== st._tt) { st._tt = Math.floor(st.t * 10); drawTimer(st.t); }
       const K = G.input.keys || {}; const kx = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0), kz = (K.KeyS || K.ArrowDown ? 1 : 0) - (K.KeyW || K.ArrowUp ? 1 : 0);
       if (!st.busy) {
         let tgt = null; if (steer && steer.target) tgt = steer.target; if (kx || kz) tgt = pet.pos.clone().add(new V3(kx, 0, kz).multiplyScalar(3));
         if (tgt) { pet.task = null; pet.setPose('stand'); pet.moveTarget = tgt.clone(); const d = U.d2(pet.pos.x, pet.pos.z, tgt.x, tgt.z); pet.speedMul = d > 2.5 ? 3.0 + (pet.d.agility || 0) * 0.012 : 1.6; } else pet.moveTarget = null;
         const o = obstacles[st.idx];
-        if (o) { const d = U.d2(pet.pos.x, pet.pos.z, o.entry.x, o.entry.z); const fwd = new V3(Math.sin(pet.heading), 0, Math.cos(pet.heading)); if (o.type === 'finish' ? U.d2(pet.pos.x, pet.pos.z, o.c.x, o.c.z) < 1.2 : d < 0.9 && fwd.dot(o.dir) > 0.2) { if (o.type === 'finish') { st.idx++; finishAgility(); } else { pet.moveTarget = null; pet.task = doObstacle(o); } } }
+        if (o) {
+          const toC = new V3(o.c.x - pet.pos.x, 0, o.c.z - pet.pos.z); const along = -toC.dot(o.dir); const lateral = Math.abs(toC.dot(new V3(o.dir.z, 0, -o.dir.x)));
+          if (o.type === 'finish') { if (U.d2(pet.pos.x, pet.pos.z, o.c.x, o.c.z) < 1.6) { st.idx++; finishAgility(); } }
+          else { const d = U.d2(pet.pos.x, pet.pos.z, o.entry.x, o.entry.z); const fwd = new V3(Math.sin(pet.heading), 0, Math.cos(pet.heading));
+            // forgiving: near the entry (or approaching from the right side, close to the obstacle) and not heading backwards
+            if ((d < 1.5 && fwd.dot(o.dir) > -0.3) || (along < -0.2 && along > -(o.len / 2 + 1.6) && lateral < 1.0 && fwd.dot(o.dir) > 0)) { pet.moveTarget = null; pet.task = doObstacle(o); } }
+        }
       }
       const o = obstacles[st.idx];
       marker.visible = !!o; ring.visible = !!o && o.type !== 'finish';
@@ -8370,7 +8607,7 @@ G.scenes.trials = (() => {
     G.time += dt;
     try { if (G.cur && G.cur.update) G.cur.update(dt); } catch (e) { console.error(e); }
     G.fx.update(dt); G.dreams.update(dt);
-    if (G.cur) { G.renderer.render(G.cur.scene, G.cur.camera); G.photos.afterRender(); }
+    if (G.cur) { if (G.cur.minHFov) G.fitFov(G.cur.camera, G.cur.minHFov); G.renderer.render(G.cur.scene, G.cur.camera); G.photos.afterRender(); }
     saveT += dt; if (saveT > 15) { saveT = 0; G.save(); G.checkStamps(); }
     // adaptive quality: drop pixel ratio if the device struggles
     fpsAcc += dt; frames++;
