@@ -6,7 +6,7 @@ G.scenes.home = (() => {
   const H = { minHFov: 60, music: 'home' };
   let scene, cam, sun, hemi, lamp, winTex, winCanvas, clockHands, trophyGroup, frameMat;
   const BX0 = -3.85, BX1 = 3.85, BZ0 = -3.05, BZ1 = 2.75;
-  const BOWL = new V3(2.05, 0, 1.25), WATER = new V3(2.75, 0, 0.6), BED = new V3(-3.2, 0, -1.4), TOYBOX = new V3(3.15, 0, -2.35), CALL = new V3(0, 0, 1.9);
+  const BOWL = new V3(2.05, 0, 1.25), WATER = new V3(2.75, 0, 0.6), BED = new V3(-3.2, 0, -1.4), TOYBOX = new V3(2.05, 0, -2.6), CALL = new V3(0, 0, 1.9);
   const OBST = [{ x: TOYBOX.x, z: TOYBOX.z, r: 0.6 }, { x: -3.75, z: -2.9, r: 0.4 }, { x: 3.75, z: -1.0, r: 0.35 }, { x: BOWL.x, z: BOWL.z, r: 0.22 }, { x: WATER.x, z: WATER.z, r: 0.22 }, { x: -3.9, z: 0.6, r: 0.35 }, { x: -2.2, z: -3.2, r: 0.55 }];
   const TVP = new V3(-2.2, 0, -3.25);
   let tvScreen = null, sillGroup = null, decor = null, moonTaps = 0, moonT = 0, clockTaps = 0, clockTapT = 0, wishDay = '', winAnimT = 0, dogeT = 0;
@@ -45,6 +45,20 @@ G.scenes.home = (() => {
     const right = left.clone(); right.rotation.y = -Math.PI / 2; right.position.x = 4.7; scene.add(right);
     const trim = M.mat('#a8683a', { r: 0.6 });
     [[0, -3.57, 9.4, 0], [-4.67, -0.1, 8.2, Math.PI / 2], [4.67, -0.1, 8.2, Math.PI / 2]].forEach(([x, z, w, ry]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, 0.16, 0.06), trim); b.position.set(x, 0.08, z); b.rotation.y = ry; b.receiveShadow = true; scene.add(b); });
+    // front door (back wall, right corner) - tap it to head outside
+    { const dg = new THREE.Group(); dg.position.set(3.92, 0, -3.56); scene.add(dg);
+      const fm = M.mat('#fff7ea', { r: 0.6 });
+      for (const sx of [-1, 1]) { const jamb = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.25, 0.08), fm); jamb.position.set(sx * 0.6, 1.12, 0.02); dg.add(jamb); }
+      const head = new THREE.Mesh(new THREE.BoxGeometry(1.32, 0.12, 0.09), fm); head.position.set(0, 2.28, 0.02); dg.add(head);
+      const hinge = new THREE.Group(); hinge.position.set(-0.55, 0, 0.01); dg.add(hinge); H.doorHinge = hinge;
+      const panelT = G.canvasTex(128, 256, (c) => { c.fillStyle = '#4a7a5a'; c.fillRect(0, 0, 128, 256); c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 5; c.strokeRect(14, 96, 100, 64); c.strokeRect(14, 174, 100, 66); c.fillStyle = 'rgba(255,255,255,.08)'; c.fillRect(0, 0, 6, 256); });
+      const panel = new THREE.Mesh(new THREE.BoxGeometry(1.08, 2.18, 0.06), M.mat('#fff', { map: panelT, r: 0.7 })); panel.position.set(0.54, 1.09, 0); panel.castShadow = true; hinge.add(panel);
+      const glassD = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.55), new THREE.MeshBasicMaterial({ color: G.daylight() > 0.4 ? '#cfe9ff' : '#2a3560' })); glassD.position.set(0.54, 1.75, 0.032); hinge.add(glassD);
+      for (const [w, h, y] of [[0.04, 0.55, 1.75], [0.7, 0.04, 1.75]]) { const bar = new THREE.Mesh(new THREE.BoxGeometry(w, h, 0.02), fm); bar.position.set(0.54, y, 0.04); hinge.add(bar); }
+      const knob = new THREE.Mesh(new THREE.SphereGeometry(0.045, 12, 10), M.mat('#f2c24b', { r: 0.25, m: 0.85 })); knob.position.set(0.95, 1.05, 0.07); hinge.add(knob);
+      const flap = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.3, 0.02), M.mat('#3b5a46', { r: 0.6 })); flap.position.set(0.54, 0.2, 0.035); hinge.add(flap);
+      const mat = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.6), M.mat('#fff', { map: G.textTex('WELCOME', { font: '700 44px Fredoka, sans-serif', bg: '#a8683a', color: '#fff7ea', pad: 16, radius: 8 }) })); mat.rotation.x = -Math.PI / 2; mat.position.set(0, 0.012, 0.6); dg.add(mat);
+      dg.traverse((o) => { if (o.isMesh) o.userData.click = 'door'; }); dg.userData.click = 'door'; clickables.push(dg); }
     // window
     winCanvas = document.createElement('canvas'); winCanvas.width = 256; winCanvas.height = 192;
     winTex = new THREE.CanvasTexture(winCanvas); winTex.encoding = THREE.sRGBEncoding;
@@ -88,7 +102,7 @@ G.scenes.home = (() => {
     for (const s of [-1, 1]) { const br = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.22, 0.25), M.mat('#7a4a24')); br.position.set(-2.6 + s * 0.8, 1.42, -3.47); scene.add(br); }
     trophyGroup = new THREE.Group(); trophyGroup.position.set(-2.6, 1.585, -3.42); scene.add(trophyGroup);
     // portrait frame
-    const fr = new THREE.Group(); fr.position.set(2.45, 1.95, -3.53); scene.add(fr);
+    const fr = new THREE.Group(); fr.position.set(2.05, 1.95, -3.53); scene.add(fr);
     const outer = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.45, 0.06), M.mat('#c8922a', { r: 0.35, m: 0.5 })); outer.castShadow = true; fr.add(outer);
     frameMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
     frameMat.map = G.canvasTex(256, 320, (g) => { g.fillStyle = '#e8f2f8'; g.fillRect(0, 0, 256, 320); g.fillStyle = '#bfd8e6'; g.beginPath(); g.moveTo(0, 220); g.lineTo(90, 120); g.lineTo(160, 190); g.lineTo(200, 150); g.lineTo(256, 210); g.lineTo(256, 320); g.lineTo(0, 320); g.fill(); g.fillStyle = '#fff'; g.beginPath(); g.moveTo(70, 143); g.lineTo(90, 120); g.lineTo(110, 143); g.fill(); g.fillStyle = '#9cc58a'; g.fillRect(0, 250, 256, 70); g.fillStyle = '#f2c24b'; g.beginPath(); g.arc(200, 70, 22, 0, 7); g.fill(); });
@@ -834,6 +848,13 @@ G.scenes.home = (() => {
       case 'frame': G.ui.toast(G.state.portrait ? 'A portrait by Sora. Masterpiece!' : 'An empty frame... Sora by the pond paints pet portraits.'); break;
       case 'shelf': G.ui.toast(G.state.trophies.length ? G.state.trophies.length + ' troph' + (G.state.trophies.length > 1 ? 'ies' : 'y') + ' won!' : 'Win Disc Cups to fill this shelf!'); break;
       case 'calendar': { const d = new Date(); G.ui.toast('Today is ' + d.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) + '. Day ' + G.state.day + ' in Maple Hill.'); break; }
+      case 'door': {
+        G.audio.play('door'); H.doorOpenT = 2.5;
+        const pp = G.activePet(); if (pp && !pp.ctl) { pp.stop(); pp.do((function* () { yield* pp.goto(3.75, -2.55, { speed: 2.2, timeout: 4 }); yield* pp.face(3.92, -3.6); pp.excite = 1; pp.voice('happy'); yield* pp.act(pp.cat ? 'sit' : 'bow', 1.2); pp.setPose('sit'); })()); }
+        G.ui.prompts([{ label: 'Go for a walk', cls: 'orange', fn: () => { G.ui.prompts([]); G.go('walk'); } }, { label: 'Other places…', fn: () => { G.ui.prompts([]); G.ui.goSheet(); } }, { label: 'Stay in', fn: () => G.ui.prompts([]) }]);
+        G.ui.hint(pp && !pp.cat ? pp.name + ' heard the door and can\u2019t sit still! Head out?' : 'Head outside?', 3000);
+        break;
+      }
       case 'clock': clockTaps = (G.time - clockTapT > 3 ? 0 : clockTaps) + 1; clockTapT = G.time; if (clockTaps >= 7) { clockTaps = 0; G.partyMode(); break; } G.ui.toast('It’s ' + U.fmtTime(new Date()) + '.'); break;
       default: break;
     }
@@ -961,6 +982,7 @@ G.scenes.home = (() => {
   /* ---------------- update ---------------- */
   let lightT = 0, clockT = 0;
   H.update = function (dt) {
+    if (H.doorHinge) { H.doorOpenT = Math.max(0, (H.doorOpenT || 0) - dt); H.doorHinge.rotation.y = U.damp(H.doorHinge.rotation.y, H.doorOpenT > 0 ? -1.1 : 0, 5, dt); }
     for (const p of pets) p.update(dt);
     H.tv.update(dt);
     if (H.beams) { const dl = G.daylight(); const sunny = G.weather() === 'sunny' ? 1 : G.weather() === 'cloudy' ? 0.45 : 0.15; const vis = dl * sunny; H.beams.visible = vis > 0.05; H.beams.children.forEach((c) => { if (c.material && c !== H.sunPatch && !c.isSprite) c.material.opacity = 0.16 * vis; }); H.sunPatch.material.opacity = 0.3 * vis; for (const m of H.motes) { m.userData.ph += dt * 0.3; m.position.y += Math.sin(m.userData.ph) * dt * 0.05; m.position.x += Math.cos(m.userData.ph * 0.7) * dt * 0.04; m.material.opacity = (0.3 + 0.4 * Math.abs(Math.sin(m.userData.ph * 2))) * vis; } }

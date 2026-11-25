@@ -91,7 +91,7 @@ G.scenes.trials = (() => {
       const cyl = (r, h, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 10), mat); m.position.set(x, y, z); g.add(m); return m; };
       if (type === 'hurdle') {
         for (const sx of [-1, 1]) { box(0.08, 0.9, 0.08, white, sx * 0.72, 0.45, 0); box(0.32, 0.7, 0.03, sx > 0 ? blue : stripe, sx * 0.92, 0.38, 0); box(0.36, 0.04, 0.36, white, sx * 0.8, 0.02, 0); }
-        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.44, 10), M.mat('#fff', { map: stripeTex })); bar.rotation.z = Math.PI / 2; bar.position.y = 0.42; g.add(bar);
+        const bar = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.44, 10), M.mat('#fff', { map: stripeTex })); bar.rotation.z = Math.PI / 2; bar.position.y = 0.42; g.add(bar); g.userData.bar = bar;
       } else if (type === 'tire') {
         const fr = M.mat('#3b5ba8', { r: 0.5 });
         for (const sx of [-1, 1]) { box(0.08, 1.5, 0.08, fr, sx * 0.75, 0.75, 0); box(0.08, 0.06, 0.8, fr, sx * 0.75, 0.03, 0); }
@@ -181,13 +181,13 @@ G.scenes.trials = (() => {
   };
   T.onVoice = function (kind, id) { if (mode === 'obedience' && st && st.phase === 'obey' && kind === 'trick') judgeGesture(id); return true; };
   T.debug = () => ({ st, obstacles, pet });
-  T.exit = function () { if (pet) { scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.baseY = 0; pet.root.visible = true; } if (courseGrp) { scene.remove(courseGrp); courseGrp = null; } for (const o of obstacles) scene.remove(o.g); obstacles = []; $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.banner('', null, 1); st = null; };
+  T.exit = function () { hideGuide(); if (squirrel) squirrel.visible = false; if ($('#skillCue')) $('#skillCue').classList.remove('show'); if (pet) { scene.remove(pet.root); pet.stop(); pet.extraPitch = 0; pet.baseY = 0; pet.root.visible = true; } if (courseGrp) { scene.remove(courseGrp); courseGrp = null; } for (const o of obstacles) scene.remove(o.g); obstacles = []; $('#contestHud').classList.add('hidden'); G.ui.hint(null); G.ui.banner('', null, 1); st = null; };
   T.dock = () => [{ label: 'Events', icon: 'trophy', fn: () => { if (!st || st.phase === 'done') menu(); } }, { label: 'Leave', icon: 'door', cls: 'go', fn: () => G.go(from === 'walk' ? 'walk' : 'home', { from: 'field' }) }];
   function menu() {
     st = null; $('#contestHud').classList.add('hidden');
     const list = G.TRIALS[mode];
     G.ui.sheet({ title: mode === 'agility' ? 'Agility trial' : 'Obedience trial', render(body) {
-      if (mode === 'agility') G.ui.note(body, 'Hold on the ground (or WASD) to lead ' + pet.name + ' to each numbered obstacle in order, head-on. Fastest time wins! An unhappy or tired pup may refuse obstacles.');
+      if (mode === 'agility') G.ui.note(body, 'Hold on the ground (or WASD) to lead ' + pet.name + ' to each numbered obstacle. Then it\u2019s about timing: tap when the ring closes to JUMP, tap each weave pole in rhythm, and tap the CONTACT zones on the A-frame and see-saw. Faults add time; perfect taps make ' + pet.name + ' faster!');
       else { const learned = G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1); G.ui.note(body, 'Judge Hoshino calls commands. Perform each trick’s gesture on ' + pet.name + ' before time runs out. Only tricks ' + pet.name + ' has learned will be called (' + learned.length + ' learned).'); }
       const l = G.ui.list(body);
       list.forEach((c) => {
@@ -211,7 +211,9 @@ G.scenes.trials = (() => {
     } else {
       pet.stop(); pet.pos.set(0, 0, 0.5); pet.heading = 0; pet.brain = null;
       const learned = G.TRICKS.filter((t) => (pet.d.tricks[t.id] || 0) >= 1).map((t) => t.id);
-      for (let i = 0; i < c.n; i++) st.calls.push(U.pick(learned));
+      for (let i = 0; i < c.n; i++) { let id = U.pick(learned); if (learned.length > 1) while (id === st.calls[st.calls.length - 1]) id = U.pick(learned); st.calls.push(id); }
+      const stays = { ob2: 1, ob3: 2 }[c.id] || 0; for (let k = 0; k < stays; k++) st.calls.splice(2 + k * 3, 0, 'stay');
+      st.log = []; st.streak = 0;
       st.phase = 'obey'; nextCall();
     }
   }
@@ -222,6 +224,21 @@ G.scenes.trials = (() => {
   }
 
   /* ---------------- agility ---------------- */
+  /* ---- timing cues: tap when the ring closes ---- */
+  function cueEl() {
+    let el = $('#skillCue');
+    if (!el) { el = document.createElement('div'); el.id = 'skillCue'; el.innerHTML = '<div class="scRing"></div><div class="scTarget"></div><div class="scLabel"></div>'; document.body.appendChild(el); el.addEventListener('pointerdown', (e) => { e.preventDefault(); skillTap(); }); const r = document.createElement('div'); r.id = 'skillRes'; document.body.appendChild(r); }
+    return el;
+  }
+  function cueStart(label, dur) { st.cue = { label, t0: G.time, dur, done: false }; st.lastTap = null; const el = cueEl(); el.querySelector('.scLabel').textContent = label; el.classList.add('show'); el.classList.remove('hit'); }
+  function cueEnd(showRes) {
+    const c = st.cue; st.cue = null; if (!c) return 'miss';
+    let r = 'miss'; if (st.lastTap != null && st.lastTap >= c.t0 - 0.05) { const e = Math.abs(G.time - st.lastTap); r = e < 0.15 ? 'perfect' : e < 0.34 ? 'good' : 'miss'; }
+    const el = cueEl(); if (showRes !== false) flashRes(r); el.classList.remove('show'); return r;
+  }
+  function flashRes(r) { cueEl(); const res = $('#skillRes'); res.textContent = r === 'perfect' ? 'PERFECT!' : r === 'good' ? 'GOOD' : 'MISS'; res.className = r; void res.offsetWidth; res.classList.add('pop'); if (r === 'perfect') { st.perfects = (st.perfects || 0) + 1; G.audio.play('sparkle'); } else if (r === 'good') G.audio.play('pop'); }
+  function skillTap() { if (st && st.cue) { st.lastTap = G.time; cueEl().classList.add('hit'); G.audio.play('tick'); } }
+  function fault(msg, secs) { st.faults = (st.faults || 0) + 1; st.t += secs; G.audio.play('aww'); G.ui.toast(msg + ' (+' + secs + 's)'); specs.forEach((sp) => { if (Math.random() < 0.3) sp.talking = 0.8; }); }
   function* doObstacle(o) {
     st.busy = true; steer = null;
     const refuseP = Math.max(0, (45 - pet.d.mood) / 120) + (pet.d.energy < 15 ? 0.3 : 0) + (st.cls.refuse ? 0.05 : 0);
@@ -232,16 +249,17 @@ G.scenes.trials = (() => {
     { const a = pet.pos.clone(), b = o.entry.clone(); let t = 0; const dur = Math.min(0.35, a.distanceTo(b) / (spd * 1.2) + 0.05); while (t < dur) { t += pet.dt; const k = Math.min(1, t / dur); pet.pos.x = U.lerp(a.x, b.x, k); pet.pos.z = U.lerp(a.z, b.z, k); pet.heading += U.angDiff(pet.heading, H0) * Math.min(1, pet.dt * 14); pet.vel = spd; yield; } }
     pet.heading = H0;
     const from = pet.pos.clone(); const to = o.exit.clone();
-    const total = from.distanceTo(to); let d = 0; let jumped = false;
+    const total = from.distanceTo(to); let d = 0; let jumped = false; let boost = st.boost || 1; const wv = { cur: -1, hit: 0, miss: 0 }; let contactCue = false;
+    if ((o.type === 'hurdle' || o.type === 'tire') && !st.cue) cueStart('JUMP!', Math.max(0.3, 0.3 / (spd * boost)));
     const side = new V3(o.dir.z, 0, -o.dir.x);
     if (o.type === 'tunnel') pet.setPose('crouch'); else pet.setPose('stand');
     if (o.type === 'table') {
       const top = o.c.clone(); let t = 0; pet.jump(2.6); pet.setPose('leap', 10); G.audio.play('whoosh');
       while (t < 0.35) { t += pet.dt; const k = Math.min(1, t / 0.35); pet.pos.x = U.lerp(from.x, top.x, k); pet.pos.z = U.lerp(from.z, top.z, k); pet.baseY = 0.48 * k; yield; }
-      pet.setPose('sit'); pet.lookCam = 2; for (let n = 3; n > 0; n--) { G.audio.play('tick'); G.ui.toast(String(n)); yield* pet.wait(0.6); }
+      cueStart('DOWN!', 0.45); yield* pet.wait(0.45); const tr = cueEnd(); pet.setPose(tr === 'miss' ? 'sit' : 'lie'); pet.lookCam = 2; const step = tr === 'perfect' ? 0.25 : tr === 'good' ? 0.4 : 0.7; for (let n = 3; n > 0; n--) { G.audio.play('tick'); G.ui.toast(String(n)); yield* pet.wait(step); }
       pet.setPose('stand'); pet.jump(2.4); t = 0; while (t < 0.35) { t += pet.dt; const k = Math.min(1, t / 0.35); pet.pos.x = U.lerp(top.x, to.x, k); pet.pos.z = U.lerp(top.z, to.z, k); pet.baseY = 0.48 * (1 - k); yield; }
     } else while (d < total) {
-      d += spd * pet.dt * (o.type === 'weave' ? 0.6 : o.type === 'tunnel' ? 0.8 : o.type === 'teeter' ? 0.55 : 1);
+      d += spd * boost * pet.dt * (o.type === 'weave' ? 0.6 : o.type === 'tunnel' ? 0.8 : o.type === 'teeter' ? 0.55 : 1);
       const k = Math.min(1, d / total);
       const p = from.clone().lerp(to, k);
       if (o.type === 'weave') { const local = k * total - 0.75; p.addScaledVector(side, Math.sin(local / 0.6 * Math.PI) * 0.3); pet.heading = H0 + Math.cos(local / 0.6 * Math.PI) * 0.7; }
@@ -253,17 +271,35 @@ G.scenes.trials = (() => {
         const ang = plank ? plank.rotation.x : 0; const sAlong = (sk - 0.5) * o.len;
         pet.baseY = sk > 0 && sk < 1 ? Math.max(0, 0.47 - Math.tan(ang) * sAlong) : 0; pet.extraPitch = sk > 0 && sk < 1 ? ang : 0;
       }
-      if ((o.type === 'hurdle' || o.type === 'tire') && !jumped && k * total > 0.75 + o.len / 2 - 0.6) { jumped = true; pet.jump(o.type === 'tire' ? 3.7 : 3.1); pet.setPose('leap', 10); G.audio.play('whoosh'); }
+      if ((o.type === 'hurdle' || o.type === 'tire') && !jumped && k * total > 0.75 + o.len / 2 - 0.6) {
+        jumped = true; const r = cueEnd();
+        pet.jump(o.type === 'tire' ? 3.7 : 3.1); pet.setPose('leap', 10); G.audio.play('whoosh');
+        if (r === 'perfect') { boost = 1.18; st.t = Math.max(0, st.t - 0.3); }
+        else if (r === 'miss') { if (o.type === 'hurdle') { const bar = o.g.userData.bar; if (bar) { bar.userData.fall = 1; } G.audio.play('clunk'); fault('Knocked the bar!', 5); } else fault('Clipped the tire!', 3); }
+      }
+      if (o.type === 'weave') { const vv = spd * 0.6 * boost; const pd = k * total - 0.75 - (o.len / 2 - 1.5); if (wv.cur < 0) { wv.cur = 0; cueStart('TAP!', Math.max(0.2, -pd / vv)); } else if (wv.cur < 6 && pd >= wv.cur * 0.6) { const r = cueEnd(); if (r === 'miss') wv.miss++; else wv.hit++; wv.cur++; if (wv.cur < 6) cueStart('TAP!', 0.6 / vv); } }
+      if ((o.type === 'aframe' || o.type === 'teeter') && !contactCue && k * total > 0.75 + o.len * 0.62) { contactCue = true; cueStart('CONTACT!', (o.len * 0.3) / (spd * (o.type === 'teeter' ? 0.55 : 1) * boost)); }
+      if (st.cue) { // keep the ring in sync with the real moment
+        const v = spd * boost * (o.type === 'weave' ? 0.6 : o.type === 'teeter' ? 0.55 : o.type === 'tunnel' ? 0.8 : 1); let rem = null;
+        if (st.cue.label === 'JUMP!' && !jumped) rem = (0.75 + o.len / 2 - 0.6) - k * total;
+        else if (st.cue.label === 'TAP!' && o.type === 'weave') rem = wv.cur * 0.6 - (k * total - 0.75 - (o.len / 2 - 1.5));
+        else if (st.cue.label === 'CONTACT!') rem = total - k * total;
+        if (rem !== null) st.cue.dur = (G.time - st.cue.t0) + Math.max(0, rem) / Math.max(0.5, v);
+      }
       pet.pos.x = p.x; pet.pos.z = p.z; pet.vel = spd;
       yield;
     }
+    if (o.type === 'weave') { if (st.cue) cueEnd(false); if (wv.miss >= 2) fault('Missed ' + wv.miss + ' weave poles!', wv.miss); else if (wv.miss === 0) { G.ui.toast('Flawless weaves!'); st.t = Math.max(0, st.t - 0.5); } }
+    if ((o.type === 'aframe' || o.type === 'teeter') && contactCue) { const r = cueEnd(); if (r === 'miss') fault('Missed the contact zone!', 5); else if (r === 'perfect') st.t = Math.max(0, st.t - 0.3); }
+    if (st.cue) cueEnd(false);
+    st.boost = boost > 1 ? 1.08 : 1;
     pet.root.visible = true; pet.baseY = 0; pet.extraPitch = 0; pet.setPose('stand'); pet.vel = spd * 0.6;
     if (o.type === 'teeter' && o.g.userData.plank) o.g.userData.plank.rotation.x = -0.24;
     G.audio.play('pop'); G.fx.spawn('sparkle', pet.pos.clone().setY(0.4), 4); specs.forEach((sp) => { if (Math.random() < 0.4) sp.clapT = 0.8; });
     st.idx++; st.busy = false; pet.d.agility = Math.min(100, (pet.d.agility || 0) + 0.4);
   }
   function finishAgility() {
-    st.phase = 'done'; G.audio.play('whistle'); const time = Math.round((st.t + st.refusals * 2) * 10) / 10;
+    st.phase = 'done'; if (st.cue) cueEnd(false); G.audio.play('whistle'); const time = Math.round((st.t + st.refusals * 2) * 10) / 10; st.summary = (st.faults ? st.faults + ' fault' + (st.faults > 1 ? 's' : '') : 'Clean run!') + ' \u00b7 ' + (st.perfects || 0) + ' perfect' + ((st.perfects || 0) === 1 ? '' : 's');
     drawTimer(time); G.ui.banner('Finished!', time.toFixed(1) + ' seconds', 2000); G.audio.play('cheer'); specs.forEach((s) => { s.cheerT = 2; }); G.fx.spawn('confetti', pet.pos.clone().setY(1.5), 40);
     results(time, true);
   }
@@ -272,24 +308,70 @@ G.scenes.trials = (() => {
   const PREP = { sit: 'stand', spin: 'stand', jump: 'stand', down: 'sit', paw: 'sit', beg: 'sit', speak: 'sit', rollover: 'lie', dead: 'lie' };
   function nextCall() {
     if (!st) return;
-    if (st.idx >= st.calls.length) { st.phase = 'done'; const sc = Math.round(st.score / (st.calls.length * 20) * 100); G.ui.banner('All done!', 'Score ' + sc + ' / 100', 2000); G.audio.play('cheer'); results(sc, false); return; }
+    if (st.idx >= st.calls.length) { hideGuide(); st.phase = 'done'; const sc = Math.min(100, Math.round(st.score / (st.calls.length * 20) * 100)); G.ui.banner('All done!', 'Score ' + sc + ' / 100', 2000); G.audio.play('cheer'); results(sc, false); return; }
     const id = st.calls[st.idx]; const tr = G.TRICKS.find((t) => t.id === id);
-    pet.stop(); pet.setPose(PREP[id] || 'sit'); pet.lookCam = 30;
+    pet.stop(); pet.setPose(id === 'stay' ? 'sit' : PREP[id] || 'sit'); pet.lookCam = 30;
     st.callT = st.cls.time; st.cur = id; st.answered = false;
     judge.talking = 1; G.audio.play('whistle');
-    G.ui.banner(tr.name + '!', 'Do the gesture: ' + tr.hint.replace(/ while they are \w+( down)?\./, '.'), 1800);
+    showGuide(id, tr ? tr.name : 'Stay'); G.ui.banner((tr ? tr.name : 'Stay') + '!', null, 1100);
+    if (id === 'stay') startStay();
     hud();
+  }
+  /* ---- obedience presentation: gesture guide, judge score cards, stay challenge ---- */
+  const GUIDE = { sit: ['down', 'Stroke DOWN along the back'], down: ['down', 'Stroke DOWN along the back (while sitting)'], beg: ['up', 'Stroke UP from the chin'], spin: ['circle', 'Draw a CIRCLE around them'], jump: ['flick', 'Quick FLICK upward'], paw: ['tap', 'Tap a front PAW'], speak: ['double', 'Double-tap the NOSE'], rollover: ['side', 'Swipe SIDEWAYS across them'], dead: ['hold', 'Press and HOLD still'], stay: ['hold', 'HOLD your finger on your pup until the squirrel is gone!'] };
+  function showGuide(id, name) {
+    let el = $('#obGuide'); if (!el) { el = document.createElement('div'); el.id = 'obGuide'; document.body.appendChild(el); }
+    const [kind, txt] = GUIDE[id] || ['tap', 'Do the gesture'];
+    el.innerHTML = '<div class="ogPad"><div class="ogDog">\ud83d\udc36</div><div class="ogFinger og-' + kind + '">\u261d\ufe0f</div></div><div class="ogTxt"><b>' + U.esc(name) + '!</b><span>' + U.esc(txt) + '</span></div>';
+    el.classList.add('show');
+  }
+  function hideGuide() { const el = $('#obGuide'); if (el) el.classList.remove('show'); }
+  let cardSp = null;
+  function scoreCard(v) {
+    if (!cardSp) { cardSp = new THREE.Sprite(new THREE.SpriteMaterial({ transparent: true, depthTest: false })); cardSp.renderOrder = 16; scene.add(cardSp); }
+    if (cardSp.material.map) cardSp.material.map.dispose();
+    const t = G.textTex(v.toFixed(1), { font: '800 64px Fredoka, sans-serif', bg: v >= 8 ? '#3b5ba8' : v >= 5 ? '#79b25a' : '#e2574c', color: '#fff', pad: 16, radius: 10 });
+    cardSp.material.map = t; cardSp.material.needsUpdate = true; cardSp.scale.set(0.5 * t.userData.w / t.userData.h, 0.5, 1); cardSp.visible = true; cardSp.userData.t = 1.8;
+    judge.waveT = 1.4; G.audio.play(v >= 8 ? 'cheer' : 'pop'); specs.forEach((sp) => { if (v >= 8 && Math.random() < 0.6) sp.clapT = 1; });
+  }
+  let squirrel = null;
+  function startStay() {
+    st.callT = 8; st.stayT = 0; st.stayHold = false; st.stayBroken = false;
+    if (!squirrel) {
+      squirrel = new THREE.Group(); const fm = G.M.mat('#8a5a3a', { r: 0.9 }), lm = G.M.mat('#d8b08a', { r: 0.9 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10), fm); body.scale.set(0.8, 0.9, 1.3); body.position.y = 0.11; squirrel.add(body);
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 10), fm); head.position.set(0, 0.2, 0.11); squirrel.add(head);
+      for (const sd of [-1, 1]) { const e = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 6), fm); e.position.set(sd * 0.035, 0.27, 0.1); squirrel.add(e); const ey = new THREE.Mesh(new THREE.SphereGeometry(0.012, 6, 6), G.M.mat('#111')); ey.position.set(sd * 0.03, 0.215, 0.165); squirrel.add(ey); }
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(0.06, 10, 8), lm); belly.position.set(0, 0.1, 0.07); squirrel.add(belly);
+      const tail = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.055, 8, 14, Math.PI * 1.3), fm); tail.rotation.set(0, Math.PI / 2, 0.4); tail.position.set(0, 0.2, -0.13); squirrel.add(tail);
+      squirrel.traverse((o) => { if (o.isMesh) o.castShadow = true; }); scene.add(squirrel);
+    }
+    squirrel.visible = true; squirrel.position.set(-5, 0, 2.2); squirrel.userData.ph = 0;
+  }
+  function updateStay(dt) {
+    if (st.answered) return;
+    st.callT -= 0; const sq = squirrel; sq.userData.ph += dt;
+    const k = U.clamp((sq.userData.ph - 0.8) / 4.2, 0, 1); sq.position.set(-5 + k * 10, Math.abs(Math.sin(sq.userData.ph * 12)) * 0.08 * (k > 0 && k < 1 ? 1 : 0), 2.2 - Math.sin(k * Math.PI) * 1.2); sq.rotation.y = Math.PI / 2;
+    pet.lookTarget = sq.position;
+    if (k > 0.05 && k < 0.95) { if (st.stayHold) { st.stayT += dt; pet.setPose('sit'); pet.emote && Math.random() < dt * 0.6 && pet.emote('sweat', 0.6); } else if (!st.stayBroken) {
+      st.stayBroken = true; st.answered = true; hideGuide(); G.audio.play('aww'); G.ui.toast(pet.name + ' couldn\u2019t resist the squirrel!'); st.log.push({ id: 'stay', pts: 0 }); st.streak = 0; scoreCard(0);
+      pet.do((function* () { pet.lookTarget = null; yield* pet.zoomies(0, 1.2, 1.4, 1); yield* pet.goto(0, 0.5, { speed: 1.4 }); yield* pet.face(cam.position.x, cam.position.z); pet.setPose('sit'); })());
+      setTimeout(() => { sq.visible = false; st.idx++; nextCall(); }, 4200); } }
+    if (k >= 1 && !st.stayBroken) { st.answered = true; hideGuide(); pet.lookTarget = null; sq.visible = false; const pts = 20; st.score += pts; st.log.push({ id: 'stay', pts }); scoreCard(10); pet.happy(4); G.ui.toast('Perfect stay! ' + pet.name + ' didn\u2019t budge.'); setTimeout(() => { st.idx++; nextCall(); }, 1300); }
   }
   function judgeGesture(g) {
     if (!st || st.phase !== 'obey' || st.answered || st.waiting) return;
     const id = st.cur;
+    if (id === 'stay') return;
     if (g !== id) { st.score = Math.max(0, st.score - 3); G.audio.play('back'); pet.tiltT = 1; pet.emote('q', 0.8); G.ui.toast('Hmm, that’s not "' + G.TRICKS.find((t) => t.id === id).name + '"...'); return; }
     const p = 0.72 + pet.d.mood * 0.002 + (pet.d.bond || 0) * 0.002;
     st.waiting = true;
     pet.do((function* () {
       if (Math.random() > p) { pet.emote('q'); pet.tiltT = 1.2; G.ui.toast(pet.name + ' got distracted! Try again.'); yield* pet.wait(1); st.waiting = false; pet.setPose(PREP[id] || 'sit'); return; }
       yield* pet.trick(id);
-      const pts = 10 + 10 * Math.max(0, st.callT) / st.cls.time; st.score += pts; st.answered = true; st.waiting = false;
+      const quick = st.callT / st.cls.time; st.streak = quick > 0.45 ? st.streak + 1 : 0; const bonus = Math.min(6, Math.max(0, st.streak - 1) * 2);
+      const pts = 10 + 10 * Math.max(0, st.callT) / st.cls.time + bonus; st.score += pts; st.answered = true; st.waiting = false; hideGuide();
+      st.log.push({ id, pts }); scoreCard(Math.min(10, pts / 2)); if (bonus) G.ui.toast('Streak x' + st.streak + '! +' + bonus);
       G.audio.play('chime'); pet.happy(2); G.ui.toast('+' + Math.round(pts) + ' — ' + U.pick(['Excellent!', 'Very good.', 'Lovely form.', 'Crisp!']));
       yield* pet.wait(0.6); st.idx++; nextCall();
     })());
@@ -303,20 +385,21 @@ G.scenes.trials = (() => {
   /* ---------------- input ---------------- */
   T.onDown = function (p) {
     if (!st) return;
-    if (mode === 'agility') { if (st.phase === 'run' && !st.busy) { steer = { target: G.groundAt(p) }; } return; }
+    if (mode === 'agility') { if (st.phase === 'run' && st.cue) { skillTap(); return; } if (st.phase === 'run' && !st.busy) { steer = { target: G.groundAt(p) }; } return; }
     if (st.phase !== 'obey') return;
     const hit = G.pick(p, pet.m.meshes, false)[0];
+    if (st.cur === 'stay' && !st.answered) { if (hit) { st.stayHold = true; G.ui.cursor(G.IC.hand, p.x, p.y); pet.petT = 0; } return; }
     if (hit) { touch = { p0: p, path: [p], angle: 0, prevA: null, part: partOf(hit) }; G.ui.cursor(G.IC.hand, p.x, p.y); pet.petT = 0; }
   };
   T.onMove = function (p, down) {
-    if (mode === 'agility') { if (steer && down) { const g = G.groundAt(p); if (g) steer.target = g; } return; }
+    if (mode === 'agility') { if (down && !steer && st && st.phase === 'run' && !st.busy && !st.cue) steer = { target: null }; if (steer && down) { const g = G.groundAt(p); if (g) steer.target = g; } return; }
     if (!touch || !down) return;
     touch.path.push(p); G.ui.cursor(G.IC.hand, p.x, p.y);
     const sc = G.toScreen(pet.pos.clone().setY(pet.sizeH * 0.45)); const a = Math.atan2(p.y - sc.y, p.x - sc.x); if (touch.prevA !== null) touch.angle += U.angDiff(touch.prevA, a); touch.prevA = a;
     if (G.pick(p, pet.m.meshes, false)[0]) pet.petT = 0;
   };
   T.onUp = function (p) {
-    steer = null; G.ui.cursor(null);
+    steer = null; G.ui.cursor(null); if (st) st.stayHold = false;
     if (mode !== 'obedience' || !touch) return;
     const Tt = touch; touch = null;
     const dx = p.x - Tt.p0.x, dy = p.y - Tt.p0.y, dur = p.t - Tt.p0.t;
@@ -349,6 +432,8 @@ G.scenes.trials = (() => {
     setTimeout(() => {
       G.ui.sheet({ title: place <= 3 ? ['', '1st place!', '2nd place!', '3rd place!'][place] : 'Results', render(body) {
         rivals.forEach((b, i) => { const r = document.createElement('div'); r.className = 'score' + (b.me ? ' me' : ''); r.innerHTML = '<span>' + (i + 1) + '. ' + U.esc(b.dog) + ' <small style="color:#7a5c46">(' + U.esc(b.owner) + ', ' + U.esc(G.BREEDS[b.breed].name) + ')</small></span><span>' + (lowerBetter ? b.score.toFixed(1) + 's' : b.score) + '</span>'; body.appendChild(r); });
+        if (st && st.summary) G.ui.note(body, st.summary);
+        if (st && st.log && st.log.length) G.ui.note(body, st.log.map((e) => { const nm = e.id === 'stay' ? 'Stay' : (G.TRICKS.find((t) => t.id === e.id) || {}).name; const stars = e.pts >= 17 ? '\u2605\u2605\u2605' : e.pts >= 13 ? '\u2605\u2605\u2606' : e.pts > 0 ? '\u2605\u2606\u2606' : '\u2606\u2606\u2606'; return nm + ' ' + stars; }).join('  \u00b7  '));
         G.ui.note(body, 'Prize: ' + prize + ' coins' + (place <= 3 ? ' and a trophy!' : '. Practice makes perfect!') + (place === 1 && G.TRIALS[mode].find((x) => x.need === c.id) ? ' The next level is unlocked!' : ''));
         if (place === 1 && PRZ) G.ui.prizeBox(body, prizeAcc, [PRZ], pet);
         const r = document.createElement('div'); r.className = 'mrow';
@@ -363,15 +448,23 @@ G.scenes.trials = (() => {
   /* ---------------- update ---------------- */
   T.update = function (dt) {
     if (!pet) return;
+    for (const o of obstacles) { const bar = o.g.userData.bar; if (bar && bar.userData.fall) { bar.position.y = Math.max(0.04, bar.position.y - dt * 2.2); bar.rotation.x = Math.min(0.6, bar.rotation.x + dt * 3); } }
+    if (st && st.cue) { const c = st.cue; const k = (G.time - c.t0) / c.dur; const el = $('#skillCue'); if (el) { el.querySelector('.scRing').style.transform = 'translate(-50%,-50%) scale(' + Math.max(0.55, 1 + 1.6 * (1 - k)) + ')'; el.querySelector('.scRing').style.opacity = k > 1.35 ? 0.2 : 1; } }
     judge.update(dt); for (const s of specs) { s.update(dt); s.lookAt = pet.pos; if (Math.random() < dt * 0.05) s.waveT = 1; }
     judge.lookAt = pet.pos;
+    if (mode === 'obedience' && st && st.phase === 'obey') { st.jA = (st.jA || 0) + dt * 0.18; const jr = 2.1, ja = Math.sin(st.jA) * 1.15; judge.target = null; judge.pos.x = U.damp(judge.pos.x, Math.sin(ja) * jr, 2, dt); judge.pos.z = U.damp(judge.pos.z, -Math.cos(ja) * jr * 0.8 - 0.2, 2, dt); judge.heading = Math.atan2(pet.pos.x - judge.pos.x, pet.pos.z - judge.pos.z); judge.vel = 0.3; }
+    if (cardSp && cardSp.visible) { cardSp.userData.t -= dt; cardSp.position.copy(judge.pos).setY(1.55 + Math.max(0, 1.8 - cardSp.userData.t) * 0.05); if (cardSp.userData.t <= 0) cardSp.visible = false; }
     if (st && mode === 'agility' && st.phase === 'run') {
       st.t += dt; hud(); if (Math.floor(st.t * 10) !== st._tt) { st._tt = Math.floor(st.t * 10); drawTimer(st.t); }
       const K = G.input.keys || {}; const kx = (K.KeyD || K.ArrowRight ? 1 : 0) - (K.KeyA || K.ArrowLeft ? 1 : 0), kz = (K.KeyS || K.ArrowDown ? 1 : 0) - (K.KeyW || K.ArrowUp ? 1 : 0);
       if (!st.busy) {
         let tgt = null; if (steer && steer.target) tgt = steer.target; if (kx || kz) tgt = pet.pos.clone().add(new V3(kx, 0, kz).multiplyScalar(3));
-        if (tgt) { pet.task = null; pet.setPose('stand'); pet.moveTarget = tgt.clone(); const d = U.d2(pet.pos.x, pet.pos.z, tgt.x, tgt.z); pet.speedMul = d > 2.5 ? 3.0 + (pet.d.agility || 0) * 0.012 : 1.6; } else pet.moveTarget = null;
+        if (tgt) { pet.task = null; pet.setPose('stand'); pet.moveTarget = tgt.clone(); const d = U.d2(pet.pos.x, pet.pos.z, tgt.x, tgt.z); pet.speedMul = d > 2.5 ? 3.0 + (pet.d.agility || 0) * 0.012 : 1.6; } else if (st.cue && st.cue.label === 'JUMP!' && obstacles[st.idx]) { const oo = obstacles[st.idx]; pet.task = null; pet.setPose('stand'); pet.moveTarget = oo.entry.clone().addScaledVector(oo.dir, 0.3); pet.speedMul = 3.0 + (pet.d.agility || 0) * 0.012; } // keeps running while you tap
+        else pet.moveTarget = null;
         const o = obstacles[st.idx];
+        if (o && (o.type === 'hurdle' || o.type === 'tire') && !st.cue) { const dd = U.d2(pet.pos.x, pet.pos.z, o.entry.x, o.entry.z); if (dd < 2.6 && dd > 0.6) cueStart('JUMP!', (dd + 0.3) / Math.max(1.8, pet.vel)); }
+        else if (o && st.cue && st.cue.label === 'JUMP!') { const dd = U.d2(pet.pos.x, pet.pos.z, o.entry.x, o.entry.z); st.cue.dur = (G.time - st.cue.t0) + (dd + 0.3) / Math.max(2.4, pet.vel); }
+        if (o && st.cue && st.cue.label === 'JUMP!' && U.d2(pet.pos.x, pet.pos.z, o.entry.x, o.entry.z) > 3.6) { st.cue = null; cueEl().classList.remove('show'); }
         if (o) {
           const toC = new V3(o.c.x - pet.pos.x, 0, o.c.z - pet.pos.z); const along = -toC.dot(o.dir); const lateral = Math.abs(toC.dot(new V3(o.dir.z, 0, -o.dir.x)));
           if (o.type === 'finish') { if (U.d2(pet.pos.x, pet.pos.z, o.c.x, o.c.z) < 1.6) { st.idx++; finishAgility(); } }
@@ -386,7 +479,8 @@ G.scenes.trials = (() => {
     } else { marker.visible = false; ring.visible = false; }
     if (st && mode === 'obedience' && st.phase === 'obey' && !st.answered && !st.waiting) {
       st.callT -= dt; hud();
-      if (st.callT <= 0) { G.audio.play('back'); G.ui.toast('Time! Moving on.'); pet.emote('sweat', 0.8); st.idx++; st.callT = undefined; setTimeout(nextCall, 700); st.answered = true; }
+      if (st.cur === 'stay') updateStay(dt);
+      else if (st.callT <= 0) { G.audio.play('back'); G.ui.toast('Time! Moving on.'); pet.emote('sweat', 0.8); st.log.push({ id: st.cur, pts: 0 }); st.streak = 0; hideGuide(); scoreCard(0); st.idx++; st.callT = undefined; setTimeout(nextCall, 900); st.answered = true; }
     }
     pet.update(dt);
     const portrait = G.aspect() < 0.9;

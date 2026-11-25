@@ -168,7 +168,8 @@ G.scenes.walk = (() => {
     }
     winMat = M.mat('#bfe4ff', { r: 0.2, em: '#ffd98a', ei: 0 });
     // lamps along the path
-    for (let i = 0; i < 14; i++) { const t = i / 14 + 0.03; const P = curvePt(t), n = outward(t); const lp = M.lamp(); lp.position.copy(P).addScaledVector(n, 1.9); st.add(lp); colliders.push({ x: lp.position.x, z: lp.position.z, r: 0.2 }); }
+    // lamps sit in the gaps between buildings so they never stand in front of a door or gate
+    { const bt = BLD.map((b) => b.t).sort((x, y) => x - y); bt.forEach((t0, i) => { const t1 = i + 1 < bt.length ? bt[i + 1] : bt[0] + 1; const t = ((t0 + t1) / 2) % 1; const P = curvePt(t), n = outward(t); const lp = M.lamp(); lp.position.copy(P).addScaledVector(n, 1.9); st.add(lp); colliders.push({ x: lp.position.x, z: lp.position.z, r: 0.2 }); }); }
     bulbMats = [M.mat('#fff2c4', { em: '#ffd98a', ei: 0.2 })];
     // trees: inside + outside
     const rt = mulberry(99); let placed = 0, tries = 0;
@@ -180,7 +181,8 @@ G.scenes.walk = (() => {
     // distant hills
     for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2; const h = new THREE.Mesh(new THREE.SphereGeometry(U.lerp(18, 30, rt()), 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), M.mat(season === 'winter' ? '#e8f0f6' : season === 'autumn' ? '#c9a45a' : '#8fc46a', { r: 1 })); h.scale.y = U.lerp(0.25, 0.45, rt()); h.position.set(Math.cos(a) * 85, -1, Math.sin(a) * 85); st.add(h); }
     // stone walls for the street cat
-    noriSpots = [0.46, 0.555, 0.38].map((t) => { const P = curvePt(t), n = outward(t); const p = P.clone().addScaledVector(n, 1.65); const wall = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.45), M.mat('#b5ada0', { r: 0.95 })); wall.position.copy(p).setY(0.275); wall.rotation.y = Math.atan2(n.x, n.z); wall.castShadow = true; wall.receiveShadow = true; st.add(wall); colliders.push({ x: p.x, z: p.z, r: 0.5 }); return p; });
+    // Nori's favourite walls: in gaps between buildings, on the inner side of the street so she never blocks a door
+    noriSpots = [0.13, 0.705, 0.885].map((t) => { const P = curvePt(t), n = outward(t); const p = P.clone().addScaledVector(n, -1.75); const wall = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.55, 0.45), M.mat('#b5ada0', { r: 0.95 })); wall.position.copy(p).setY(0.275); wall.rotation.y = Math.atan2(n.x, n.z); wall.castShadow = true; wall.receiveShadow = true; st.add(wall); colliders.push({ x: p.x, z: p.z, r: 0.5 }); return p; });
     buildDetail(st);
     // instanced grass tufts swaying in the wind
     { const blade = new THREE.ConeGeometry(0.035, 0.32, 3, 1); blade.translate(0, 0.16, 0);
@@ -263,6 +265,7 @@ G.scenes.walk = (() => {
   W.onVoice = function (kind, id, p) { if (talkBusy) return true; if (kind === 'name') { p.stop(); p.emote('heart', 1); p.voice(); p.do((function* () { yield* p.face(cam.position.x, cam.position.z); p.lookCam = 3; yield* p.act('sit', 2); })()); } else p.do((function* () { p.lookCam = 3; yield* p.trick(id); p.happy(2); })()); return true; };
   W.debugProps = () => props;
   W.debugDoors = () => doors;
+  W.debugAudit = () => ({ colliders, npcs, props, noriSpots, curvePt, outward });
   function refreshPresence() {
     const h = new Date().getHours() + (G.hourOffset || 0);
     for (const N of npcs) {

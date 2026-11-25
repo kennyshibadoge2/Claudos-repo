@@ -191,7 +191,7 @@ M.pet = function (spec) {
   // muzzle
   const sn = B.snout;
   const mzL = hr * 0.36 * sn + hr * 0.08;
-  const mg = paintSphere(new THREE.SphereGeometry(1, 30, 22), C, 'muzzle', hr, hr, hr); mg.scale(hr * (cat ? 0.34 : 0.4), hr * (cat ? 0.25 : 0.3), mzL);
+  const mg = paintSphere(new THREE.SphereGeometry(1, 30, 22), C, 'muzzle', hr, hr, hr); mg.scale(hr * (cat ? 0.34 : B.pug ? 0.52 : 0.4), hr * (cat ? 0.25 : B.pug ? 0.36 : 0.3), mzL);
   const muzzle = addM(mesh(mg, fur, 'muzzle', hc)); muzzle.position.set(0, -hr * (cat ? 0.3 : 0.3), rz * 0.66);
   const mzFront = rz * 0.66 + mzL * 0.92;
   // nose
@@ -216,7 +216,7 @@ M.pet = function (spec) {
   P.tongueBase = tongue.position.clone();
 
   // eyes
-  const eyeR = hr * (cat ? 0.165 : 0.148);
+  const eyeR = hr * (cat ? 0.165 : B.pug ? 0.172 : 0.148);
   const eyeMat = C.glowEye ? M.mat(C.eye, { r: 0.2, em: C.eye, ei: 1.8 }) : M.mat(cat ? '#111' : '#151012', { r: 0.12 });
   const hiMat = M.basic(0xffffff);
   const arcMat = M.mat('#1d1716', { r: 0.5 });
@@ -234,6 +234,7 @@ M.pet = function (spec) {
     }
     const h1 = mesh(new THREE.SphereGeometry(eyeR * 0.34, 12, 10), hiMat, null, open, false); h1.position.set(eyeR * 0.3, eyeR * 0.42, eyeR * 0.42);
     const h2 = mesh(new THREE.SphereGeometry(eyeR * 0.15, 10, 8), hiMat, null, open, false); h2.position.set(-eyeR * 0.32, -eyeR * 0.38, eyeR * 0.4);
+    if (B.pug) { h1.scale.setScalar(1.25); const h3 = mesh(new THREE.SphereGeometry(eyeR * 0.1, 8, 6), hiMat, null, open, false); h3.position.set(eyeR * 0.05, eyeR * 0.55, eyeR * 0.42); }
     const happy = mesh(new THREE.TorusGeometry(eyeR * 0.8, eyeR * 0.24, 8, 20, Math.PI), arcMat, null, eg, false); happy.position.y = -eyeR * 0.25; happy.visible = false;
     const sleep = mesh(new THREE.TorusGeometry(eyeR * 0.8, eyeR * 0.2, 8, 20, Math.PI), arcMat, null, eg, false); sleep.rotation.z = Math.PI; sleep.position.y = eyeR * 0.3; sleep.visible = false;
     P.eyes.push({ g: eg, open, happy, sleep, s });
@@ -276,11 +277,13 @@ M.pet = function (spec) {
       pivot.position.copy(sp.p); pivot.rotation.set(0, 0, s * 0.18);
       const g = paintSphere(new THREE.SphereGeometry(1, 20, 14), C, 'ear', 1, 1, 1, {}); g.scale(B.earR * 0.42, B.earH * 0.8, B.earR * 1.05); g.translate(0, -B.earH * 0.62, 0);
       addM(mesh(g, fur, 'ear', pivot));
-    } else { // fold (pug)
-      const sp = surf(s * 0.62, 0.72, 0.05, 0.92);
-      pivot.position.copy(sp.p); pivot.rotation.set(1.1, 0, -s * 0.5);
-      const og = new THREE.ConeGeometry(B.earR, B.earH, 16, 1); og.translate(0, B.earH / 2, 0); og.scale(1, 1, 0.4);
-      addM(mesh(og, M.mat(C.mask || '#3a2c26', { r: 0.9 }), 'ear', pivot));
+    } else { // fold (pug): soft velvety button ears that flop forward
+      const sp = surf(s * 0.66, 0.7, 0.0, 0.94);
+      pivot.position.copy(sp.p); pivot.rotation.set(0.25, 0, -s * 0.35);
+      const eg = new THREE.SphereGeometry(1, 18, 12); const pa = eg.attributes.position;
+      for (let i = 0; i < pa.count; i++) { const x = pa.getX(i), y = pa.getY(i), z = pa.getZ(i); const t = (y + 1) / 2; pa.setXYZ(i, x * (1 - t * 0.45), y, z + Math.pow(t, 2) * 0.9); }
+      eg.computeVertexNormals(); eg.scale(B.earR * 1.05, B.earH * 0.62, B.earR * 0.32); eg.translate(0, B.earH * 0.35, 0);
+      const ear = addM(mesh(eg, M.mat(C.mask || '#3a2c26', { r: 0.9 }), 'ear', pivot)); ear.rotation.x = 1.2; ear.position.z = B.earR * 0.2;
     }
     hc.add(pivot); P.ears.push({ pivot, s, base: pivot.rotation.clone() });
   };
@@ -378,6 +381,15 @@ M.pet = function (spec) {
     mesh(new THREE.SphereGeometry(hr * 0.09, 12, 10), bowM, null, tk).position.set(0, hr * 0.42, hr * 0.14);
     // little moustache
     for (const sd of [-1, 1]) { const ms = paintSphere(new THREE.SphereGeometry(1, 10, 8), C, 'muzzle', 1, 1, 1); ms.scale(hr * 0.16, hr * 0.22, hr * 0.12); addM(mesh(ms, fur, 'head', hc)).position.set(sd * hr * 0.16, -hr * 0.32, rz * 0.88); }
+  }
+  if (B.pug) { // pug face: forehead wrinkles, nose roll, droopy jowls, black mask
+    const wr = M.mat(C.top === '#1d1a1b' ? '#4a4244' : '#c4a67a', { r: 0.8 }); const dark = M.mat(C.mask || '#2a2321', { r: 0.85 });
+    for (let k = 0; k < 3; k++) { const sp = surf(0, 0.42 + k * 0.13, 0.9, 1.005); const w = mesh(new THREE.TorusGeometry(hr * (0.17 - k * 0.03), hr * 0.008, 6, 20, Math.PI * 0.7), wr, null, hc, false); w.position.copy(sp.p); w.quaternion.setFromUnitVectors(new V3(0, 0, 1), sp.n); w.rotateZ(Math.PI * 0.1); }
+    { const mz = mesh(new THREE.SphereGeometry(1, 22, 16), M.mat(C.mask ? '#4a3a32' : '#2a2321', { r: 0.8 }), null, hc, false); mz.scale.set(hr * 0.36, hr * 0.24, hr * 0.17); mz.position.set(0, -hr * 0.28, rz * 0.66 + mzL * 0.5); }
+    const roll = mesh(new THREE.TorusGeometry(hr * 0.16, hr * 0.022, 8, 20, Math.PI), wr, null, hc, false); roll.position.set(0, -hr * 0.08, rz * 0.66 + mzL * 0.75); roll.rotation.x = -0.4;
+    for (const sd of [-1, 1]) { const jw = paintSphere(new THREE.SphereGeometry(1, 16, 12), C, 'muzzle', 1, 1, 1); jw.scale(hr * 0.2, hr * 0.17, hr * 0.17); addM(mesh(jw, fur, 'muzzle', hc)).position.set(sd * hr * 0.2, -hr * 0.42, rz * 0.66 + mzL * 0.35); }
+    const chin = paintSphere(new THREE.SphereGeometry(1, 14, 10), C, 'jaw', 1, 1, 1); chin.scale(hr * 0.16, hr * 0.1, hr * 0.12); addM(mesh(chin, fur, 'muzzle', hc)).position.set(0, -hr * 0.5, rz * 0.66 + mzL * 0.2);
+    const scruff = paintSphere(new THREE.SphereGeometry(1, 20, 14), C, 'torso', 1, 1, 1); scruff.scale(bx * 0.9, by * 0.3, bx * 0.55); addM(mesh(scruff, fur, 'torso', body)).position.set(0, by * 0.62, bz * 0.62);
   }
   if (B.robo) { // Robo Shiba: antenna, LED cheeks, rocket pack, rivets
     const metal = M.mat('#8a96a4', { r: 0.3, m: 0.6 }), glow = M.mat(C.eye || '#4ff0ff', { r: 0.2, em: C.eye || '#4ff0ff', ei: 2 });
